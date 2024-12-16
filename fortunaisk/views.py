@@ -2,11 +2,11 @@
 from random import choice
 
 # Third Party
-from authentication.models import OwnershipRecord
 from corptools.models import CorporationWalletJournalEntry
 
 # Django
 from django.contrib.auth.decorators import login_required, permission_required
+from django.contrib.auth.models import User  # Modèle utilisateur standard de Django
 from django.http import JsonResponse
 from django.shortcuts import render
 
@@ -63,10 +63,12 @@ def ticket_purchases(request):
     for entry in journal_entries:
         try:
             character = EveCharacter.objects.get(character_id=entry.first_party_id)
-            ownership = OwnershipRecord.objects.filter(character=character).first()
-            if ownership:
+            user = User.objects.filter(
+                character_ownerships__character=character
+            ).first()
+            if user:
                 purchase, created = TicketPurchase.objects.get_or_create(
-                    user=ownership.user,
+                    user=user,
                     character=character,
                     lottery_reference=settings.lottery_reference,
                     defaults={"amount": entry.amount, "date": entry.date},
