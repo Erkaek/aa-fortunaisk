@@ -24,11 +24,11 @@
                 <tbody>
                     {% for purchase in purchases %}
                         <tr>
-                            <td>{{ purchase.user }}</td>
-                            <td>{{ purchase.character }}</td>
+                            <td>{{ purchase.user.username }}</td>
+                            <td>{{ purchase.character.character_name }}</td>
                             <td>{{ purchase.amount }} ISK</td>
                             <td>{{ purchase.date|date:"Y-m-d H:i" }}</td>
-                            <td>{{ purchase.reference }}</td>
+                            <td>{{ purchase.lottery_reference }}</td>
                         </tr>
                     {% endfor %}
                 </tbody>

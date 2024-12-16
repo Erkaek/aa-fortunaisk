@@ -1,25 +1,34 @@
+# Standard Library
+from random import choice
+
 # Third Party
 from authentication.models import OwnershipRecord
 from corptools.models import CorporationWalletJournalEntry
 
 # Django
-from django.db.models import Q
+from django.contrib.auth.decorators import login_required, permission_required
+from django.http import JsonResponse
 from django.shortcuts import render
 
 # Alliance Auth
 from allianceauth.eveonline.models import EveCharacter
 
-from .models import FortunaISKSettings
+from .models import FortunaISKSettings, TicketPurchase, Winner
 
 
 @login_required
 def lottery(request):
     settings = FortunaISKSettings.objects.first()
-    has_ticket = Ticket.objects.filter(
-        character__character_ownership__user=request.user
+    if not settings:
+        return render(
+            request, "fortunaisk/lottery.html", {"message": "No active lottery."}
+        )
+
+    has_ticket = TicketPurchase.objects.filter(
+        user=request.user,
+        lottery_reference=settings.lottery_reference,
     ).exists()
 
-    # Instructions à afficher uniquement si une loterie est en cours
     instructions = (
         f"Send {settings.ticket_price} ISK to {settings.payment_receiver} with reference '{settings.lottery_reference}' to participate."
         if settings
@@ -36,19 +45,7 @@ def lottery(request):
 
 
 @login_required
-def winner_list(request):
-    winners = Winner.objects.all()
-    return render(request, "fortunaisk/winner_list.html", {"winners": winners})
-
-
-@permission_required("fortunaisk.admin")
-def admin_dashboard(request):
-    return render(request, "fortunaisk/admin.html")
-
-
-@login_required
 def ticket_purchases(request):
-    # Récupérer la loterie en cours
     settings = FortunaISKSettings.objects.first()
     if not settings:
         return render(
@@ -57,30 +54,24 @@ def ticket_purchases(request):
             {"purchases": [], "message": "No active lottery."},
         )
 
-    # Filtrer les transactions correspondant au Payment Receiver
     journal_entries = CorporationWalletJournalEntry.objects.filter(
         second_party_name=settings.payment_receiver,
         amount=settings.ticket_price,
     )
 
-    # Lier les transactions à un utilisateur Auth
     purchases = []
     for entry in journal_entries:
-        # Trouver l'ID du personnage correspondant au first_party_name_id
         try:
             character = EveCharacter.objects.get(character_id=entry.first_party_id)
-            # Trouver l'utilisateur Auth associé au personnage
             ownership = OwnershipRecord.objects.filter(character=character).first()
             if ownership:
-                purchases.append(
-                    {
-                        "user": ownership.user,
-                        "character": character.character_name,
-                        "amount": entry.amount,
-                        "date": entry.date,
-                        "reference": settings.lottery_reference,
-                    }
+                purchase, created = TicketPurchase.objects.get_or_create(
+                    user=ownership.user,
+                    character=character,
+                    lottery_reference=settings.lottery_reference,
+                    defaults={"amount": entry.amount, "date": entry.date},
                 )
+                purchases.append(purchase)
         except EveCharacter.DoesNotExist:
             continue
 
@@ -88,4 +79,31 @@ def ticket_purchases(request):
         request,
         "fortunaisk/ticket_purchases.html",
         {"purchases": purchases, "lottery_reference": settings.lottery_reference},
+    )
+
+
+@permission_required("fortunaisk.admin")
+def select_winner(request):
+    settings = FortunaISKSettings.objects.first()
+    if not settings:
+        return JsonResponse({"error": "No active lottery."}, status=400)
+
+    participants = TicketPurchase.objects.filter(
+        lottery_reference=settings.lottery_reference
+    )
+    if not participants.exists():
+        return JsonResponse({"error": "No participants found."}, status=400)
+
+    winner = choice(participants)
+    Winner.objects.create(character=winner.character, ticket=winner)
+
+    return JsonResponse(
+        {
+            "winner": {
+                "user": winner.user.username,
+                "character": winner.character.character_name,
+                "lottery_reference": winner.lottery_reference,
+                "date": winner.date.strftime("%Y-%m-%d %H:%M:%S"),
+            }
+        }
     )
