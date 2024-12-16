@@ -64,9 +64,10 @@ class FortunaISKSettings(models.Model):
     def save(self, *args, **kwargs):
         # Générer une référence unique seulement si elle est vide
         if not self.lottery_reference:
-            self.lottery_reference = f"LOTTERY-{timezone.now().strftime('%Y%m%d%H%M%S')}"
+            self.lottery_reference = (
+                f"LOTTERY-{timezone.now().strftime('%Y%m%d%H%M%S')}"
+            )
         super().save(*args, **kwargs)
 
     def __str__(self):
         return "FortunaISK Settings"
-

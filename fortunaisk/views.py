@@ -26,7 +26,6 @@ def lottery(request):
     return render(request, "lottery.html", context)
 
 
-
 @login_required
 def winner_list(request):
     winners = Winner.objects.all()
