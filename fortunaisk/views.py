@@ -7,13 +7,13 @@ from .models import FortunaISKSettings, Ticket, Winner
 
 @login_required
 def lottery(request):
-    settings = FortunaISKSettings.objects.first()
-    if settings is None:
-        context = {
-            "message": "No lottery is currently active. Please check back later.",
-        }
-        return render(request, "lottery.html", context)
+    try:
+        template = get_template("fortunaisk/lottery.html")
+        print("Template found:", template)
+    except Exception as e:
+        return HttpResponse(f"Template error: {e}")
 
+    settings = FortunaISKSettings.objects.first()
     has_ticket = Ticket.objects.filter(
         character__character_ownership__user=request.user
     ).exists()
@@ -21,9 +21,14 @@ def lottery(request):
     context = {
         "settings": settings,
         "has_ticket": has_ticket,
-        "instructions": f"Send {settings.ticket_price} ISK to {settings.payment_receiver} with reference '{settings.lottery_reference}' to participate.",
+        "instructions": (
+            f"Send {settings.ticket_price} ISK to {settings.payment_receiver} with reference '{settings.lottery_reference}' to participate."
+            if settings
+            else None
+        ),
     }
-    return render(request, "lottery.html", context)
+
+    return render(request, "fortunaisk/lottery.html", context)
 
 
 @login_required
