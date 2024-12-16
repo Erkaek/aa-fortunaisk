@@ -16,5 +16,10 @@ class WinnerAdmin(admin.ModelAdmin):
 
 @admin.register(FortunaISKSettings)
 class FortunaISKSettingsAdmin(admin.ModelAdmin):
-    list_display = ("ticket_price", "next_drawing_date", "payment_receiver", "lottery_reference")
+    list_display = (
+        "ticket_price",
+        "next_drawing_date",
+        "payment_receiver",
+        "lottery_reference",
+    )
     readonly_fields = ("lottery_reference",)
