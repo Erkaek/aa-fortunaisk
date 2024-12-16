@@ -1,16 +1,18 @@
-# admin.py
+# Django
 from django.contrib import admin
+
 from .models import FortunaISKSettings, Ticket, Winner
+
 
 @admin.register(Ticket)
 class TicketAdmin(admin.ModelAdmin):
     list_display = ("character", "ticket_ref", "amount", "paid", "created_at")
-    search_fields = ("ticket_ref", "character__character_name")  # Facilite la recherche
+
 
 @admin.register(Winner)
 class WinnerAdmin(admin.ModelAdmin):
     list_display = ("character", "ticket", "won_at")
-    search_fields = ("character__character_name",)
+
 
 @admin.register(FortunaISKSettings)
 class FortunaISKSettingsAdmin(admin.ModelAdmin):
@@ -26,9 +28,7 @@ class FortunaISKSettingsAdmin(admin.ModelAdmin):
     )
 
     def has_add_permission(self, request):
-        # Prevent adding new settings; only allow editing the existing one.
         return not FortunaISKSettings.objects.exists()
 
     def has_delete_permission(self, request, obj=None):
-        # Prevent deletion of the settings.
         return False

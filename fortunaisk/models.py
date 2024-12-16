@@ -1,8 +1,10 @@
-# models.py
+# Django
 from django.db import models
 from django.utils import timezone
-from django.utils.timezone import now
+
+# Alliance Auth
 from allianceauth.eveonline.models import EveCharacter
+
 
 class Ticket(models.Model):
     character = models.ForeignKey(
@@ -48,7 +50,7 @@ class FortunaISKSettings(models.Model):
         help_text="Price of a single ticket.",
     )
     next_drawing_date = models.DateTimeField(
-        help_text="Date and time of the next automatic drawing.",
+        help_text="Date and time of the next automatic drawing."
     )
 
     def __str__(self):

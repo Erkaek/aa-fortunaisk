@@ -1,8 +1,8 @@
-# apps.py
+# Django
 from django.apps import AppConfig
-from fortunaisk import __version__
 
-class FortunaISKConfig(AppConfig):
+
+class FortunaiskConfig(AppConfig):
     name = "fortunaisk"
     label = "fortunaisk"
-    verbose_name = f"FortunaISK App v{__version__}"
+    verbose_name = "FortunaISK App"
