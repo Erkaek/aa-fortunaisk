@@ -49,10 +49,11 @@ class FortunaISKSettings(models.Model):
     next_drawing_date = models.DateTimeField(
         help_text="Date and time of the next automatic drawing."
     )
-    payment_receiver = models.CharField(  # Nouveau champ pour l'entité recevant les paiements
-        max_length=100,
-        help_text="Name of the character or corporation to whom ISK should be sent.",
-    )
+    payment_receiver = models.CharField(
+    max_length=100,
+    default="Corporation ID",  # Ajout d'une valeur par défaut
+    help_text="Name of the character or corporation to whom ISK should be sent.",
+)
     lottery_reference = (
         models.CharField(  # Génération automatique d'une référence unique
             max_length=50,
@@ -65,9 +66,8 @@ class FortunaISKSettings(models.Model):
     def save(self, *args, **kwargs):
         # Générer une référence unique si elle n'existe pas
         if not self.lottery_reference or self.lottery_reference == "default":
-            self.lottery_reference = (
-                f"LOTTERY-{timezone.now().strftime('%Y%m%d%H%M%S')}"
-            )
+            self.lottery_reference = f"LOTTERY-{timezone.now().strftime('%Y%m%d')}"
+
         super().save(*args, **kwargs)
 
     def __str__(self):
