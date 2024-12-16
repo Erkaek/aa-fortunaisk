@@ -23,56 +23,9 @@ FortunaISK is a monthly lottery module for Alliance Auth. **Please note: this pr
 
 ### Steps
 
-1. **Clone the repository**:
+1. **Clone the repository**:  
    Since the package is under development, clone the repository instead of installing it via pip:
 
    ```bash
    git clone https://github.com/Erkaek/allianceauth-fortunaisk.git
    cd allianceauth-fortunaisk
-   ```
-
-1. **Install dependencies**:
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-1. **Add the module to your project**:
-   Update your `INSTALLED_APPS` in your Django settings:
-
-   ```python
-   INSTALLED_APPS += [
-       "fortunaisk",
-   ]
-   ```
-
-1. **Apply migrations**:
-
-   ```bash
-   python manage.py migrate
-   ```
-
-1. **Collect static files**:
-
-   ```bash
-   python manage.py collectstatic
-   ```
-
-1. **Configuration**:
-   The configuration is not finalized yet. Placeholder settings will be updated in future releases.
-
-1. **Restart services**:
-   Restart your application services to apply the changes.
-
-## Current Status
-
-- **Development**: The project is still under active development. Features may be incomplete or subject to change.
-- **Testing**: Please do not use in a production environment.
-
-## Contributions
-
-Contributions are welcome! Feel free to open issues or submit pull requests to help improve FortunaISK.
-
-## License
-
-This project is licensed under the MIT License. See the LICENSE file for details.
