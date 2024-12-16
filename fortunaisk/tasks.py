@@ -1,11 +1,8 @@
 # tasks.py
-# Third Party
 from celery import shared_task
 from corptools.models import CorporationWalletJournalEntry
-
 from .app_settings import PAYMENT_CORP
 from .models import Ticket
-
 
 @shared_task
 def check_ticket_payments():

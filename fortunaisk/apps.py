@@ -1,16 +1,8 @@
-"""App Configuration"""
-
-# Django
+# apps.py
 from django.apps import AppConfig
-
-# fortunaisk
-# AA fortunaisk App
 from fortunaisk import __version__
 
-
-class fortunaiskConfig(AppConfig):
-    """App Config"""
-
-    name = "fortunaISK"
-    label = "fortunaISK"
-    verbose_name = f"fortunaISK App v{__version__}"
+class FortunaISKConfig(AppConfig):
+    name = "fortunaisk"
+    label = "fortunaisk"
+    verbose_name = f"FortunaISK App v{__version__}"

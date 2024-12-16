@@ -1,11 +1,8 @@
-# Django
+# models.py
 from django.db import models
 from django.utils import timezone
-from django.utils.timezone import now  # Import the `now` function
-
-# Alliance Auth
+from django.utils.timezone import now
 from allianceauth.eveonline.models import EveCharacter
-
 
 class Ticket(models.Model):
     character = models.ForeignKey(
@@ -17,7 +14,7 @@ class Ticket(models.Model):
     paid = models.BooleanField(default=False)
 
     class Meta:
-        default_permissions = ("add", "change", "delete")  # Supprime `view` auto-généré
+        default_permissions = ("add", "change", "delete")
         permissions = [
             ("view_ticket_custom", "Can view tickets (custom permission)"),
             ("admin", "Can manage Fortunaisk tickets"),
@@ -27,29 +24,13 @@ class Ticket(models.Model):
         return f"{self.character} - {self.ticket_ref}"
 
 
-class Config(models.Model):
-    ticket_price = models.DecimalField(
-        max_digits=10, decimal_places=0, default=100000000, verbose_name="Ticket Price"
-    )
-    next_draw_date = models.DateTimeField(
-        default=now, verbose_name="Next Draw Date"  # Use `now` for the default value
-    )
-
-    def __str__(self):
-        return "Configuration"
-
-    class Meta:
-        verbose_name = "Configuration"
-        verbose_name_plural = "Configuration"
-
-
 class Winner(models.Model):
     character = models.ForeignKey(EveCharacter, on_delete=models.CASCADE)
     ticket = models.OneToOneField(Ticket, on_delete=models.CASCADE)
     won_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
-        default_permissions = ("add", "change", "delete")  # Supprime `view` auto-généré
+        default_permissions = ("add", "change", "delete")
         permissions = [
             ("view_winner_custom", "Can view winners (custom permission)"),
             ("admin", "Can manage Fortunaisk winners"),
@@ -67,7 +48,7 @@ class FortunaISKSettings(models.Model):
         help_text="Price of a single ticket.",
     )
     next_drawing_date = models.DateTimeField(
-        help_text="Date and time of the next automatic drawing."
+        help_text="Date and time of the next automatic drawing.",
     )
 
     def __str__(self):
