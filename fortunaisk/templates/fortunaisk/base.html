@@ -30,6 +30,11 @@
             </a>
         </li>
         {% if perms.fortunaisk.admin %}
+            <li class="nav-item {% navactive request 'fortunaisk:ticket_purchases' %}">
+                <a class="nav-link" href="{% url 'fortunaisk:ticket_purchases' %}">
+                    {% translate "Ticket Purchases" %}
+                </a>
+            </li>
             <li class="nav-item {% navactive request 'fortunaisk:admin' %}">
                 <a class="nav-link" href="{% url 'fortunaisk:admin' %}">
                     {% translate "Admin Dashboard" %}
@@ -38,6 +43,7 @@
         {% endif %}
     </ul>
 {% endblock header_nav_collapse_left %}
+
 
 {% block content %}
     <div class="container mt-4">
