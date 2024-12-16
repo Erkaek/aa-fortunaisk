@@ -12,15 +12,18 @@ def lottery(request):
         character__character_ownership__user=request.user
     ).exists()
     context = {"settings": settings, "has_ticket": has_ticket}
-    return render(request, "lottery.html", context)
+    # Ajout du préfixe 'fortunaisk/' pour le chemin du template
+    return render(request, "fortunaisk/lottery.html", context)
 
 
 @login_required
 def winner_list(request):
     winners = Winner.objects.all()
-    return render(request, "winner_list.html", {"winners": winners})
+    # Ajout du préfixe 'fortunaisk/' pour le chemin du template
+    return render(request, "fortunaisk/winner_list.html", {"winners": winners})
 
 
 @permission_required("fortunaisk.admin")
 def admin_dashboard(request):
-    return render(request, "admin.html")
+    # Ajout du préfixe 'fortunaisk/' pour le chemin du template
+    return render(request, "fortunaisk/admin.html")
