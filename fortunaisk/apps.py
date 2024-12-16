@@ -13,9 +13,5 @@ class FortunaiskConfig(AppConfig):
 
         def setup_periodic_tasks(sender, **kwargs):
             TicketPurchase.objects.setup_periodic_task()
-            print("Celery Beat task 'Process Ticket Purchases' has been set up.")
 
         post_migrate.connect(setup_periodic_tasks, sender=self)
-
-
-# Ligne vide à la fin du fichier

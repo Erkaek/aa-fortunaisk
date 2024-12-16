@@ -5,12 +5,38 @@ import json
 from django_celery_beat.models import IntervalSchedule, PeriodicTask
 
 # Django
-from django.contrib.auth.models import User  # Modèle utilisateur standard de Django
+from django.contrib.auth.models import User
 from django.db import models
 from django.utils import timezone
 
 # Alliance Auth
 from allianceauth.eveonline.models import EveCharacter
+
+
+# Manager personnalisé pour TicketPurchase
+class TicketPurchaseManager(models.Manager):
+    def setup_periodic_task(self):
+        """
+        Configure une tâche périodique Celery Beat pour le traitement des achats de tickets.
+        """
+        schedule, created = IntervalSchedule.objects.get_or_create(
+            every=5,  # Toutes les 5 minutes
+            period=IntervalSchedule.MINUTES,
+        )
+
+        task_name = "process_ticket_purchases"
+
+        # Vérifie si la tâche existe pour éviter les doublons
+        if not PeriodicTask.objects.filter(name=task_name).exists():
+            PeriodicTask.objects.create(
+                interval=schedule,
+                name=task_name,
+                task="fortunaisk.tasks.process_wallet_tickets",
+                args=json.dumps([]),
+            )
+            print(f"Celery Beat task '{task_name}' has been created.")
+        else:
+            print(f"Celery Beat task '{task_name}' already exists.")
 
 
 class TicketPurchase(models.Model):
@@ -23,6 +49,8 @@ class TicketPurchase(models.Model):
     lottery_reference = models.CharField(max_length=50)
     date = models.DateTimeField(default=timezone.now)
     amount = models.PositiveBigIntegerField()
+
+    objects = TicketPurchaseManager()  # Associe le Manager personnalisé
 
     class Meta:
         unique_together = ("user", "lottery_reference")
@@ -74,25 +102,23 @@ class FortunaISKSettings(models.Model):
                 f"LOTTERY-{timezone.now().strftime('%Y%m%d%H%M%S')}"
             )
         super().save(*args, **kwargs)
-        self.setup_periodic_task()  # Appelle la configuration des tâches après sauvegarde
+        self.setup_periodic_task()
 
     def setup_periodic_task(self):
         """
         Configure ou met à jour la tâche Celery Beat pour vérifier les achats de tickets.
         """
-        # Crée ou récupère l'intervalle
         schedule, created = IntervalSchedule.objects.get_or_create(
             every=5,  # Fréquence : toutes les 5 minutes
             period=IntervalSchedule.MINUTES,
         )
 
-        # Crée ou met à jour la tâche périodique
         PeriodicTask.objects.update_or_create(
             name="Check Wallet Entries for FortunaISK Tickets",
             defaults={
-                "task": "fortunaisk.tasks.process_ticket_purchases",  # Chemin vers la tâche Celery
+                "task": "fortunaisk.tasks.process_wallet_tickets",
                 "interval": schedule,
-                "args": json.dumps([]),  # Aucune donnée spécifique
+                "args": json.dumps([]),
                 "description": "Verifies wallet entries and updates ticket purchases.",
             },
         )
