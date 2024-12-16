@@ -43,36 +43,30 @@ class Winner(models.Model):
 
 
 class FortunaISKSettings(models.Model):
-    ticket_price = models.PositiveBigIntegerField(  # Pas de limite et sans décimales
+    ticket_price = models.PositiveBigIntegerField(
         default=10000000, help_text="Price of a single ticket (in ISK)."
     )
     next_drawing_date = models.DateTimeField(
         help_text="Date and time of the next automatic drawing."
     )
     payment_receiver = models.CharField(
-    max_length=100,
-    default="Corporation ID",  # Ajout d'une valeur par défaut
-    help_text="Name of the character or corporation to whom ISK should be sent.",
-)
-    lottery_reference = (
-        models.CharField(  # Génération automatique d'une référence unique
-            max_length=50,
-            default="default",
-            unique=True,
-            help_text="Unique reference for the current lottery.",
-        )
+        max_length=100,
+        default="Default Receiver",
+        help_text="Name of the character or corporation to whom ISK should be sent.",
+    )
+    lottery_reference = models.CharField(
+        max_length=50,
+        unique=True,
+        blank=True,  # Permet de ne pas remplir manuellement
+        help_text="Unique reference for the current lottery.",
     )
 
     def save(self, *args, **kwargs):
-        # Générer une référence unique si elle n'existe pas
-        if not self.lottery_reference or self.lottery_reference == "default":
-            self.lottery_reference = f"LOTTERY-{timezone.now().strftime('%Y%m%d')}"
-
+        # Générer une référence unique seulement si elle est vide
+        if not self.lottery_reference:
+            self.lottery_reference = f"LOTTERY-{timezone.now().strftime('%Y%m%d%H%M%S')}"
         super().save(*args, **kwargs)
 
     def __str__(self):
         return "FortunaISK Settings"
 
-    class Meta:
-        verbose_name = "FortunaISK Setting"
-        verbose_name_plural = "FortunaISK Settings"
