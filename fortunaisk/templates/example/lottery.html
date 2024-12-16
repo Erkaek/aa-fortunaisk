@@ -17,7 +17,7 @@
             <div class="card-body">
                 <p><strong>{% translate "Start Date" %}:</strong> {{ settings.next_drawing_date|date:"Y-m-d H:i" }}</p>
                 <p><strong>{% translate "Ticket Price" %}:</strong> {{ settings.ticket_price }} ISK</p>
-                <p><strong>{% translate "Has Ticket?" %}:</strong> 
+                <p><strong>{% translate "Has Ticket?" %}:</strong>
                     {% if has_ticket %}
                         <span class="badge bg-success">{% translate "Yes" %}</span>
                     {% else %}
