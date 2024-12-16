@@ -119,3 +119,19 @@ def winner_list(request):
         "fortunaisk/winner_list.html",
         {"winners": winners},
     )
+
+
+def admin_dashboard(request):
+    settings = FortunaISKSettings.objects.first()
+    total_tickets = TicketPurchase.objects.filter(
+        lottery_reference=settings.lottery_reference if settings else None
+    ).count()
+
+    return render(
+        request,
+        "fortunaisk/admin.html",  # Assurez-vous que le chemin du template correspond
+        {
+            "settings": settings,
+            "total_tickets": total_tickets,
+        },
+    )
