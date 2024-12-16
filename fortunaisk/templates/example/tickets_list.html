@@ -1,0 +1,43 @@
+{% extends "fortunaisk/base.html" %}
+
+{% load i18n %}  <!-- Ensure the i18n library is loaded -->
+
+{% block page_title %}
+    {% translate "My Tickets" %}
+{% endblock page_title %}
+
+{% block details %}
+    <h2 class="mb-4">{% translate "My Tickets" %}</h2>
+    {% if tickets %}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>{% translate "Reference" %}</th>
+                        <th>{% translate "Amount" %}</th>
+                        <th>{% translate "Paid" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ticket in tickets %}
+                        <tr>
+                            <td>{{ ticket.ticket_ref }}</td>
+                            <td>{{ ticket.amount }}</td>
+                            <td>
+                                {% if ticket.paid %}
+                                    <span class="badge bg-success">{% translate "Yes" %}</span>
+                                {% else %}
+                                    <span class="badge bg-danger">{% translate "No" %}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="aa-callout aa-callout-warning text-center">
+            {% translate "No tickets available." %}
+        </div>
+    {% endif %}
+{% endblock details %}

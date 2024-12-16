@@ -10,6 +10,6 @@ from fortunaisk import __version__
 class fortunaiskConfig(AppConfig):
     """App Config"""
 
-    name = "fortunaisk"
-    label = "fortunaisk"
-    verbose_name = f"fortunaisk App v{__version__}"
+    name = "fortunaISK"
+    label = "fortunaISK"
+    verbose_name = f"fortunaISK App v{__version__}"

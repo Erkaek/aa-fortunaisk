@@ -1,9 +1,4 @@
-"""App Settings"""
-
-# Django
+# app_settings.py
 from django.conf import settings
 
-# put your app settings here
-
-
-fortunaisk_SETTING_ONE = getattr(settings, "fortunaisk_SETTING_ONE", None)
+PAYMENT_CORP = getattr(settings, "PAYMENT_CORP", 123456789)

@@ -1,21 +1,17 @@
-"""App Views"""
-
-# Django
-from django.contrib.auth.decorators import login_required, permission_required
-from django.core.handlers.wsgi import WSGIRequest
-from django.http import HttpResponse
 from django.shortcuts import render
-
+from django.contrib.auth.decorators import login_required, permission_required
+from .models import Ticket, Winner
 
 @login_required
-@permission_required("fortunaisk.basic_access")
-def index(request: WSGIRequest) -> HttpResponse:
-    """
-    Index view
-    :param request:
-    :return:
-    """
+def tickets_list(request):
+    tickets = Ticket.objects.filter(character__character_ownership__user=request.user)
+    return render(request, "fortunaisk/tickets_list.html", {"tickets": tickets})
 
-    context = {"text": "Hello, World!"}
+@login_required
+def winner_list(request):
+    winners = Winner.objects.all()
+    return render(request, "fortunaisk/winner_list.html", {"winners": winners})
 
-    return render(request, "fortunaisk/index.html", context)
+@permission_required("fortunaisk.admin")
+def admin_dashboard(request):
+    return render(request, "fortunaisk/admin.html")

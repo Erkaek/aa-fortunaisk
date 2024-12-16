@@ -1,13 +1,10 @@
-"""App URLs"""
-
-# Django
 from django.urls import path
+from . import views
 
-# AA fortunaisk App
-from fortunaisk import views
-
-app_name: str = "fortunaisk"
+app_name = "fortunaisk"
 
 urlpatterns = [
-    path("", views.index, name="index"),
+    path("tickets/", views.tickets_list, name="tickets_list"),
+    path("winners/", views.winner_list, name="winner_list"),
+    path("admin/", views.admin_dashboard, name="admin"),
 ]
