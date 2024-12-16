@@ -11,8 +11,8 @@ class FortunaiskMenu(MenuItemHook):
             self,
             "Fortunaisk",
             "fas fa-ticket-alt fa-fw",
-            "fortunaisk:tickets_list",
-            navactive=["fortunaisk:"],
+            "fortunaisk:lottery",  # Mise à jour ici
+            navactive=["fortunaisk:lottery"],
         )
 
     def render(self, request):

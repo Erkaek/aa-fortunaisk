@@ -1,6 +1,6 @@
 {% extends "fortunaisk/base.html" %}
 
-{% load i18n %}  <!-- Ensure the i18n library is loaded -->
+{% load i18n %}
 
 {% block page_title %}
     {% translate "Admin Dashboard" %}
@@ -14,8 +14,8 @@
         </div>
         <div class="card-body">
             <p>{% translate "Manage tickets and winners for Fortunaisk." %}</p>
-            <a href="{% url 'fortunaisk:tickets_list' %}" class="btn btn-primary">
-                {% translate "View Tickets" %}
+            <a href="{% url 'fortunaisk:lottery' %}" class="btn btn-primary">
+                {% translate "View Lottery" %}
             </a>
             <a href="{% url 'fortunaisk:winner_list' %}" class="btn btn-secondary">
                 {% translate "View Winners" %}
