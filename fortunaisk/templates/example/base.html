@@ -1,0 +1,41 @@
+{% extends "allianceauth/base-bs5.html" %}
+
+{% load static %}
+{% load i18n %}
+{% load navactive %}
+
+{% block page_title %}
+    {% translate "Fortunaisk" %}
+{% endblock page_title %}
+
+{% block header_nav_brand %}
+    {% translate "Fortunaisk" %}
+{% endblock header_nav_brand %}
+
+{% block header_nav_collapse_left %}
+    <ul class="nav navbar-nav">
+        <li class="nav-item {% navactive request 'fortunaisk:tickets_list' %}">
+            <a class="nav-link" href="{% url 'fortunaisk:tickets_list' %}">
+                {% translate "My Tickets" %}
+            </a>
+        </li>
+        <li class="nav-item {% navactive request 'fortunaisk:winner_list' %}">
+            <a class="nav-link" href="{% url 'fortunaisk:winner_list' %}">
+                {% translate "Winners" %}
+            </a>
+        </li>
+        {% if perms.fortunaisk.admin %}
+            <li class="nav-item {% navactive request 'fortunaisk:admin' %}">
+                <a class="nav-link" href="{% url 'fortunaisk:admin' %}">
+                    {% translate "Admin Dashboard" %}
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+{% endblock header_nav_collapse_left %}
+
+{% block content %}
+    <div class="container mt-4">
+        {% block details %}{% endblock %}
+    </div>
+{% endblock %}
