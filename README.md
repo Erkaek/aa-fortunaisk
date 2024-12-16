@@ -23,9 +23,10 @@ FortunaISK is a monthly lottery module for Alliance Auth. **Please note: this pr
 
 ### Steps
 
-1. **Clone the repository**:  
+1. **Clone the repository**:\
    Since the package is under development, clone the repository instead of installing it via pip:
 
    ```bash
    git clone https://github.com/Erkaek/allianceauth-fortunaisk.git
    cd allianceauth-fortunaisk
+   ```
