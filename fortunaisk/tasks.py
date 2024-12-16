@@ -20,17 +20,23 @@ def process_wallet_tickets():
     if not settings:
         return "No active FortunaISK settings found."
 
+    # Filtrer les entrées de journal selon les critères de paiement
     journal_entries = CorporationWalletJournalEntry.objects.filter(
         second_party_name_id=settings.payment_receiver,
         amount=settings.ticket_price,
+        reason="Lottery reference",  # Critère pour vérifier si la raison correspond
     )
 
     for entry in journal_entries:
         try:
+            # Rechercher le personnage en fonction de first_party_name_id
             character = EveCharacter.objects.get(character_id=entry.first_party_name_id)
+            # Trouver l'utilisateur associé au personnage
             user = User.objects.filter(
                 character_ownerships__character=character
             ).first()
+
+            # Si un utilisateur est trouvé, enregistrer l'achat du ticket
             if user:
                 TicketPurchase.objects.get_or_create(
                     user=user,
