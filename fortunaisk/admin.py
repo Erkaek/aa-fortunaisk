@@ -1,12 +1,14 @@
 # Django
 from django.contrib import admin
 
-from .models import FortunaISKSettings, Ticket, Winner
+from .models import FortunaISKSettings, TicketPurchase, Winner
 
 
-@admin.register(Ticket)
-class TicketAdmin(admin.ModelAdmin):
-    list_display = ("character", "ticket_ref", "amount", "paid", "created_at")
+@admin.register(TicketPurchase)
+class TicketPurchaseAdmin(admin.ModelAdmin):
+    list_display = ("user", "character", "lottery_reference", "amount", "date")
+    list_filter = ("lottery_reference", "date")
+    search_fields = ("user__username", "character__character_name", "lottery_reference")
 
 
 @admin.register(Winner)
