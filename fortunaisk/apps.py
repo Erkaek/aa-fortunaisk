@@ -3,6 +3,7 @@
 # Django
 from django.apps import AppConfig
 
+# fortunaisk
 # AA fortunaisk App
 from fortunaisk import __version__
 

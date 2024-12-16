@@ -1,5 +1,7 @@
+# Alliance Auth
 from allianceauth import hooks
 from allianceauth.services.hooks import MenuItemHook, UrlHook
+
 from . import urls
 
 
@@ -16,7 +18,7 @@ class FortunaiskMenu(MenuItemHook):
     def render(self, request):
         if request.user.has_perm("fortunaisk.view_ticket"):
             return super().render(request)
-        return ''
+        return ""
 
 
 @hooks.register("menu_item_hook")
