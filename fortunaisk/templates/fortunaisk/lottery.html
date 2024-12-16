@@ -7,9 +7,12 @@
 
 {% block details %}
 <div class="container text-center mt-4">
-    <h2 class="mb-4">{% translate "Current Lottery" %}</h2>
-
-    {% if settings %}
+    {% if message %}
+        <div class="alert alert-warning">
+            {{ message }}
+        </div>
+    {% else %}
+        <h2 class="mb-4">{% translate "Current Lottery" %}</h2>
         <div class="card text-center mb-4">
             <div class="card-header bg-primary text-white">
                 {% translate "Lottery Details" %}
@@ -31,10 +34,6 @@
                     {{ instructions }}
                 </p>
             </div>
-        </div>
-    {% else %}
-        <div class="alert alert-warning">
-            {% translate "No lottery available at the moment." %}
         </div>
     {% endif %}
 </div>
