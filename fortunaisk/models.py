@@ -43,15 +43,29 @@ class Winner(models.Model):
 
 
 class FortunaISKSettings(models.Model):
-    ticket_price = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=100.00,
-        help_text="Price of a single ticket.",
+    ticket_price = models.PositiveBigIntegerField(  # Pas de limite et sans décimales
+        default=10000000, 
+        help_text="Price of a single ticket (in ISK)."
     )
     next_drawing_date = models.DateTimeField(
         help_text="Date and time of the next automatic drawing."
     )
+    payment_receiver = models.CharField(  # Nouveau champ pour l'entité recevant les paiements
+        max_length=100, 
+        help_text="Name of the character or corporation to whom ISK should be sent."
+    )
+    lottery_reference = models.CharField(  # Génération automatique d'une référence unique
+        max_length=50,
+        default="default",
+        unique=True,
+        help_text="Unique reference for the current lottery."
+    )
+
+    def save(self, *args, **kwargs):
+        # Générer une référence unique si elle n'existe pas
+        if not self.lottery_reference or self.lottery_reference == "default":
+            self.lottery_reference = f"LOTTERY-{timezone.now().strftime('%Y%m%d%H%M%S')}"
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return "FortunaISK Settings"

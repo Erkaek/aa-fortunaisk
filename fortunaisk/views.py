@@ -11,8 +11,11 @@ def lottery(request):
     has_ticket = Ticket.objects.filter(
         character__character_ownership__user=request.user
     ).exists()
-    context = {"settings": settings, "has_ticket": has_ticket}
-    # Ajout du préfixe 'fortunaisk/' pour le chemin du template
+    context = {
+        "settings": settings,
+        "has_ticket": has_ticket,
+        "instructions": f"Send {settings.ticket_price} ISK to {settings.payment_receiver} with reference '{settings.lottery_reference}' to participate.",
+    }
     return render(request, "fortunaisk/lottery.html", context)
 
 
