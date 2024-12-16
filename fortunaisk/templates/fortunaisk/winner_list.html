@@ -11,18 +11,18 @@
 
     {% if winners %}
         <div class="table-responsive">
-            <table class="table table-bordered">
+            <table class="table table-bordered table-striped">
                 <thead class="thead-dark">
                     <tr>
                         <th>{% translate "Character" %}</th>
-                        <th>{% translate "Ticket" %}</th>
+                        <th>{% translate "Ticket Reference" %}</th>
                         <th>{% translate "Won At" %}</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for winner in winners %}
                         <tr>
-                            <td>{{ winner.character }}</td>
+                            <td>{{ winner.character.character_name }}</td>
                             <td>{{ winner.ticket.ticket_ref }}</td>
                             <td>{{ winner.won_at|date:"Y-m-d H:i" }}</td>
                         </tr>
@@ -32,7 +32,7 @@
         </div>
     {% else %}
         <div class="alert alert-warning">
-            {% translate "No winners yet." %}
+            <strong>{% translate "No winners yet." %}</strong>
         </div>
     {% endif %}
 </div>

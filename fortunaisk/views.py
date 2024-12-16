@@ -109,3 +109,13 @@ def select_winner(request):
             }
         }
     )
+
+
+@login_required
+def winner_list(request):
+    winners = Winner.objects.all().select_related("character", "ticket")
+    return render(
+        request,
+        "fortunaisk/winner_list.html",
+        {"winners": winners},
+    )
