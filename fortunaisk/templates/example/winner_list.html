@@ -1,17 +1,18 @@
 {% extends "fortunaisk/base.html" %}
-
-{% load i18n %}  <!-- Ensure the i18n library is loaded -->
+{% load i18n %}
 
 {% block page_title %}
     {% translate "Winners" %}
 {% endblock page_title %}
 
 {% block details %}
+<div class="container text-center mt-4">
     <h2 class="mb-4">{% translate "Winners" %}</h2>
+
     {% if winners %}
         <div class="table-responsive">
-            <table class="table table-striped">
-                <thead>
+            <table class="table table-bordered">
+                <thead class="thead-dark">
                     <tr>
                         <th>{% translate "Character" %}</th>
                         <th>{% translate "Ticket" %}</th>
@@ -23,15 +24,16 @@
                         <tr>
                             <td>{{ winner.character }}</td>
                             <td>{{ winner.ticket.ticket_ref }}</td>
-                            <td>{{ winner.won_at }}</td>
+                            <td>{{ winner.won_at|date:"Y-m-d H:i" }}</td>
                         </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     {% else %}
-        <div class="aa-callout aa-callout-warning text-center">
+        <div class="alert alert-warning">
             {% translate "No winners yet." %}
         </div>
     {% endif %}
+</div>
 {% endblock details %}

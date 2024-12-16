@@ -17,18 +17,3 @@ class WinnerAdmin(admin.ModelAdmin):
 @admin.register(FortunaISKSettings)
 class FortunaISKSettingsAdmin(admin.ModelAdmin):
     list_display = ("ticket_price", "next_drawing_date")
-    fieldsets = (
-        (
-            None,
-            {
-                "fields": ("ticket_price", "next_drawing_date"),
-                "description": "Configure the ticket price and the date of the next automatic drawing.",
-            },
-        ),
-    )
-
-    def has_add_permission(self, request):
-        return not FortunaISKSettings.objects.exists()
-
-    def has_delete_permission(self, request, obj=None):
-        return False

@@ -1,0 +1,35 @@
+{% extends "fortunaisk/base.html" %}
+{% load i18n %}
+
+{% block page_title %}
+    {% translate "Lottery" %}
+{% endblock page_title %}
+
+{% block details %}
+<div class="container text-center mt-4">
+    <h2 class="mb-4">{% translate "Current Lottery" %}</h2>
+
+    {% if settings %}
+        <div class="card text-center mb-4">
+            <div class="card-header bg-primary text-white">
+                {% translate "Lottery Details" %}
+            </div>
+            <div class="card-body">
+                <p><strong>{% translate "Start Date" %}:</strong> {{ settings.next_drawing_date|date:"Y-m-d H:i" }}</p>
+                <p><strong>{% translate "Ticket Price" %}:</strong> {{ settings.ticket_price }} ISK</p>
+                <p><strong>{% translate "Has Ticket?" %}:</strong> 
+                    {% if has_ticket %}
+                        <span class="badge bg-success">{% translate "Yes" %}</span>
+                    {% else %}
+                        <span class="badge bg-danger">{% translate "No" %}</span>
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    {% else %}
+        <div class="alert alert-warning">
+            {% translate "No lottery available at the moment." %}
+        </div>
+    {% endif %}
+</div>
+{% endblock details %}

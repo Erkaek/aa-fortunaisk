@@ -2,13 +2,21 @@
 from django.contrib.auth.decorators import login_required, permission_required
 from django.shortcuts import render
 
-from .models import Ticket, Winner
+from .models import FortunaISKSettings, Ticket, Winner
 
 
 @login_required
-def tickets_list(request):
+def lottery(request):
+    # Récupérer les informations de la loterie actuelle
+    settings = FortunaISKSettings.objects.first()
     tickets = Ticket.objects.filter(character__character_ownership__user=request.user)
-    return render(request, "fortunaisk/tickets_list.html", {"tickets": tickets})
+
+    context = {
+        "settings": settings,
+        "has_ticket": tickets.exists(),
+    }
+
+    return render(request, "fortunaisk/lottery.html", context)
 
 
 @login_required
