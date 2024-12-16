@@ -11,7 +11,7 @@ class FortunaiskMenu(MenuItemHook):
             self,
             "Fortunaisk",
             "fas fa-ticket-alt fa-fw",
-            "fortunaisk:lottery",  # Mise à jour ici
+            "fortunaisk:lottery",
             navactive=["fortunaisk:lottery"],
         )
 
