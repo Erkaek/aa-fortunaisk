@@ -11,7 +11,7 @@ from django.http import JsonResponse
 from django.shortcuts import render
 
 # Alliance Auth
-from allianceauth.eveonline.models import EveCharacter
+from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 
 from .models import FortunaISKSettings, TicketPurchase, Winner
 
@@ -24,19 +24,31 @@ def lottery(request):
             request, "fortunaisk/lottery.html", {"message": "No active lottery."}
         )
 
+    # Récupérer le nom de la corporation si le Payment Receiver est un ID de corporation
+    corporation_name = None
+    if settings.payment_receiver.isdigit():  # Vérifie si Payment Receiver est un ID
+        try:
+            corporation = EveCorporationInfo.objects.get(
+                corporation_id=int(settings.payment_receiver)
+            )
+            corporation_name = corporation.corporation_name
+        except EveCorporationInfo.DoesNotExist:
+            corporation_name = "Unknown Corporation"
+
     has_ticket = TicketPurchase.objects.filter(
         user=request.user,
         lottery_reference=settings.lottery_reference,
     ).exists()
 
     instructions = (
-        f"Send {settings.ticket_price} ISK to {settings.payment_receiver} with reference '{settings.lottery_reference}' to participate."
+        f"Send {settings.ticket_price} ISK to {corporation_name or settings.payment_receiver} with reference '{settings.lottery_reference}' to participate."
         if settings
         else "No lottery is currently available."
     )
 
     context = {
         "settings": settings,
+        "corporation_name": corporation_name,
         "has_ticket": has_ticket,
         "instructions": instructions,
     }
