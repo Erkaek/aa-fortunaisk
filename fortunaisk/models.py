@@ -1,3 +1,9 @@
+# Standard Library
+import json
+
+# Third Party
+from django_celery_beat.models import IntervalSchedule, PeriodicTask
+
 # Django
 from django.contrib.auth.models import User  # Modèle utilisateur standard de Django
 from django.db import models
@@ -68,6 +74,28 @@ class FortunaISKSettings(models.Model):
                 f"LOTTERY-{timezone.now().strftime('%Y%m%d%H%M%S')}"
             )
         super().save(*args, **kwargs)
+        self.setup_periodic_task()  # Appelle la configuration des tâches après sauvegarde
+
+    def setup_periodic_task(self):
+        """
+        Configure ou met à jour la tâche Celery Beat pour vérifier les achats de tickets.
+        """
+        # Crée ou récupère l'intervalle
+        schedule, created = IntervalSchedule.objects.get_or_create(
+            every=5,  # Fréquence : toutes les 5 minutes
+            period=IntervalSchedule.MINUTES,
+        )
+
+        # Crée ou met à jour la tâche périodique
+        PeriodicTask.objects.update_or_create(
+            name="Check Wallet Entries for FortunaISK Tickets",
+            defaults={
+                "task": "fortunaisk.tasks.process_ticket_purchases",  # Chemin vers la tâche Celery
+                "interval": schedule,
+                "args": json.dumps([]),  # Aucune donnée spécifique
+                "description": "Verifies wallet entries and updates ticket purchases.",
+            },
+        )
 
     def __str__(self):
         return "FortunaISK Settings"

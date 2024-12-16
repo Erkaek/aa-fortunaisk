@@ -1,5 +1,6 @@
 # Django
 from django.apps import AppConfig
+from django.db.models.signals import post_migrate  # Import manquant
 
 
 class FortunaiskConfig(AppConfig):
@@ -8,12 +9,13 @@ class FortunaiskConfig(AppConfig):
     verbose_name = "FortunaISK App"
 
     def ready(self):
-        # Alliance Auth
-        from allianceauth.services.hooks import get_hooks
+        from .models import TicketPurchase
 
-        # Vérifie que Celery est configuré
-        hooks = get_hooks("celery_hook")
-        if hooks:
-            from .tasks import process_ticket_purchases
+        def setup_periodic_tasks(sender, **kwargs):
+            TicketPurchase.objects.setup_periodic_task()
+            print("Celery Beat task 'Process Ticket Purchases' has been set up.")
 
-            self.logger.info("Celery task for ticket purchase loaded.")
+        post_migrate.connect(setup_periodic_tasks, sender=self)
+
+
+# Ligne vide à la fin du fichier
