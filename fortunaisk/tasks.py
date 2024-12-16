@@ -21,13 +21,13 @@ def process_wallet_tickets():
         return "No active FortunaISK settings found."
 
     journal_entries = CorporationWalletJournalEntry.objects.filter(
-        second_party_name=settings.payment_receiver,
+        second_party_name_id=settings.payment_receiver,
         amount=settings.ticket_price,
     )
 
     for entry in journal_entries:
         try:
-            character = EveCharacter.objects.get(character_id=entry.first_party_id)
+            character = EveCharacter.objects.get(character_id=entry.first_party_name_id)
             user = User.objects.filter(
                 character_ownerships__character=character
             ).first()
