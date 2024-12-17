@@ -11,12 +11,3 @@ class FortunaiskConfig(AppConfig):
         from .tasks import setup_tasks
 
         post_migrate.connect(setup_tasks, sender=self)
-
-
-def setup_tasks(sender, **kwargs):
-    from .models import Lottery
-
-    active_lotteries = Lottery.objects.filter(is_active=True)
-    for lottery in active_lotteries:
-        # Initialiser les tâches périodiques si nécessaire
-        pass

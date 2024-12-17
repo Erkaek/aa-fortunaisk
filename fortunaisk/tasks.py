@@ -8,6 +8,7 @@ from corptools.models import CorporationWalletJournalEntry
 # Django
 from django.contrib.auth.models import User
 from django.db import IntegrityError, transaction
+from django.db.models.signals import post_migrate
 
 # Alliance Auth
 from allianceauth.eveonline.models import EveCharacter
@@ -108,3 +109,11 @@ def process_wallet_tickets(lottery_id):
         f"Processed {processed_entries} wallet entries for lottery '{lottery.lottery_reference}'."
     )
     return f"{processed_entries} entrées traitées pour la loterie '{lottery.lottery_reference}'."
+
+
+def setup_tasks(sender, **kwargs):
+    active_lotteries = Lottery.objects.filter(is_active=True)
+    for lottery in active_lotteries:
+        # Initialize periodic tasks if necessary
+        logger.info(f"Setting up tasks for lottery: {lottery.lottery_reference}")
+        pass
