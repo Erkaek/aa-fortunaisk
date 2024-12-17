@@ -106,3 +106,15 @@ class TicketPurchase(models.Model):
     @property
     def date(self):
         return self.purchase_date
+
+
+class Winner(models.Model):
+    character = models.ForeignKey(EveCharacter, on_delete=models.CASCADE)
+    ticket = models.OneToOneField(TicketPurchase, on_delete=models.CASCADE)
+    won_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["-won_at"]
+
+    def __str__(self):
+        return f"Winner: {self.character.character_name}"
