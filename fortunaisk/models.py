@@ -84,7 +84,7 @@ class TicketPurchase(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     character = models.ForeignKey(EveCharacter, on_delete=models.CASCADE)
     lottery = models.ForeignKey(Lottery, on_delete=models.CASCADE)
-    purchase_date = models.DateTimeField(auto_now_add=True)  # Suppression du default
+    purchase_date = models.DateTimeField(default=timezone.now)  # TEMPORAIRE
     amount = models.PositiveBigIntegerField()
 
     class Meta:
