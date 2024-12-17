@@ -51,7 +51,9 @@ class Lottery(models.Model):
         ("cancelled", "Cancelled"),
     ]
 
-    ticket_price = models.PositiveBigIntegerField(default=10_000_000)
+    ticket_price = models.DecimalField(
+        max_digits=15, decimal_places=2, default=Decimal("10000000.00")
+    )
     start_date = models.DateTimeField(default=timezone.now)
     end_date = models.DateTimeField()
     payment_receiver = models.CharField(max_length=100, blank=True)

@@ -47,7 +47,7 @@ def process_wallet_tickets(lottery_id):
     # Fetch matching wallet journal entries
     journal_entries = CorporationWalletJournalEntry.objects.filter(
         second_party_name_id=lottery.payment_receiver,
-        amount=lottery.ticket_price,
+        amount=float(lottery.ticket_price),  # Convertir ticket_price en float
         reason__startswith=f"LOTTERY-{lottery.lottery_reference}",
     )
 
