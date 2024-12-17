@@ -100,3 +100,12 @@ def process_wallet_tickets(self, lottery_id):
         f"Processed {processed_entries} ticket entries for lottery '{lottery.lottery_reference}'."
     )
     return f"{processed_entries} entries processed for lottery '{lottery.lottery_reference}'."
+
+
+def setup_tasks(sender, **kwargs):
+    """
+    Configure tasks for active lotteries. Placeholder function.
+    """
+    active_lotteries = Lottery.objects.filter(status="active")
+    for lottery in active_lotteries:
+        logger.info(f"Setting up tasks for lottery: {lottery.lottery_reference}")
