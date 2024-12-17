@@ -36,13 +36,3 @@ class TicketPurchaseAdmin(admin.ModelAdmin):
 class WinnerAdmin(admin.ModelAdmin):
     list_display = ("character", "ticket", "won_at")
 
-
-@admin.register(FortunaISKSettings)
-class FortunaISKSettingsAdmin(admin.ModelAdmin):
-    list_display = (
-        "ticket_price",
-        "next_drawing_date",
-        "payment_receiver",
-        "lottery_reference",
-    )
-    search_fields = ("lottery_reference", "payment_receiver")

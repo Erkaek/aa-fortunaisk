@@ -107,13 +107,3 @@ class Winner(models.Model):
 
     class Meta:
         ordering = ["-won_at"]
-
-
-class FortunaISKSettings(models.Model):
-    ticket_price = models.PositiveBigIntegerField(default=10_000_000)
-    next_drawing_date = models.DateTimeField(default=timezone.now)
-    payment_receiver = models.CharField(max_length=100, default="Default Receiver")
-    lottery_reference = models.CharField(max_length=50, unique=True, blank=True)
-
-    class Meta:
-        ordering = ["-next_drawing_date"]
