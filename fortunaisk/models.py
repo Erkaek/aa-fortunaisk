@@ -16,6 +16,19 @@ from allianceauth.eveonline.models import EveCharacter
 logger = logging.getLogger(__name__)
 
 
+def get_default_lottery():
+    """Return the ID of the default lottery, creating one if it doesn't exist."""
+    lottery, _ = Lottery.objects.get_or_create(
+        lottery_reference="DEFAULT-LOTTERY",
+        defaults={
+            "ticket_price": 10_000_000,
+            "start_date": timezone.now(),
+            "end_date": timezone.now() + timezone.timedelta(days=30),
+        },
+    )
+    return lottery.id
+
+
 class Lottery(models.Model):
     STATUS_CHOICES = [
         ("active", "Active"),
@@ -73,8 +86,7 @@ class TicketPurchase(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     character = models.ForeignKey(EveCharacter, on_delete=models.CASCADE)
     lottery = models.ForeignKey(Lottery, on_delete=models.CASCADE)
-
-    purchase_date = models.DateTimeField(auto_now_add=True)
+    purchase_date = models.DateTimeField(default=timezone.now, auto_now_add=True)
     amount = models.PositiveBigIntegerField()
 
     class Meta:
@@ -107,16 +119,3 @@ class FortunaISKSettings(models.Model):
 
     class Meta:
         ordering = ["-next_drawing_date"]
-
-
-def get_default_lottery():
-    """Return the ID of the default lottery, creating one if it doesn't exist."""
-    lottery, _ = Lottery.objects.get_or_create(
-        lottery_reference="DEFAULT-LOTTERY",
-        defaults={
-            "ticket_price": 10_000_000,
-            "start_date": timezone.now(),
-            "end_date": timezone.now() + timezone.timedelta(days=30),
-        },
-    )
-    return lottery.id
