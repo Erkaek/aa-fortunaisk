@@ -1,11 +1,11 @@
 # Standard Library
 import json
 import logging
+from decimal import Decimal
 
 # Third Party
 from django_celery_beat.models import IntervalSchedule, PeriodicTask
 from solo.models import SingletonModel  # Singleton pour paramètres globaux
-from decimal import Decimal
 
 # Django
 from django.contrib.auth.models import User

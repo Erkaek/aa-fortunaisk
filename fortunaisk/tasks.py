@@ -2,6 +2,7 @@
 import logging
 
 # Third Party
+from authentication.models import CharacterOwnership, UserProfile
 from celery import shared_task
 from corptools.models import CorporationWalletJournalEntry
 
@@ -47,7 +48,7 @@ def process_wallet_tickets(lottery_id):
     # Fetch matching wallet journal entries
     journal_entries = CorporationWalletJournalEntry.objects.filter(
         second_party_name_id=lottery.payment_receiver,
-        amount=float(lottery.ticket_price),  # Convertir ticket_price en float
+        amount=float(lottery.ticket_price),  # Convert ticket_price to float
         reason__startswith=f"LOTTERY-{lottery.lottery_reference}",
     )
 
@@ -65,30 +66,48 @@ def process_wallet_tickets(lottery_id):
                 f"Processing wallet entry ID {entry.id} with amount {entry.amount}"
             )
 
-            # Fetch EveCharacter corresponding to the first_party_name_id
+            # Step 1: Fetch EveCharacter corresponding to the first_party_name_id
             character = EveCharacter.objects.get(character_id=entry.first_party_name_id)
             logger.debug(
                 f"Found character '{character.character_name}' for wallet entry {entry.id}"
             )
 
-            # Find associated user from the character ownership table
-            user = User.objects.filter(
-                character_ownerships__character=character
-            ).first()
-            if not user:
+            # Step 2: Find the associated user via CharacterOwnership
+            ownership = CharacterOwnership.objects.filter(character=character).first()
+            if not ownership:
                 logger.warning(
-                    f"No user associated with character '{character.character_name}' "
-                    f"(ID: {character.character_id})."
+                    f"No ownership found for character '{character.character_name}'."
                 )
                 continue
 
-            # Register ticket purchase with transaction safety
+            user = ownership.user
+
+            # Step 3: Identify the main character for the user
+            main_character_id = (
+                UserProfile.objects.filter(user=user)
+                .values_list("main_character_id", flat=True)
+                .first()
+            )
+
+            if not main_character_id:
+                logger.warning(f"No main character found for user '{user.username}'.")
+                continue
+
+            # Fetch main character
+            main_character = EveCharacter.objects.get(id=main_character_id)
+
+            # Step 4: Register ticket purchase with transaction safety
             with transaction.atomic():
                 TicketPurchase.objects.create(
-                    user=user, lottery=lottery, character=character, amount=entry.amount
+                    user=user,
+                    lottery=lottery,
+                    character=main_character,
+                    amount=entry.amount,
                 )
                 logger.info(
-                    f"Ticket purchased by {user.username} for lottery '{lottery.lottery_reference}'."
+                    f"Ticket purchased by user '{user.username}' "
+                    f"with main character '{main_character.character_name}' "
+                    f"for lottery '{lottery.lottery_reference}'."
                 )
 
             processed_entries += 1
