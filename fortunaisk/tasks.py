@@ -27,15 +27,17 @@ def process_wallet_tickets(self):
     """
     Process ticket purchases for all active lotteries by checking wallet entries.
     """
+    logger.info("Started process_wallet_tickets task.")  # Log d'entrée
+
     # Étape 1 : Récupérer toutes les loteries actives
     active_lotteries = Lottery.objects.filter(status="active")
-
     if not active_lotteries.exists():
         logger.info("No active lotteries found.")
         return "No active lotteries to process."
 
-    logger.info("Processing wallet entries for active lotteries.")
-
+    logger.info(
+        f"Processing wallet entries for {active_lotteries.count()} active lotteries."
+    )
     processed_entries = 0
 
     # Étape 2 : Traiter les paiements pour chaque loterie active
