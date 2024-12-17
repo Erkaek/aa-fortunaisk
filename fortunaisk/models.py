@@ -9,6 +9,9 @@ from django_celery_beat.models import IntervalSchedule, PeriodicTask
 from django.contrib.auth.models import User
 from django.db import models
 from django.utils import timezone
+from django.contrib import messages
+from django.shortcuts import render
+from django.db.models import Count
 
 # Alliance Auth
 from allianceauth.eveonline.models import EveCharacter
@@ -78,9 +81,7 @@ class TicketPurchase(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(
-                fields=["user", "lottery"], name="unique_user_lottery"
-            )
+            models.UniqueConstraint(fields=['user', 'lottery'], name='unique_user_lottery')
         ]
         ordering = ["-purchase_date"]
 
