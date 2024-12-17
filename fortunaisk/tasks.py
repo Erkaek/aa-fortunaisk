@@ -8,13 +8,12 @@ from corptools.models import CorporationWalletJournalEntry
 # Django
 from django.contrib.auth.models import User
 from django.db import IntegrityError, transaction
-from django.contrib import admin
 
 # Alliance Auth
 from allianceauth.eveonline.models import EveCharacter
 
 # Local imports
-from .models import Lottery, TicketPurchase, FortunaISKSettings, Winner
+from .models import Lottery, TicketPurchase
 
 logger = logging.getLogger(__name__)
 
@@ -54,22 +53,22 @@ def process_wallet_tickets(lottery_id):
 
     if not journal_entries.exists():
         logger.info(
-            f"Aucune entrée de portefeuille correspondante pour la loterie '{lottery.lottery_reference}'."
+            f"No matching wallet entries for lottery '{lottery.lottery_reference}'."
         )
-        return f"Aucune entrée correspondante trouvée pour la loterie '{lottery.lottery_reference}'."
+        return f"No matching entries found for lottery '{lottery.lottery_reference}'."
 
     # Process each matching entry
-    processed_entries = 0  # Initialisation correcte
+    processed_entries = 0
     for entry in journal_entries:
         try:
             logger.debug(
-                f"Traitement de l'entrée de portefeuille ID {entry.id} pour un montant de {entry.amount}"
+                f"Processing wallet entry ID {entry.id} with amount {entry.amount}"
             )
 
             # Fetch EveCharacter corresponding to the first_party_name_id
             character = EveCharacter.objects.get(character_id=entry.first_party_name_id)
             logger.debug(
-                f"Personnage trouvé '{character.character_name}' pour l'entrée de portefeuille {entry.id}"
+                f"Found character '{character.character_name}' for wallet entry {entry.id}"
             )
 
             # Find associated user from the character ownership table
@@ -78,80 +77,42 @@ def process_wallet_tickets(lottery_id):
             ).first()
             if not user:
                 logger.warning(
-                    f"Aucun utilisateur associé au personnage '{character.character_name}' (ID: {character.character_id})."
+                    f"No user associated with character '{character.character_name}' "
+                    f"(ID: {character.character_id})."
                 )
                 continue
 
             # Register ticket purchase with transaction safety
             with transaction.atomic():
-                TicketPurchase.objects.create(user=user, lottery=lottery)
+                TicketPurchase.objects.create(
+                    user=user, lottery=lottery, character=character, amount=entry.amount
+                )
                 logger.info(
-                    f"Ticket acheté par {user.username} pour la loterie '{lottery.lottery_reference}'."
+                    f"Ticket purchased by {user.username} for lottery '{lottery.lottery_reference}'."
                 )
 
             processed_entries += 1
 
         except EveCharacter.DoesNotExist:
-            logger.error(
-                f"Personnage avec ID {entry.first_party_name_id} n'existe pas."
-            )
-        except IntegrityError:
-            logger.error(
-                f"Erreur d'intégrité lors de la création du ticket pour l'utilisateur {user.username}."
-            )
+            logger.error(f"Character with ID {entry.first_party_name_id} does not exist.")
+        except IntegrityError as e:
+            logger.error(f"Integrity error: {e}")
         except Exception as e:
             logger.exception(
-                f"Erreur inattendue lors du traitement de l'entrée {entry.id}: {e}"
+                f"Unexpected error while processing wallet entry {entry.id}: {e}"
             )
             continue
 
     logger.info(
         f"Processed {processed_entries} wallet entries for lottery '{lottery.lottery_reference}'."
     )
-    return f"{processed_entries} entrées traitées pour la loterie '{lottery.lottery_reference}'."
+    return f"{processed_entries} entries processed for lottery '{lottery.lottery_reference}'."
 
 
 def setup_tasks(sender, **kwargs):
+    """
+    Placeholder for task setup, e.g., initializing periodic tasks for active lotteries.
+    """
     active_lotteries = Lottery.objects.filter(status="active")
     for lottery in active_lotteries:
-        # Initialize periodic tasks if necessary
         logger.info(f"Setting up tasks for lottery: {lottery.lottery_reference}")
-        pass
-
-
-@admin.register(Lottery)
-class LotteryAdmin(admin.ModelAdmin):
-    list_display = ("lottery_reference", "is_active", "winner", "next_drawing_date")
-    search_fields = ("lottery_reference", "winner_name")
-    actions = ["mark_completed", "mark_cancelled"]
-
-    def save_model(self, request, obj, form, change):
-        if not obj.lottery_reference:
-            start_date_str = obj.start_date.strftime("%Y%m%d") if obj.start_date else "00000000"
-            end_date_str = obj.end_date.strftime("%Y%m%d") if obj.end_date else "99999999"
-            obj.lottery_reference = f"LOTTERY-{start_date_str}-{end_date_str}"
-        super().save_model(request, obj, form, change)
-
-    @admin.action(description="Mark selected lotteries as completed")
-    def mark_completed(self, request, queryset):
-        queryset.update(status="completed")
-        self.message_user(request, "Selected lotteries marked as completed.")
-
-    @admin.action(description="Mark selected lotteries as cancelled")
-    def mark_cancelled(self, request, queryset):
-        queryset.update(status="cancelled", winner_name=None)
-        self.message_user(request, "Selected lotteries marked as cancelled.")
-
-@admin.register(TicketPurchase)
-class TicketPurchaseAdmin(admin.ModelAdmin):
-    list_display = ("user", "character", "lottery", "amount", "date")
-    search_fields = ("user__username", "character__name")
-
-@admin.register(Winner)
-class WinnerAdmin(admin.ModelAdmin):
-    list_display = ("character", "ticket", "won_at")
-
-@admin.register(FortunaISKSettings)
-class FortunaISKSettingsAdmin(admin.ModelAdmin):
-    list_display = ("ticket_price", "next_drawing_date", "payment_receiver", "lottery_reference")
-    search_fields = ("lottery_reference", "payment_receiver")
