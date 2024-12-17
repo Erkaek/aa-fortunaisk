@@ -10,8 +10,7 @@ from django.contrib.auth.models import User
 from django.db import IntegrityError, transaction
 
 # Alliance Auth
-from allianceauth.authentication.models import UserProfile
-from allianceauth.eveonline.models import CharacterOwnership, EveCharacter
+from allianceauth.eveonline.models import CharacterOwnership, EveCharacter, UserProfile
 
 # Local imports
 from .models import Lottery, TicketPurchase
