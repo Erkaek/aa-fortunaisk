@@ -1,5 +1,8 @@
+# Django
 from django import forms
+
 from .models import LotterySettings
+
 
 class LotterySettingsForm(forms.ModelForm):
     class Meta:

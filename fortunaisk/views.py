@@ -11,13 +11,13 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.models import User
 from django.db.models import Count
-from django.shortcuts import render, redirect  # Import de redirect
+from django.shortcuts import get_object_or_404, redirect, render  # Import de redirect
 
 # Alliance Auth
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 
-from .models import Lottery, TicketPurchase, Winner, LotterySettings
 from .forms import LotterySettingsForm
+from .models import Lottery, LotterySettings, TicketPurchase, Winner
 
 logger = logging.getLogger(__name__)
 

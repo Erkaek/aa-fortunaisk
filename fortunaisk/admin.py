@@ -1,7 +1,10 @@
+# Third Party
+from solo.admin import SingletonModelAdmin
+
 # Django
 from django.contrib import admin
 
-from .models import Lottery, TicketPurchase, Winner, LotterySettings
+from .models import Lottery, LotterySettings, TicketPurchase, Winner
 
 
 @admin.register(Lottery)

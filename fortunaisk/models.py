@@ -32,7 +32,10 @@ def get_default_lottery():
 
 class LotterySettings(SingletonModel):
     """Global settings for the lottery app."""
-    default_payment_receiver = models.CharField(max_length=100, default="Default Receiver")
+
+    default_payment_receiver = models.CharField(
+        max_length=100, default="Default Receiver"
+    )
 
     def __str__(self):
         return "Lottery Settings"
