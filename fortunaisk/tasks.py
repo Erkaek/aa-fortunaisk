@@ -103,8 +103,6 @@ def setup_tasks(sender, **kwargs):
     Configure periodic tasks for all active lotteries. This ensures that wallet entries
     are periodically processed to check for ticket purchases.
     """
-    active_lotteries = Lottery.objects.filter(status="active")
-
     # Créer ou mettre à jour une seule tâche périodique pour toutes les loteries actives
     task_name = "process_wallet_tickets_for_all_lotteries"
 
@@ -112,7 +110,7 @@ def setup_tasks(sender, **kwargs):
     existing_task = PeriodicTask.objects.filter(name=task_name).first()
 
     if existing_task:
-        logger.info(f"Periodic task already exists for all active lotteries.")
+        logger.info("Periodic task already exists for all active lotteries.")
     else:
         # Si aucune tâche existante, créer la tâche périodique
         schedule, _ = IntervalSchedule.objects.get_or_create(
@@ -130,4 +128,4 @@ def setup_tasks(sender, **kwargs):
                 ),  # Aucune donnée spécifique ici, car la tâche gère toutes les loteries
             },
         )
-        logger.info(f"Periodic task set for processing all active lotteries.")
+        logger.info("Periodic task set for processing all active lotteries.")

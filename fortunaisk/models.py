@@ -1,7 +1,6 @@
 # Standard Library
 import json
 import logging
-from decimal import Decimal
 
 # Third Party
 from django_celery_beat.models import IntervalSchedule, PeriodicTask
@@ -14,8 +13,6 @@ from django.utils import timezone
 
 # Alliance Auth
 from allianceauth.eveonline.models import EveCharacter
-
-from .models import Lottery
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +97,7 @@ class Lottery(models.Model):
                 ),  # Pas besoin de passer un ID spécifique, la tâche gère toutes les loteries actives
             },
         )
-        logger.info(f"Periodic task set for all active lotteries.")
+        logger.info("Periodic task set for all active lotteries.")
 
     def delete(self, *args, **kwargs):
         task_name = "process_wallet_tickets_for_all_lotteries"
