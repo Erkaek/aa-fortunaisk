@@ -25,13 +25,6 @@ class FortunaiskMenu(MenuItemHook):
         return ""
 
 
-class FortunaISKMenu:
-    def render(self, user: User):
-        if user.has_perm("fortunaisk.view_lottery"):
-            return '<li><a href="/fortunaisk/lottery/">Loterie</a></li>'
-        return ""
-
-
 @hooks.register("menu_item_hook")
 def register_menu():
     return FortunaiskMenu()
