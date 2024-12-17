@@ -11,12 +11,13 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.models import User
 from django.db.models import Count
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import render, redirect  # Import de redirect
 
 # Alliance Auth
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 
-from .models import Lottery, TicketPurchase, Winner
+from .models import Lottery, TicketPurchase, Winner, LotterySettings
+from .forms import LotterySettingsForm
 
 logger = logging.getLogger(__name__)
 
@@ -176,6 +177,16 @@ def admin_dashboard(request):
     )
     past_lotteries = Lottery.objects.filter(status="completed").order_by("-end_date")
 
+    # Configuration Payment Receiver
+    settings, _ = LotterySettings.objects.get_or_create()
+    if request.method == "POST":
+        form = LotterySettingsForm(request.POST, instance=settings)
+        if form.is_valid():
+            form.save()
+            return redirect("fortunaisk:admin_dashboard")
+    else:
+        form = LotterySettingsForm(instance=settings)
+
     return render(
         request,
         "fortunaisk/admin.html",
@@ -183,6 +194,7 @@ def admin_dashboard(request):
             "current_lottery": current_lottery,
             "total_tickets": total_tickets,
             "past_lotteries": past_lotteries,
+            "form": form,
         },
     )
 

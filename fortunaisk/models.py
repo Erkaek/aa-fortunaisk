@@ -4,6 +4,7 @@ import logging
 
 # Third Party
 from django_celery_beat.models import IntervalSchedule, PeriodicTask
+from solo.models import SingletonModel  # Singleton pour paramètres globaux
 
 # Django
 from django.contrib.auth.models import User
@@ -29,6 +30,17 @@ def get_default_lottery():
     return lottery.id
 
 
+class LotterySettings(SingletonModel):
+    """Global settings for the lottery app."""
+    default_payment_receiver = models.CharField(max_length=100, default="Default Receiver")
+
+    def __str__(self):
+        return "Lottery Settings"
+
+    class Meta:
+        verbose_name = "Lottery Settings"
+
+
 class Lottery(models.Model):
     STATUS_CHOICES = [
         ("active", "Active"),
@@ -39,7 +51,7 @@ class Lottery(models.Model):
     ticket_price = models.PositiveBigIntegerField(default=10_000_000)
     start_date = models.DateTimeField(default=timezone.now)
     end_date = models.DateTimeField()
-    payment_receiver = models.CharField(max_length=100, default="Default Receiver")
+    payment_receiver = models.CharField(max_length=100, blank=True)
     lottery_reference = models.CharField(max_length=50, unique=True, blank=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="active")
     winner_name = models.CharField(max_length=100, null=True, blank=True)
@@ -60,8 +72,14 @@ class Lottery(models.Model):
         return self.end_date
 
     def save(self, *args, **kwargs):
+        if not self.payment_receiver:
+            # Appliquer la valeur par défaut depuis LotterySettings
+            settings = LotterySettings.objects.get_or_create()[0]
+            self.payment_receiver = settings.default_payment_receiver
+
         if not self.lottery_reference:
             self.lottery_reference = f"LOTTERY-{self.start_date.strftime('%Y%m%d')}-{self.end_date.strftime('%Y%m%d')}"
+
         super().save(*args, **kwargs)
         self.setup_periodic_task()
 
@@ -84,7 +102,7 @@ class TicketPurchase(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     character = models.ForeignKey(EveCharacter, on_delete=models.CASCADE)
     lottery = models.ForeignKey(Lottery, on_delete=models.CASCADE)
-    purchase_date = models.DateTimeField(default=timezone.now)  # TEMPORAIRE
+    purchase_date = models.DateTimeField(default=timezone.now)
     amount = models.PositiveBigIntegerField()
 
     class Meta:

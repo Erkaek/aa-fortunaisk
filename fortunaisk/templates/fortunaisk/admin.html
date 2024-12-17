@@ -6,68 +6,72 @@
 {% endblock page_title %}
 
 {% block details %}
-<div class="mb-4">
-    <h2 class="mb-4 text-center">{% trans "Admin Dashboard" %}</h2>
-    <div class="card shadow">
-        <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">{% trans "Administration" %}</h5>
-        </div>
-        <div class="card-body text-center">
-            <p>{% trans "Manage tickets and winners for Fortunaisk." %}</p>
-            <div class="d-grid gap-2 d-md-flex justify-content-center">
-                <a href="{% url 'fortunaisk:lottery' %}" class="btn btn-primary">{% trans "View Lottery" %}</a>
-                <a href="{% url 'fortunaisk:winner_list' %}" class="btn btn-secondary">{% trans "View Winners" %}</a>
-                <a href="{% url 'fortunaisk:ticket_purchases' %}" class="btn btn-info">{% trans "View Ticket Purchases" %}</a>
-                <a href="{% url 'fortunaisk:select_winner' %}" class="btn btn-warning">{% trans "Select Winner" %}</a>
-                <a href="{% url 'fortunaisk:lottery_history' %}" class="btn btn-success">{% trans "Lottery History" %}</a>
-            </div>
-        </div>
-    </div>
-</div>
+<div class="container mt-4">
+    <h2 class="text-center mb-4">{% trans "Admin Dashboard" %}</h2>
 
-{% if past_lotteries %}
-<div class="card shadow mb-4">
-    <div class="card-header bg-secondary text-white">
-        <h5 class="mb-0">{% trans "Lottery History" %}</h5>
+    <!-- Formulaire pour le Payment Receiver -->
+    <div class="card shadow mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">{% trans "Configure Default Payment Receiver" %}</h5>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <button type="submit" class="btn btn-success">{% trans "Save" %}</button>
+            </form>
+        </div>
     </div>
-    <div class="card-body">
-        <table class="table table-striped table-hover">
-            <thead class="table-dark">
-                <tr>
-                    <th>{% trans "Lottery Reference" %}</th>
-                    <th>{% trans "Ticket Price" %}</th>
-                    <th>{% trans "Start Date" %}</th>
-                    <th>{% trans "End Date" %}</th>
-                    <th>{% trans "Status" %}</th>
-                    <th>{% trans "Actions" %}</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for lottery in past_lotteries %}
-                <tr>
-                    <td>{{ lottery.lottery_reference }}</td>
-                    <td>{{ lottery.ticket_price }} ISK</td>
-                    <td>{{ lottery.start_date|date:"Y-m-d H:i" }}</td>
-                    <td>{{ lottery.end_date|date:"Y-m-d H:i" }}</td>
-                    <td>{{ lottery.get_status_display }}</td>
-                    <td>
-                        <a href="{% url 'admin:fortunaisk_winner_changelist' %}?lottery__id__exact={{ lottery.id }}" class="btn btn-sm btn-primary">
-                            {% trans "View Winners" %}
-                        </a>
-                        <a href="{% url 'admin:fortunaisk_ticketpurchase_changelist' %}?lottery__id__exact={{ lottery.id }}" class="btn btn-sm btn-secondary">
-                            {% trans "View Purchases" %}
-                        </a>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+
+    <!-- Section des Loteries -->
+    {% if current_lottery %}
+    <div class="card shadow mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">{% trans "Current Lottery" %}</h5>
+        </div>
+        <div class="card-body">
+            <p><strong>{% trans "Reference:" %}</strong> {{ current_lottery.lottery_reference }}</p>
+            <p><strong>{% trans "Status:" %}</strong> {{ current_lottery.get_status_display }}</p>
+            <p><strong>{% trans "Total Tickets:" %}</strong> {{ total_tickets }}</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Historique des Loteries -->
+    <div class="card shadow">
+        <div class="card-header bg-secondary text-white">
+            <h5 class="mb-0">{% trans "Lottery History" %}</h5>
+        </div>
+        <div class="card-body">
+            {% if past_lotteries %}
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>{% trans "Lottery Reference" %}</th>
+                        <th>{% trans "Ticket Price" %}</th>
+                        <th>{% trans "Start Date" %}</th>
+                        <th>{% trans "End Date" %}</th>
+                        <th>{% trans "Status" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lottery in past_lotteries %}
+                    <tr>
+                        <td>{{ lottery.lottery_reference }}</td>
+                        <td>{{ lottery.ticket_price }} ISK</td>
+                        <td>{{ lottery.start_date|date:"Y-m-d H:i" }}</td>
+                        <td>{{ lottery.end_date|date:"Y-m-d H:i" }}</td>
+                        <td>{{ lottery.get_status_display }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="alert alert-warning text-center">
+                {% trans "No past lotteries found." %}
+            </div>
+            {% endif %}
+        </div>
     </div>
 </div>
-{% else %}
-<div class="alert alert-warning text-center">
-    <i class="fas fa-exclamation-circle alert-icon"></i>
-    {% trans "No past lotteries found." %}
-</div>
-{% endif %}
-{% endblock details %}
+{% endblock %}
