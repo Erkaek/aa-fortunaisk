@@ -1,6 +1,9 @@
 # fortunaisk/templatetags/fortunaisk_tags.py
 
+# Django
 from django import template
+
+# fortunaisk
 from fortunaisk.models import Winner
 
 register = template.Library()

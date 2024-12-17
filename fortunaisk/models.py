@@ -162,3 +162,66 @@ class Winner(models.Model):
 
     def __str__(self):
         return f"Winner: {self.character.character_name} - {self.ticket.lottery.lottery_reference}"
+
+
+class FortunaISKSettings(models.Model):
+    ticket_price = models.PositiveBigIntegerField(
+        default=10000000, help_text="Price of a single ticket (in ISK)."
+    )
+    next_drawing_date = models.DateTimeField(
+        default=timezone.now, help_text="Date and time of the next lottery drawing."
+    )
+    payment_receiver = models.CharField(
+        max_length=100,
+        default="Default Receiver",
+        help_text="Name of the character or corporation to which the ISK should be sent.",
+    )
+    lottery_reference = models.CharField(
+        max_length=50,
+        unique=True,
+        blank=True,
+        help_text="Unique reference for the lottery settings.",
+    )
+
+    class Meta:
+        verbose_name = "FortunaISK Setting"
+        verbose_name_plural = "FortunaISK Settings"
+        ordering = ["-next_drawing_date"]
+
+    def save(self, *args, **kwargs):
+        if not self.lottery_reference:
+            self.lottery_reference = (
+                f"SETTING-{timezone.now().strftime('%Y%m%d%H%M%S')}"
+            )
+        super().save(*args, **kwargs)
+        self.setup_periodic_task()
+
+    def setup_periodic_task(self):
+        """
+        Configure or update the Celery Beat task to check ticket purchases.
+        """
+        schedule, created = IntervalSchedule.objects.get_or_create(
+            every=5,  # Frequency: every 5 minutes
+            period=IntervalSchedule.MINUTES,
+        )
+
+        task_name = f"check_wallet_entries_fortunaisk_{self.lottery_reference}"
+
+        periodic_task, created = PeriodicTask.objects.update_or_create(
+            name=task_name,
+            defaults={
+                "task": "fortunaisk.tasks.process_wallet_tickets",
+                "interval": schedule,
+                "args": json.dumps([self.id]),
+                "description": f"Check wallet entries for lottery {self.lottery_reference}.",
+                "enabled": True,
+            },
+        )
+
+        if created:
+            logger.info(f"Periodic task '{task_name}' created.")
+        else:
+            logger.info(f"Periodic task '{task_name}' updated.")
+
+    def __str__(self):
+        return f"Settings {self.lottery_reference}"
