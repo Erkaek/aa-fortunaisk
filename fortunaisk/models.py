@@ -49,25 +49,28 @@ class Lottery(models.Model):
 
     @property
     def is_active(self):
+        """Check if the lottery is active."""
         return self.status == "active"
 
     @property
     def winner(self):
+        """Return the winner's name if available."""
         return self.winner_name or "No Winner"
 
     @property
     def next_drawing_date(self):
+        """Return the end date for the lottery."""
         return self.end_date
 
     def save(self, *args, **kwargs):
+        """Generate lottery reference and create periodic task if needed."""
         if not self.lottery_reference:
-            self.lottery_reference = (
-                f"LOTTERY-{timezone.now().strftime('%Y%m%d%H%M%S')}"
-            )
+            self.lottery_reference = f"LOTTERY-{self.start_date.strftime('%Y%m%d')}-{self.end_date.strftime('%Y%m%d')}"
         super().save(*args, **kwargs)
         self.setup_periodic_task()
 
     def setup_periodic_task(self):
+        """Create or update the periodic task for checking wallet entries."""
         task_name = f"check_wallet_entries_{self.lottery_reference}"
         schedule, _ = IntervalSchedule.objects.get_or_create(
             every=5, period=IntervalSchedule.MINUTES
@@ -86,7 +89,9 @@ class TicketPurchase(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     character = models.ForeignKey(EveCharacter, on_delete=models.CASCADE)
     lottery = models.ForeignKey(Lottery, on_delete=models.CASCADE)
-    purchase_date = models.DateTimeField(default=timezone.now, auto_now_add=True)
+    purchase_date = models.DateTimeField(
+        auto_now_add=True
+    )  # Removed default=timezone.now
     amount = models.PositiveBigIntegerField()
 
     class Meta:
@@ -99,6 +104,7 @@ class TicketPurchase(models.Model):
 
     @property
     def date(self):
+        """Return the purchase date."""
         return self.purchase_date
 
 
