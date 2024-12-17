@@ -40,7 +40,7 @@ class Lottery(models.Model):
     ]
 
     ticket_price = models.DecimalField(
-        max_digits=15, decimal_places=2, default=10000000.00
+        max_digits=15, decimal_places=2, default=Decimal("10000000.00")
     )
     start_date = models.DateTimeField(default=timezone.now)
     end_date = models.DateTimeField()
@@ -77,7 +77,8 @@ class Lottery(models.Model):
         self.setup_periodic_task()
 
     def setup_periodic_task(self):
-        task_name = "check_wallet_entries"  # Un nom générique pour la tâche
+        # Créer une tâche périodique avec un nom spécifique à la loterie
+        task_name = f"process_wallet_tickets_{self.lottery_reference}"
         schedule, _ = IntervalSchedule.objects.get_or_create(
             every=5, period=IntervalSchedule.MINUTES
         )
@@ -86,12 +87,13 @@ class Lottery(models.Model):
             defaults={
                 "task": "fortunaisk.tasks.process_wallet_tickets",  # Tâche générique
                 "interval": schedule,
-                "args": json.dumps([]),  # Liste vide pour cette tâche générique
+                "args": json.dumps([self.id]),  # Passer l'ID de la loterie en argument
             },
         )
 
     def delete(self, *args, **kwargs):
-        task_name = f"process_wallet_tickets_{self.id}"
+        # Supprimer la tâche périodique associée à la loterie
+        task_name = f"process_wallet_tickets_{self.lottery_reference}"
         PeriodicTask.objects.filter(name=task_name).delete()
         super().delete(*args, **kwargs)
 
