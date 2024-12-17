@@ -18,19 +18,6 @@ from allianceauth.eveonline.models import EveCharacter
 logger = logging.getLogger(__name__)
 
 
-def get_default_lottery():
-    """Return the ID of the default lottery, creating one if it doesn't exist."""
-    lottery, _ = Lottery.objects.get_or_create(
-        lottery_reference="DEFAULT-LOTTERY",
-        defaults={
-            "ticket_price": 10_000_000,
-            "start_date": timezone.now(),
-            "end_date": timezone.now() + timezone.timedelta(days=30),
-        },
-    )
-    return lottery.id
-
-
 class LotterySettings(SingletonModel):
     """Global settings for the lottery app."""
 
@@ -69,17 +56,8 @@ class Lottery(models.Model):
     def is_active(self):
         return self.status == "active"
 
-    @property
-    def winner(self):
-        return self.winner_name or "No Winner"
-
-    @property
-    def next_drawing_date(self):
-        return self.end_date
-
     def save(self, *args, **kwargs):
         if not self.payment_receiver:
-            # Appliquer la valeur par défaut depuis LotterySettings
             settings = LotterySettings.objects.get_or_create()[0]
             self.payment_receiver = settings.default_payment_receiver
 
@@ -90,7 +68,7 @@ class Lottery(models.Model):
         self.setup_periodic_task()
 
     def setup_periodic_task(self):
-        task_name = f"check_wallet_entries_{self.lottery_reference}"
+        task_name = f"process_wallet_tickets_{self.id}"
         schedule, _ = IntervalSchedule.objects.get_or_create(
             every=5, period=IntervalSchedule.MINUTES
         )
@@ -100,8 +78,14 @@ class Lottery(models.Model):
                 "task": "fortunaisk.tasks.process_wallet_tickets",
                 "interval": schedule,
                 "args": json.dumps([self.id]),
+                "enabled": self.is_active,
             },
         )
+
+    def delete(self, *args, **kwargs):
+        task_name = f"process_wallet_tickets_{self.id}"
+        PeriodicTask.objects.filter(name=task_name).delete()
+        super().delete(*args, **kwargs)
 
 
 class TicketPurchase(models.Model):
@@ -122,12 +106,3 @@ class TicketPurchase(models.Model):
     @property
     def date(self):
         return self.purchase_date
-
-
-class Winner(models.Model):
-    character = models.ForeignKey(EveCharacter, on_delete=models.CASCADE)
-    ticket = models.OneToOneField(TicketPurchase, on_delete=models.CASCADE)
-    won_at = models.DateTimeField(default=timezone.now)
-
-    class Meta:
-        ordering = ["-won_at"]
