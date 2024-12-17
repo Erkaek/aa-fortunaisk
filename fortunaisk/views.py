@@ -66,19 +66,45 @@ def ticket_purchases(request):
             {"purchases": [], "message": "No active lottery."},
         )
 
+    # Filtrage des entrées de journal
     journal_entries = CorporationWalletJournalEntry.objects.filter(
-        second_party_name=settings.payment_receiver,
+        second_party_name_id=settings.payment_receiver,
         amount=settings.ticket_price,
+        reason=f"LOTTERY-{settings.lottery_reference}",  # Assurez-vous que le format correspond
     )
+
+    if not journal_entries.exists():
+        print("No journal entries found matching the criteria.")
+        return render(
+            request,
+            "fortunaisk/ticket_purchases.html",
+            {"purchases": [], "message": "No matching journal entries found."},
+        )
 
     purchases = []
     for entry in journal_entries:
         try:
-            character = EveCharacter.objects.get(character_id=entry.first_party_id)
+            # Log l'entrée du journal traitée
+            print(
+                f"Processing journal entry {entry.id} for character ID {entry.first_party_name_id}"
+            )
+
+            # Recherche du personnage
+            character = EveCharacter.objects.get(character_id=entry.first_party_name_id)
+
+            # Log du personnage trouvé
+            print(
+                f"Found character: {character.character_name} (ID: {character.character_id})"
+            )
+
+            # Recherche de l'utilisateur associé au personnage
             user = User.objects.filter(
                 character_ownerships__character=character
             ).first()
+
             if user:
+                print(f"Found user: {user.username}")
+                # Créer ou obtenir un ticket
                 purchase, created = TicketPurchase.objects.get_or_create(
                     user=user,
                     character=character,
@@ -86,8 +112,18 @@ def ticket_purchases(request):
                     defaults={"amount": entry.amount, "date": entry.date},
                 )
                 purchases.append(purchase)
+
+                # Log si le ticket a été créé ou existait déjà
+                if created:
+                    print(f"Created TicketPurchase for user: {user.username}")
+                else:
+                    print(f"TicketPurchase already exists for user: {user.username}")
+            else:
+                print(f"No user found for character: {character.character_name}")
+
         except EveCharacter.DoesNotExist:
-            continue
+            print(f"Character with ID {entry.first_party_name_id} not found.")
+            continue  # Passer à l'entrée suivante si le personnage n'existe pas
 
     return render(
         request,
