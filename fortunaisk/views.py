@@ -2,7 +2,6 @@
 
 # Standard Library
 import logging
-from random import choice
 
 # Third Party
 from corptools.models import CorporationWalletJournalEntry
@@ -12,9 +11,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.models import User  # Standard Django user model
 from django.db.models import Count
-from django.http import JsonResponse
 from django.shortcuts import render
-from django.utils import timezone
 
 # Alliance Auth
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo

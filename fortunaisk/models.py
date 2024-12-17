@@ -9,9 +9,6 @@ from django_celery_beat.models import IntervalSchedule, PeriodicTask
 from django.contrib.auth.models import User
 from django.db import models
 from django.utils import timezone
-from django.contrib import messages
-from django.shortcuts import render
-from django.db.models import Count
 
 # Alliance Auth
 from allianceauth.eveonline.models import EveCharacter
@@ -32,9 +29,22 @@ class Lottery(models.Model):
     payment_receiver = models.CharField(max_length=100, default="Default Receiver")
     lottery_reference = models.CharField(max_length=50, unique=True, blank=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="active")
+    winner_name = models.CharField(max_length=100, null=True, blank=True)
 
     class Meta:
         ordering = ["-start_date"]
+
+    @property
+    def is_active(self):
+        return self.status == "active"
+
+    @property
+    def winner(self):
+        return self.winner_name or "No Winner"
+
+    @property
+    def next_drawing_date(self):
+        return self.end_date
 
     def save(self, *args, **kwargs):
         if not self.lottery_reference:
@@ -59,18 +69,6 @@ class Lottery(models.Model):
         )
 
 
-def get_default_lottery():
-    lottery, _ = Lottery.objects.get_or_create(
-        lottery_reference="DEFAULT-LOTTERY",
-        defaults={
-            "ticket_price": 10_000_000,
-            "start_date": timezone.now(),
-            "end_date": timezone.now() + timezone.timedelta(days=30),
-        },
-    )
-    return lottery.id
-
-
 class TicketPurchase(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     character = models.ForeignKey(EveCharacter, on_delete=models.CASCADE)
@@ -81,9 +79,15 @@ class TicketPurchase(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=['user', 'lottery'], name='unique_user_lottery')
+            models.UniqueConstraint(
+                fields=["user", "lottery"], name="unique_user_lottery"
+            )
         ]
         ordering = ["-purchase_date"]
+
+    @property
+    def date(self):
+        return self.purchase_date
 
 
 class Winner(models.Model):

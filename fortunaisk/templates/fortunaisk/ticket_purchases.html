@@ -1,51 +1,51 @@
-{% extends "base.html" %}
-{% load i18n %}
+    {% extends "base.html" %}
+    {% load i18n %}
 
-{% block page_title %}
+    {% block page_title %}
     {% trans "Ticket Purchases" %}
-{% endblock page_title %}
+    {% endblock page_title %}
 
-{% block details %}
-<div class="container text-center mt-4">
+    {% block details %}
+    <div class="container text-center mt-4">
     <h2 class="mb-4">{% trans "Ticket Purchases" %}</h2>
 
     {% if purchases %}
-        <div class="table-responsive">
-            <table class="table table-bordered">
-                <thead class="thead-dark">
-                    <tr>
-                        <th>{% trans "User" %}</th>
-                        <th>{% trans "Character" %}</th>
-                        <th>{% trans "Amount" %}</th>
-                        <th>{% trans "Date" %}</th>
-                        <th>{% trans "Lottery Reference" %}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for purchase in purchases %}
-                        <tr>
-                            <td>{{ purchase.user.username }}</td>
-                            <td>{{ purchase.character.character_name }}</td>
-                            <td>{{ purchase.amount }} ISK</td>
-                            <td>{{ purchase.date|date:"Y-m-d H:i" }}</td>
-                            <td>{{ purchase.lottery.lottery_reference }}</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+    <div class="table-responsive">
+    <table class="table table-bordered">
+    <thead class="thead-dark">
+    <tr>
+    <th>{% trans "User" %}</th>
+    <th>{% trans "Character" %}</th>
+    <th>{% trans "Amount" %}</th>
+    <th>{% trans "Date" %}</th>
+    <th>{% trans "Lottery Reference" %}</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for purchase in purchases %}
+    <tr>
+    <td>{{ purchase.user.username }}</td>
+    <td>{{ purchase.character.character_name }}</td>
+    <td>{{ purchase.amount }} ISK</td>
+    <td>{{ purchase.date|date:"Y-m-d H:i" }}</td>
+    <td>{{ purchase.lottery.lottery_reference }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+    </table>
+    </div>
     {% else %}
-        <div class="alert alert-warning">
-            {% trans "No ticket purchases found for the current lottery." %}
-        </div>
+    <div class="alert alert-warning">
+    {% trans "No ticket purchases found for the current lottery." %}
+    </div>
     {% endif %}
-</div>
-{% endblock details %}
+    </div>
+    {% endblock details %}
 
-{% block content %}
-  <h1>{% trans "Loterie Actuelle" %}</h1>
-  {% if message %}
+    {% block content %}
+    <h1>{% trans "Loterie Actuelle" %}</h1>
+    {% if message %}
     <p>{{ message }}</p>
-  {% endif %}
-  <!-- Contenu supplémentaire -->
-{% endblock %}
+    {% endif %}
+    <!-- Contenu supplémentaire -->
+    {% endblock %}

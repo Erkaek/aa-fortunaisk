@@ -8,7 +8,6 @@ from corptools.models import CorporationWalletJournalEntry
 # Django
 from django.contrib.auth.models import User
 from django.db import IntegrityError, transaction
-from django.db.models.signals import post_migrate
 
 # Alliance Auth
 from allianceauth.eveonline.models import EveCharacter

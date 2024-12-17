@@ -1,52 +1,52 @@
-{% extends "base.html" %}
-{% load i18n %}
+    {% extends "base.html" %}
+    {% load i18n %}
 
-{% block page_title %}
+    {% block page_title %}
     {% trans "Lottery" %}
-{% endblock page_title %}
+    {% endblock page_title %}
 
-{% block details %}
-<div class="container text-center mt-4">
+    {% block details %}
+    <div class="container text-center mt-4">
     <h2 class="mb-4">{% trans "Current Lottery" %}</h2>
 
     {% if current_lottery %}
-        <div class="card text-center mb-4">
-            <div class="card-header bg-primary text-white">
-                {% trans "Lottery Details" %}
-            </div>
-            <div class="card-body">
-                <p><strong>{% trans "Start Date" %} :</strong> {{ current_lottery.start_date|date:"Y-m-d H:i" }}</p>
-                <p><strong>{% trans "End Date" %} :</strong> {{ current_lottery.end_date|date:"Y-m-d H:i" }}</p>
-                <p><strong>{% trans "Ticket Price" %} :</strong> {{ current_lottery.ticket_price }} ISK</p>
-                <p><strong>{% trans "Payment Receiver" %} :</strong>
-                    {{ corporation_name|default:current_lottery.payment_receiver }}
-                </p>
-                <p><strong>{% trans "Lottery Reference" %} :</strong> {{ current_lottery.lottery_reference }}</p>
-                <p><strong>{% trans "Has a Ticket?" %} :</strong>
-                    {% if has_ticket %}
-                        <span class="badge bg-success">{% trans "Yes" %}</span>
-                    {% else %}
-                        <span class="badge bg-danger">{% trans "No" %}</span>
-                    {% endif %}
-                </p>
-                <p class="mt-3">
-                    <strong>{% trans "Participation Instructions" %} :</strong><br>
-                    {{ instructions }}
-                </p>
-            </div>
-        </div>
+    <div class="card text-center mb-4">
+    <div class="card-header bg-primary text-white">
+    {% trans "Lottery Details" %}
+    </div>
+    <div class="card-body">
+    <p><strong>{% trans "Start Date" %} :</strong> {{ current_lottery.start_date|date:"Y-m-d H:i" }}</p>
+    <p><strong>{% trans "End Date" %} :</strong> {{ current_lottery.end_date|date:"Y-m-d H:i" }}</p>
+    <p><strong>{% trans "Ticket Price" %} :</strong> {{ current_lottery.ticket_price }} ISK</p>
+    <p><strong>{% trans "Payment Receiver" %} :</strong>
+    {{ corporation_name|default:current_lottery.payment_receiver }}
+    </p>
+    <p><strong>{% trans "Lottery Reference" %} :</strong> {{ current_lottery.lottery_reference }}</p>
+    <p><strong>{% trans "Has a Ticket?" %} :</strong>
+    {% if has_ticket %}
+    <span class="badge bg-success">{% trans "Yes" %}</span>
     {% else %}
-        <div class="alert alert-warning">
-            {% trans "No lottery is currently available." %}
-        </div>
+    <span class="badge bg-danger">{% trans "No" %}</span>
     {% endif %}
-</div>
-{% endblock details %}
+    </p>
+    <p class="mt-3">
+    <strong>{% trans "Participation Instructions" %} :</strong><br>
+    {{ instructions }}
+    </p>
+    </div>
+    </div>
+    {% else %}
+    <div class="alert alert-warning">
+    {% trans "No lottery is currently available." %}
+    </div>
+    {% endif %}
+    </div>
+    {% endblock details %}
 
-{% block content %}
-  <h1>{% trans "Loterie Actuelle" %}</h1>
-  {% if message %}
+    {% block content %}
+    <h1>{% trans "Loterie Actuelle" %}</h1>
+    {% if message %}
     <p>{{ message }}</p>
-  {% endif %}
-  <!-- Contenu supplémentaire -->
-{% endblock %}
+    {% endif %}
+    <!-- Contenu supplémentaire -->
+    {% endblock %}

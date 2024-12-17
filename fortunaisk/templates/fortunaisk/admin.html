@@ -1,79 +1,79 @@
-{% extends "base.html" %}
+    {% extends "base.html" %}
 
-{% load i18n %}
+    {% load i18n %}
 
-{% block page_title %}
+    {% block page_title %}
     {% trans "Admin Dashboard" %}
-{% endblock page_title %}
+    {% endblock page_title %}
 
-{% block details %}
+    {% block details %}
     <h2 class="mb-4">{% trans "Admin Dashboard" %}</h2>
     <div class="card border-primary mb-4">
-        <div class="card-header bg-primary text-white">
-            {% trans "Administration" %}
-        </div>
-        <div class="card-body">
-            <p>{% trans "Manage tickets and winners for Fortunaisk." %}</p>
-            <a href="{% url 'fortunaisk:lottery' %}" class="btn btn-primary mb-2">
-                {% trans "View Lottery" %}
-            </a>
-            <a href="{% url 'fortunaisk:winner_list' %}" class="btn btn-secondary mb-2">
-                {% trans "View Winners" %}
-            </a>
-            <a href="{% url 'fortunaisk:ticket_purchases' %}" class="btn btn-info mb-2">
-                {% trans "View Ticket Purchases" %}
-            </a>
-            <a href="{% url 'fortunaisk:select_winner' %}" class="btn btn-warning mb-2">
-                {% trans "Select Winner" %}
-            </a>
-            <a href="{% url 'fortunaisk:lottery_history' %}" class="btn btn-success mb-2">
-                {% trans "Lottery History" %}
-            </a>
-        </div>
+    <div class="card-header bg-primary text-white">
+    {% trans "Administration" %}
+    </div>
+    <div class="card-body">
+    <p>{% trans "Manage tickets and winners for Fortunaisk." %}</p>
+    <a href="{% url 'fortunaisk:lottery' %}" class="btn btn-primary mb-2">
+    {% trans "View Lottery" %}
+    </a>
+    <a href="{% url 'fortunaisk:winner_list' %}" class="btn btn-secondary mb-2">
+    {% trans "View Winners" %}
+    </a>
+    <a href="{% url 'fortunaisk:ticket_purchases' %}" class="btn btn-info mb-2">
+    {% trans "View Ticket Purchases" %}
+    </a>
+    <a href="{% url 'fortunaisk:select_winner' %}" class="btn btn-warning mb-2">
+    {% trans "Select Winner" %}
+    </a>
+    <a href="{% url 'fortunaisk:lottery_history' %}" class="btn btn-success mb-2">
+    {% trans "Lottery History" %}
+    </a>
+    </div>
     </div>
 
     {% if past_lotteries %}
-        <h3 class="mb-3">{% trans "Lottery History" %}</h3>
-        <div class="table-responsive">
-            <table class="table table-bordered table-striped">
-                <thead class="thead-dark">
-                    <tr>
-                        <th>{% trans "Lottery Reference" %}</th>
-                        <th>{% trans "Ticket Price" %}</th>
-                        <th>{% trans "Start Date" %}</th>
-                        <th>{% trans "End Date" %}</th>
-                        <th>{% trans "Status" %}</th>
-                        <th>{% trans "Actions" %}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for lottery in past_lotteries %}
-                        <tr>
-                            <td>{{ lottery.lottery_reference }}</td>
-                            <td>{{ lottery.ticket_price }} ISK</td>
-                            <td>{{ lottery.start_date|date:"Y-m-d H:i" }}</td>
-                            <td>{{ lottery.end_date|date:"Y-m-d H:i" }}</td>
-                            <td>{{ lottery.get_status_display }}</td>
-                            <td>
-                                <a href="{% url 'admin:fortunaisk_winner_changelist' %}?lottery__id__exact={{ lottery.id }}" class="btn btn-sm btn-primary">
-                                    {% trans "View Winners" %}
-                                </a>
-                                <a href="{% url 'admin:fortunaisk_ticketpurchase_changelist' %}?lottery__id__exact={{ lottery.id }}" class="btn btn-sm btn-secondary">
-                                    {% trans "View Purchases" %}
-                                </a>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+    <h3 class="mb-3">{% trans "Lottery History" %}</h3>
+    <div class="table-responsive">
+    <table class="table table-bordered table-striped">
+    <thead class="thead-dark">
+    <tr>
+    <th>{% trans "Lottery Reference" %}</th>
+    <th>{% trans "Ticket Price" %}</th>
+    <th>{% trans "Start Date" %}</th>
+    <th>{% trans "End Date" %}</th>
+    <th>{% trans "Status" %}</th>
+    <th>{% trans "Actions" %}</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for lottery in past_lotteries %}
+    <tr>
+    <td>{{ lottery.lottery_reference }}</td>
+    <td>{{ lottery.ticket_price }} ISK</td>
+    <td>{{ lottery.start_date|date:"Y-m-d H:i" }}</td>
+    <td>{{ lottery.end_date|date:"Y-m-d H:i" }}</td>
+    <td>{{ lottery.get_status_display }}</td>
+    <td>
+    <a href="{% url 'admin:fortunaisk_winner_changelist' %}?lottery__id__exact={{ lottery.id }}" class="btn btn-sm btn-primary">
+    {% trans "View Winners" %}
+    </a>
+    <a href="{% url 'admin:fortunaisk_ticketpurchase_changelist' %}?lottery__id__exact={{ lottery.id }}" class="btn btn-sm btn-secondary">
+    {% trans "View Purchases" %}
+    </a>
+    </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+    </table>
+    </div>
     {% endif %}
-{% endblock details %}
+    {% endblock details %}
 
-{% block content %}
-  <h1>{% trans "Loterie Actuelle" %}</h1>
-  {% if message %}
+    {% block content %}
+    <h1>{% trans "Loterie Actuelle" %}</h1>
+    {% if message %}
     <p>{{ message }}</p>
-  {% endif %}
-  <!-- Contenu supplémentaire -->
-{% endblock %}
+    {% endif %}
+    <!-- Contenu supplémentaire -->
+    {% endblock %}

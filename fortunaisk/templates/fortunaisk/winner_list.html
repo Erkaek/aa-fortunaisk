@@ -1,47 +1,47 @@
-{% extends "base.html" %}
-{% load i18n %}
+    {% extends "base.html" %}
+    {% load i18n %}
 
-{% block page_title %}
+    {% block page_title %}
     {% trans "Winners" %}
-{% endblock page_title %}
+    {% endblock page_title %}
 
-{% block details %}
-<div class="container text-center mt-4">
+    {% block details %}
+    <div class="container text-center mt-4">
     <h2 class="mb-4">{% trans "Winners" %}</h2>
 
     {% if winners %}
-        <div class="table-responsive">
-            <table class="table table-bordered table-striped">
-                <thead class="thead-dark">
-                    <tr>
-                        <th>{% trans "Character" %}</th>
-                        <th>{% trans "Ticket Reference" %}</th>
-                        <th>{% trans "Win Date" %}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for winner in winners %}
-                        <tr>
-                            <td>{{ winner.character.character_name }}</td>
-                            <td>{{ winner.ticket.lottery.lottery_reference }}</td>
-                            <td>{{ winner.won_at|date:"Y-m-d H:i" }}</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+    <div class="table-responsive">
+    <table class="table table-bordered table-striped">
+    <thead class="thead-dark">
+    <tr>
+    <th>{% trans "Character" %}</th>
+    <th>{% trans "Ticket Reference" %}</th>
+    <th>{% trans "Win Date" %}</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for winner in winners %}
+    <tr>
+    <td>{{ winner.character.character_name }}</td>
+    <td>{{ winner.ticket.lottery.lottery_reference }}</td>
+    <td>{{ winner.won_at|date:"Y-m-d H:i" }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+    </table>
+    </div>
     {% else %}
-        <div class="alert alert-warning">
-            <strong>{% trans "No winners at the moment." %}</strong>
-        </div>
+    <div class="alert alert-warning">
+    <strong>{% trans "No winners at the moment." %}</strong>
+    </div>
     {% endif %}
-</div>
-{% endblock details %}
+    </div>
+    {% endblock details %}
 
-{% block content %}
-  <h1>{% trans "Loterie Actuelle" %}</h1>
-  {% if message %}
+    {% block content %}
+    <h1>{% trans "Loterie Actuelle" %}</h1>
+    {% if message %}
     <p>{{ message }}</p>
-  {% endif %}
-  <!-- Contenu supplémentaire -->
-{% endblock %}
+    {% endif %}
+    <!-- Contenu supplémentaire -->
+    {% endblock %}
