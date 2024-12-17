@@ -1,71 +1,54 @@
-    {% extends "fortunaisk/base.html" %}
-    {% load i18n %}
-    {% load fortunaisk_tags %}
+{% extends "fortunaisk/base.html" %}
+{% load i18n %}
+{% load fortunaisk_tags %}
 
-    {% block page_title %}
+{% block page_title %}
     {% trans "Lottery History" %}
-    {% endblock page_title %}
+{% endblock page_title %}
 
-    {% block details %}
-    <div class="container text-center mt-4">
-    <h2 class="mb-4">{% trans "Lottery History" %}</h2>
-
+{% block details %}
+<div class="mt-4">
+    <h2 class="text-center mb-4">{% trans "Lottery History" %}</h2>
     {% if past_lotteries %}
     <div class="table-responsive">
-    <table class="table table-bordered table-striped">
-    <thead class="thead-dark">
-    <tr>
-    <th>{% trans "Lottery Reference" %}</th>
-    <th>{% trans "Ticket Price" %}</th>
-    <th>{% trans "Start Date" %}</th>
-    <th>{% trans "End Date" %}</th>
-    <th>{% trans "Status" %}</th>
-    <th>{% trans "Winner" %}</th>
-    <th>{% trans "Actions" %}</th>
-    </tr>
-    </thead>
-    <tbody>
-    {% for lottery in past_lotteries %}
-    <tr>
-    <td>{{ lottery.lottery_reference }}</td>
-    <td>{{ lottery.ticket_price }} ISK</td>
-    <td>{{ lottery.start_date|date:"Y-m-d H:i" }}</td>
-    <td>{{ lottery.end_date|date:"Y-m-d H:i" }}</td>
-    <td>{{ lottery.get_status_display }}</td>
-    <td>
-    {% with winner=winners|get_winner:lottery.id %}
-    {% if winner %}
-    {{ winner.character.character_name }} ({{ winner.ticket.user.username }})
-    {% else %}
-    {% trans "No winner" %}
-    {% endif %}
-    {% endwith %}
-    </td>
-    <td>
-    <a href="{% url 'admin:fortunaisk_winner_changelist' %}?lottery__id__exact={{ lottery.id }}" class="btn btn-sm btn-primary">
-    {% trans "View Winners" %}
-    </a>
-    <a href="{% url 'admin:fortunaisk_ticketpurchase_changelist' %}?lottery__id__exact={{ lottery.id }}" class="btn btn-sm btn-secondary">
-    {% trans "View Purchases" %}
-    </a>
-    </td>
-    </tr>
-    {% endfor %}
-    </tbody>
-    </table>
+        <table class="table table-bordered table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th>{% trans "Lottery Reference" %}</th>
+                    <th>{% trans "Ticket Price" %}</th>
+                    <th>{% trans "Start Date" %}</th>
+                    <th>{% trans "End Date" %}</th>
+                    <th>{% trans "Status" %}</th>
+                    <th>{% trans "Winner" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lottery in past_lotteries %}
+                <tr>
+                    <td>{{ lottery.lottery_reference }}</td>
+                    <td>{{ lottery.ticket_price }} ISK</td>
+                    <td>{{ lottery.start_date|date:"Y-m-d H:i" }}</td>
+                    <td>{{ lottery.end_date|date:"Y-m-d H:i" }}</td>
+                    <td>{{ lottery.get_status_display }}</td>
+                    <td>
+                        {% with winner=winners|get_winner:lottery.id %}
+                            {% if winner %}
+                                {{ winner.character.character_name }}
+                            {% else %}
+                                <span class="text-muted">{% trans "No winner" %}</span>
+                            {% endif %}
+                        {% endwith %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
     {% else %}
-    <div class="alert alert-warning">
-    {% trans "No past lotteries found." %}
+    <div class="alert alert-warning text-center">
+        <i class="fas fa-exclamation-circle alert-icon"></i>
+        {% trans "No past lotteries found." %}
     </div>
     {% endif %}
-    </div>
-    {% endblock details %}
-
-    {% block content %}
-    <h1>{% trans "Loterie Actuelle" %}</h1>
-    {% if message %}
-    <p>{{ message }}</p>
-    {% endif %}
-    <!-- Contenu supplémentaire -->
-    {% endblock %}
+</div>
+{% endblock details %}

@@ -94,7 +94,9 @@ def process_wallet_tickets(lottery_id):
             processed_entries += 1
 
         except EveCharacter.DoesNotExist:
-            logger.error(f"Character with ID {entry.first_party_name_id} does not exist.")
+            logger.error(
+                f"Character with ID {entry.first_party_name_id} does not exist."
+            )
         except IntegrityError as e:
             logger.error(f"Integrity error: {e}")
         except Exception as e:

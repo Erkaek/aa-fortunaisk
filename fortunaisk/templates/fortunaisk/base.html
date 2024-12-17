@@ -1,68 +1,65 @@
-    {% extends "allianceauth/base-bs5.html" %}
+{% extends "allianceauth/base-bs5.html" %}
+{% load static %}
+{% load i18n %}
+{% load navactive %}
 
-    {% load static %}
-    {% load i18n %}
-    {% load navactive %}
-
-    {% block page_title %}
+{% block page_title %}
     {% trans "Fortunaisk" %}
-    {% endblock page_title %}
+{% endblock page_title %}
 
-    {% block head %}
-    {{ block.super }} <!-- Keep the base styles from AllianceAuth -->
+{% block head %}
+    {{ block.super }}
     <link rel="stylesheet" href="{% static 'fortunaisk/style.css' %}">
-    {% endblock head %}
+    <style>
+        /* Styles supplémentaires */
+        .table th {
+            background-color: #343a40;
+            color: white;
+        }
+        .alert-icon {
+            margin-right: 8px;
+        }
+    </style>
+{% endblock head %}
 
-    {% block header_nav_brand %}
+{% block header_nav_brand %}
     {% trans "Fortunaisk" %}
-    {% endblock header_nav_brand %}
+{% endblock header_nav_brand %}
 
-    {% block header_nav_collapse_left %}
-    <ul class="nav navbar-nav">
-    <li class="nav-item {% navactive request 'fortunaisk:lottery' %}">
-    <a class="nav-link" href="{% url 'fortunaisk:lottery' %}">
-    {% trans "Lottery" %}
-    </a>
-    </li>
-    <li class="nav-item {% navactive request 'fortunaisk:winner_list' %}">
-    <a class="nav-link" href="{% url 'fortunaisk:winner_list' %}">
-    {% trans "Winners" %}
-    </a>
-    </li>
-    <li class="nav-item {% navactive request 'fortunaisk:lottery_history' %}">
-    <a class="nav-link" href="{% url 'fortunaisk:lottery_history' %}">
-    {% trans "Lottery History" %}
-    </a>
-    </li>
-    {% if perms.fortunaisk.admin %}
-    <li class="nav-item {% navactive request 'fortunaisk:ticket_purchases' %}">
-    <a class="nav-link" href="{% url 'fortunaisk:ticket_purchases' %}">
-    {% trans "Ticket Purchases" %}
-    </a>
-    </li>
-    <li class="nav-item {% navactive request 'fortunaisk:admin_dashboard' %}">
-    <a class="nav-link" href="{% url 'fortunaisk:admin_dashboard' %}">
-    {% trans "Admin Dashboard" %}
-    </a>
-    </li>
-    {% endif %}
+{% block header_nav_collapse_left %}
+    <ul class="navbar-nav">
+        <li class="nav-item {% navactive request 'fortunaisk:lottery' %}">
+            <a class="nav-link" href="{% url 'fortunaisk:lottery' %}">{% trans "Lottery" %}</a>
+        </li>
+        <li class="nav-item {% navactive request 'fortunaisk:winner_list' %}">
+            <a class="nav-link" href="{% url 'fortunaisk:winner_list' %}">{% trans "Winners" %}</a>
+        </li>
+        <li class="nav-item {% navactive request 'fortunaisk:lottery_history' %}">
+            <a class="nav-link" href="{% url 'fortunaisk:lottery_history' %}">{% trans "Lottery History" %}</a>
+        </li>
+        {% if perms.fortunaisk.admin %}
+        <li class="nav-item {% navactive request 'fortunaisk:ticket_purchases' %}">
+            <a class="nav-link" href="{% url 'fortunaisk:ticket_purchases' %}">{% trans "Ticket Purchases" %}</a>
+        </li>
+        <li class="nav-item {% navactive request 'fortunaisk:admin_dashboard' %}">
+            <a class="nav-link" href="{% url 'fortunaisk:admin_dashboard' %}">{% trans "Admin Dashboard" %}</a>
+        </li>
+        {% endif %}
     </ul>
-    {% endblock header_nav_collapse_left %}
+{% endblock header_nav_collapse_left %}
 
-    {% block header_nav_collapse_right %}
-    <ul class="nav navbar-nav ml-auto">
-    {% if user.is_authenticated %}
-    <li class="nav-item {% navactive request 'fortunaisk:user_dashboard' %}">
-    <a class="nav-link" href="{% url 'fortunaisk:user_dashboard' %}">
-    {% trans "My Dashboard" %}
-    </a>
-    </li>
-    {% endif %}
+{% block header_nav_collapse_right %}
+    <ul class="navbar-nav ms-auto">
+        {% if user.is_authenticated %}
+        <li class="nav-item {% navactive request 'fortunaisk:user_dashboard' %}">
+            <a class="nav-link" href="{% url 'fortunaisk:user_dashboard' %}">{% trans "My Dashboard" %}</a>
+        </li>
+        {% endif %}
     </ul>
-    {% endblock header_nav_collapse_right %}
+{% endblock header_nav_collapse_right %}
 
-    {% block content %}
+{% block content %}
     <div class="container mt-4">
-    {% block details %}{% endblock %}
+        {% block details %}{% endblock %}
     </div>
-    {% endblock %}
+{% endblock %}
