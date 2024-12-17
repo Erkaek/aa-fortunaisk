@@ -111,7 +111,7 @@ def process_wallet_tickets(lottery_id):
 
 
 def setup_tasks(sender, **kwargs):
-    active_lotteries = Lottery.objects.filter(is_active=True)
+    active_lotteries = Lottery.objects.filter(status="active")
     for lottery in active_lotteries:
         # Initialize periodic tasks if necessary
         logger.info(f"Setting up tasks for lottery: {lottery.lottery_reference}")
