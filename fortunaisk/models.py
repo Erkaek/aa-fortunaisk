@@ -107,3 +107,15 @@ class FortunaISKSettings(models.Model):
 
     class Meta:
         ordering = ["-next_drawing_date"]
+
+def get_default_lottery():
+    """Return the ID of the default lottery, creating one if it doesn't exist."""
+    lottery, _ = Lottery.objects.get_or_create(
+        lottery_reference="DEFAULT-LOTTERY",
+        defaults={
+            "ticket_price": 10_000_000,
+            "start_date": timezone.now(),
+            "end_date": timezone.now() + timezone.timedelta(days=30),
+        },
+    )
+    return lottery.id
