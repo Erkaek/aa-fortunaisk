@@ -2,7 +2,6 @@
 import logging
 
 # Third Party
-from authentication.models import CharacterOwnership, UserProfile
 from celery import shared_task
 from corptools.models import CorporationWalletJournalEntry
 
@@ -11,7 +10,8 @@ from django.contrib.auth.models import User
 from django.db import IntegrityError, transaction
 
 # Alliance Auth
-from allianceauth.eveonline.models import EveCharacter
+from allianceauth.authentication.models import UserProfile
+from allianceauth.eveonline.models import CharacterOwnership, EveCharacter
 
 # Local imports
 from .models import Lottery, TicketPurchase
