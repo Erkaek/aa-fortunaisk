@@ -1,5 +1,3 @@
-# fortunaisk/admin.py
-
 # Django
 from django.contrib import admin
 from django.utils import timezone
@@ -18,40 +16,26 @@ class LotteryAdmin(admin.ModelAdmin):
     )
     list_filter = ("status", "start_date", "end_date")
     search_fields = ("lottery_reference", "payment_receiver")
-    ordering = ("-start_date",)
     readonly_fields = ("lottery_reference",)
-
-    actions = ["complete_lottery", "cancel_lottery"]
+    actions = ["mark_completed", "mark_cancelled"]
 
     @admin.action(description="Mark selected lotteries as completed")
-    def complete_lottery(self, request, queryset):
-        updated = queryset.update(status="completed", end_date=timezone.now())
-        self.message_user(request, f"{updated} lottery(ies) marked as completed.")
+    def mark_completed(self, request, queryset):
+        queryset.update(status="completed", end_date=timezone.now())
 
-    @admin.action(description="Cancel selected lotteries")
-    def cancel_lottery(self, request, queryset):
-        updated = queryset.update(status="cancelled", end_date=timezone.now())
-        self.message_user(request, f"{updated} lottery(ies) cancelled.")
+    @admin.action(description="Mark selected lotteries as cancelled")
+    def mark_cancelled(self, request, queryset):
+        queryset.update(status="cancelled", end_date=timezone.now())
 
 
 @admin.register(TicketPurchase)
 class TicketPurchaseAdmin(admin.ModelAdmin):
     list_display = ("user", "character", "lottery", "amount", "date")
-    list_filter = ("lottery", "date")
-    search_fields = (
-        "user__username",
-        "character__character_name",
-        "lottery__lottery_reference",
-    )
-    ordering = ("-date",)
-    list_select_related = ("user", "character", "lottery")
 
 
 @admin.register(Winner)
 class WinnerAdmin(admin.ModelAdmin):
     list_display = ("character", "ticket", "won_at")
-    ordering = ("-won_at",)
-    list_select_related = ("character", "ticket")
 
 
 @admin.register(FortunaISKSettings)
@@ -62,5 +46,3 @@ class FortunaISKSettingsAdmin(admin.ModelAdmin):
         "payment_receiver",
         "lottery_reference",
     )
-    readonly_fields = ("lottery_reference",)
-    ordering = ("-next_drawing_date",)
