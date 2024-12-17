@@ -91,6 +91,21 @@ class Lottery(models.Model):
             logger.info(f"Periodic task '{task_name}' updated.")
 
 
+# Fonction pour obtenir une Lottery par défaut
+def get_default_lottery():
+    default_lottery, created = Lottery.objects.get_or_create(
+        lottery_reference="DEFAULT-LOTTERY",
+        defaults={
+            "ticket_price": 10000000,
+            "start_date": timezone.now(),
+            "end_date": timezone.now() + timezone.timedelta(days=30),
+            "payment_receiver": "Default Receiver",
+            "status": "active",
+        },
+    )
+    return default_lottery.id
+
+
 class TicketPurchaseManager(models.Manager):
     def setup_periodic_task(self, lottery_id):
         """
@@ -125,7 +140,10 @@ class TicketPurchase(models.Model):
         EveCharacter, on_delete=models.CASCADE, related_name="ticket_purchases"
     )
     lottery = models.ForeignKey(
-        Lottery, on_delete=models.CASCADE, related_name="ticket_purchases"
+        Lottery,
+        on_delete=models.CASCADE,
+        related_name="ticket_purchases",
+        default=get_default_lottery,  # Ajout de la valeur par défaut
     )
     date = models.DateTimeField(default=timezone.now)
     amount = models.PositiveBigIntegerField()
