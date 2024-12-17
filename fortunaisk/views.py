@@ -228,3 +228,21 @@ def lottery_history(request):
         "fortunaisk/lottery_history.html",
         {"past_lotteries": past_lotteries, "winners": winners},
     )
+
+
+@login_required
+@permission_required("fortunaisk.view_ticketpurchase", raise_exception=True)
+def lottery_participants(request, lottery_id):
+    """
+    Vue pour afficher les participants d'une loterie.
+    """
+    lottery = get_object_or_404(Lottery, id=lottery_id)
+    participants = TicketPurchase.objects.filter(lottery=lottery).select_related(
+        "user", "character"
+    )
+
+    return render(
+        request,
+        "fortunaisk/lottery_participants.html",
+        {"lottery": lottery, "participants": participants},
+    )

@@ -1,0 +1,41 @@
+{% extends "fortunaisk/base.html" %}
+{% load i18n %}
+
+{% block page_title %}
+    {% trans "Lottery Participants" %}
+{% endblock page_title %}
+
+{% block details %}
+<div class="container mt-4">
+    <h2 class="text-center mb-4">{% trans "Participants for Lottery:" %} {{ lottery.lottery_reference }}</h2>
+
+    {% if participants %}
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>{% trans "User" %}</th>
+                    <th>{% trans "Character" %}</th>
+                    <th>{% trans "Amount" %}</th>
+                    <th>{% trans "Purchase Date" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for purchase in participants %}
+                <tr>
+                    <td>{{ purchase.user.username }}</td>
+                    <td>{{ purchase.character.character_name }}</td>
+                    <td>{{ purchase.amount }} ISK</td>
+                    <td>{{ purchase.purchase_date|date:"Y-m-d H:i" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="alert alert-info text-center">
+        {% trans "No participants for this lottery." %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
