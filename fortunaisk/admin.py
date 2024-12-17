@@ -10,7 +10,7 @@ class LotteryAdmin(admin.ModelAdmin):
         "lottery_reference",
         "is_active",
         "winner_name",
-        "next_drawing_date",
+        "get_next_drawing_date",  # Remplacer next_drawing_date par une méthode
     )
     search_fields = ("lottery_reference", "winner_name")
     actions = ["mark_completed", "mark_cancelled"]
@@ -32,6 +32,13 @@ class LotteryAdmin(admin.ModelAdmin):
         if not obj.lottery_reference:
             obj.lottery_reference = f"LOTTERY-{obj.start_date.strftime('%Y%m%d')}-{obj.end_date.strftime('%Y%m%d')}"
         super().save_model(request, obj, form, change)
+
+    @admin.display(description="Next Drawing Date")
+    def get_next_drawing_date(self, obj):
+        """Affiche la prochaine date de tirage"""
+        return obj.next_drawing_date.strftime(
+            "%Y-%m-%d %H:%M"
+        )  # Formate la date comme vous le souhaitez
 
     @admin.action(description="Marquer les loteries sélectionnées comme complétées")
     def mark_completed(self, request, queryset):
