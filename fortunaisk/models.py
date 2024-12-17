@@ -89,9 +89,7 @@ class TicketPurchase(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     character = models.ForeignKey(EveCharacter, on_delete=models.CASCADE)
     lottery = models.ForeignKey(Lottery, on_delete=models.CASCADE)
-    purchase_date = models.DateTimeField(
-        auto_now_add=True
-    )  # Removed default=timezone.now
+    purchase_date = models.DateTimeField(default=timezone.now, auto_now_add=True)
     amount = models.PositiveBigIntegerField()
 
     class Meta:
