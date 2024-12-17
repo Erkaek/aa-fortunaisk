@@ -8,12 +8,13 @@ from corptools.models import CorporationWalletJournalEntry
 # Django
 from django.contrib.auth.models import User
 from django.db import IntegrityError, transaction
+from django.contrib import admin
 
 # Alliance Auth
 from allianceauth.eveonline.models import EveCharacter
 
 # Local imports
-from .models import Lottery, TicketPurchase
+from .models import Lottery, TicketPurchase, FortunaISKSettings, Winner
 
 logger = logging.getLogger(__name__)
 
@@ -116,3 +117,41 @@ def setup_tasks(sender, **kwargs):
         # Initialize periodic tasks if necessary
         logger.info(f"Setting up tasks for lottery: {lottery.lottery_reference}")
         pass
+
+
+@admin.register(Lottery)
+class LotteryAdmin(admin.ModelAdmin):
+    list_display = ("lottery_reference", "is_active", "winner", "next_drawing_date")
+    search_fields = ("lottery_reference", "winner_name")
+    actions = ["mark_completed", "mark_cancelled"]
+
+    def save_model(self, request, obj, form, change):
+        if not obj.lottery_reference:
+            start_date_str = obj.start_date.strftime("%Y%m%d") if obj.start_date else "00000000"
+            end_date_str = obj.end_date.strftime("%Y%m%d") if obj.end_date else "99999999"
+            obj.lottery_reference = f"LOTTERY-{start_date_str}-{end_date_str}"
+        super().save_model(request, obj, form, change)
+
+    @admin.action(description="Mark selected lotteries as completed")
+    def mark_completed(self, request, queryset):
+        queryset.update(status="completed")
+        self.message_user(request, "Selected lotteries marked as completed.")
+
+    @admin.action(description="Mark selected lotteries as cancelled")
+    def mark_cancelled(self, request, queryset):
+        queryset.update(status="cancelled", winner_name=None)
+        self.message_user(request, "Selected lotteries marked as cancelled.")
+
+@admin.register(TicketPurchase)
+class TicketPurchaseAdmin(admin.ModelAdmin):
+    list_display = ("user", "character", "lottery", "amount", "date")
+    search_fields = ("user__username", "character__name")
+
+@admin.register(Winner)
+class WinnerAdmin(admin.ModelAdmin):
+    list_display = ("character", "ticket", "won_at")
+
+@admin.register(FortunaISKSettings)
+class FortunaISKSettingsAdmin(admin.ModelAdmin):
+    list_display = ("ticket_price", "next_drawing_date", "payment_receiver", "lottery_reference")
+    search_fields = ("lottery_reference", "payment_receiver")
