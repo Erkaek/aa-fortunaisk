@@ -1,6 +1,3 @@
-# Third Party
-from solo.admin import SingletonModelAdmin
-
 # Django
 from django.contrib import admin
 
@@ -17,15 +14,30 @@ class LotteryAdmin(admin.ModelAdmin):
     )
     search_fields = ("lottery_reference", "winner_name")
     actions = ["mark_completed", "mark_cancelled"]
-    readonly_fields = ("lottery_reference", "winner_name")
+    readonly_fields = ("lottery_reference", "winner_name")  # Champs en lecture seule
+
+    def get_changeform_initial_data(self, request):
+        """
+        Pré-remplir le champ 'payment_receiver' avec la valeur par défaut depuis LotterySettings.
+        """
+        settings = LotterySettings.objects.get_or_create()[
+            0
+        ]  # Récupère les paramètres globaux
+        return {"payment_receiver": settings.default_payment_receiver}
 
     def save_model(self, request, obj, form, change):
+        """
+        Automatiquement générer 'lottery_reference' lors de la sauvegarde.
+        """
         if not obj.lottery_reference:
             obj.lottery_reference = f"LOTTERY-{obj.start_date.strftime('%Y%m%d')}-{obj.end_date.strftime('%Y%m%d')}"
         super().save_model(request, obj, form, change)
 
-    @admin.action(description="Mark selected lotteries as completed")
+    @admin.action(description="Marquer les loteries sélectionnées comme complétées")
     def mark_completed(self, request, queryset):
+        """
+        Marquer les loteries comme 'completed' et définir le gagnant.
+        """
         for lottery in queryset.filter(status="active"):
             ticket = (
                 TicketPurchase.objects.filter(lottery=lottery).order_by("?").first()
@@ -44,8 +56,11 @@ class LotteryAdmin(admin.ModelAdmin):
                     level="warning",
                 )
 
-    @admin.action(description="Mark selected lotteries as cancelled")
+    @admin.action(description="Marquer les loteries sélectionnées comme annulées")
     def mark_cancelled(self, request, queryset):
+        """
+        Marquer les loteries comme 'cancelled' et retirer le gagnant.
+        """
         queryset.update(status="cancelled", winner_name=None)
         self.message_user(request, "Selected lotteries marked as cancelled.")
 
@@ -60,8 +75,3 @@ class TicketPurchaseAdmin(admin.ModelAdmin):
 class WinnerAdmin(admin.ModelAdmin):
     list_display = ("character", "ticket", "won_at")
     readonly_fields = ("ticket", "character", "won_at")
-
-
-@admin.register(LotterySettings)
-class LotterySettingsAdmin(SingletonModelAdmin):
-    list_display = ("default_payment_receiver",)
