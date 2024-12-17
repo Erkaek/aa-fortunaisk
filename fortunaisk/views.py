@@ -10,7 +10,7 @@ from corptools.models import CorporationWalletJournalEntry
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.models import User
-from django.db.models import Count, Prefetch
+from django.db.models import Count
 from django.shortcuts import get_object_or_404, render
 
 # Alliance Auth

@@ -1,7 +1,6 @@
 # fortunaisk/auth_hooks.py
 
 # Django
-from django.contrib.auth.models import User
 
 # Alliance Auth
 from allianceauth import hooks

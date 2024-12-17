@@ -1,7 +1,7 @@
 # Django
 from django.contrib import admin
 
-from .models import FortunaISKSettings, Lottery, TicketPurchase, Winner
+from .models import Lottery, TicketPurchase, Winner
 
 
 @admin.register(Lottery)
@@ -35,4 +35,3 @@ class TicketPurchaseAdmin(admin.ModelAdmin):
 @admin.register(Winner)
 class WinnerAdmin(admin.ModelAdmin):
     list_display = ("character", "ticket", "won_at")
-
