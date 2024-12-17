@@ -27,25 +27,23 @@ def process_wallet_tickets(self):
     """
     Process ticket purchases for all active lotteries by checking wallet entries.
     """
-    logger.info("Started process_wallet_tickets task.")  # Log d'entrée
-
     # Étape 1 : Récupérer toutes les loteries actives
     active_lotteries = Lottery.objects.filter(status="active")
+
     if not active_lotteries.exists():
         logger.info("No active lotteries found.")
         return "No active lotteries to process."
 
-    logger.info(
-        f"Processing wallet entries for {active_lotteries.count()} active lotteries."
-    )
+    logger.info("Processing wallet entries for active lotteries.")
+
     processed_entries = 0
 
     # Étape 2 : Traiter les paiements pour chaque loterie active
     for lottery in active_lotteries:
         payments = CorporationWalletJournalEntry.objects.filter(
             second_party_name_id=lottery.payment_receiver,
-            amount=float(lottery.ticket_price),
-            reason__startswith=f"LOTTERY-{lottery.lottery_reference}",
+            amount=lottery.ticket_price,  # Utiliser le prix exact du ticket
+            reason__contains=f"LOTTERY-{lottery.lottery_reference}",  # Recherche plus large sur le "reason"
         )
 
         # Étape 3 : Traiter chaque paiement pour la loterie
@@ -105,6 +103,8 @@ def setup_tasks(sender, **kwargs):
     Configure periodic tasks for all active lotteries. This ensures that wallet entries
     are periodically processed to check for ticket purchases.
     """
+    active_lotteries = Lottery.objects.filter(status="active")
+
     # Créer ou mettre à jour une seule tâche périodique pour toutes les loteries actives
     task_name = "process_wallet_tickets_for_all_lotteries"
 
@@ -112,7 +112,7 @@ def setup_tasks(sender, **kwargs):
     existing_task = PeriodicTask.objects.filter(name=task_name).first()
 
     if existing_task:
-        logger.info("Periodic task already exists for all active lotteries.")
+        logger.info(f"Periodic task already exists for all active lotteries.")
     else:
         # Si aucune tâche existante, créer la tâche périodique
         schedule, _ = IntervalSchedule.objects.get_or_create(
@@ -127,7 +127,7 @@ def setup_tasks(sender, **kwargs):
                 "interval": schedule,
                 "args": json.dumps(
                     []
-                ),  # Aucune donnée spécifique ici, car la tâche gère toutes les loteries
+                ),  # Pas besoin de passer un ID spécifique, la tâche gère toutes les loteries
             },
         )
-        logger.info("Periodic task set for processing all active lotteries.")
+        logger.info(f"Periodic task set for processing all active lotteries.")
