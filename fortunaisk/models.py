@@ -71,15 +71,18 @@ def get_default_lottery():
 class TicketPurchase(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     character = models.ForeignKey(EveCharacter, on_delete=models.CASCADE)
-    lottery = models.ForeignKey(
-        Lottery, on_delete=models.CASCADE, default=get_default_lottery
-    )
-    date = models.DateTimeField(default=timezone.now)
+    lottery = models.ForeignKey(Lottery, on_delete=models.CASCADE)
+
+    purchase_date = models.DateTimeField(auto_now_add=True)
     amount = models.PositiveBigIntegerField()
 
     class Meta:
-        unique_together = ("user", "lottery")
-        ordering = ["-date"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "lottery"], name="unique_user_lottery"
+            )
+        ]
+        ordering = ["-purchase_date"]
 
 
 class Winner(models.Model):

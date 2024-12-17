@@ -1,4 +1,4 @@
-{% extends "fortunaisk/base.html" %}
+{% extends "base.html" %}
 {% load i18n %}
 {% load fortunaisk_tags %}
 
@@ -61,3 +61,11 @@
     {% endif %}
 </div>
 {% endblock details %}
+
+{% block content %}
+  <h1>{% trans "Loterie Actuelle" %}</h1>
+  {% if message %}
+    <p>{{ message }}</p>
+  {% endif %}
+  <!-- Contenu supplémentaire -->
+{% endblock %}

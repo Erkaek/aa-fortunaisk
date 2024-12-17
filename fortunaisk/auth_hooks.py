@@ -1,5 +1,8 @@
 # fortunaisk/auth_hooks.py
 
+# Django
+from django.contrib.auth.models import User
+
 # Alliance Auth
 from allianceauth import hooks
 from allianceauth.services.hooks import MenuItemHook, UrlHook
@@ -19,6 +22,13 @@ class FortunaiskMenu(MenuItemHook):
     def render(self, request):
         if request.user.has_perm("fortunaisk.view_ticketpurchase"):
             return super().render(request)
+        return ""
+
+
+class FortunaISKMenu:
+    def render(self, user: User):
+        if user.has_perm("fortunaisk.view_lottery"):
+            return '<li><a href="/fortunaisk/lottery/">Loterie</a></li>'
         return ""
 
 

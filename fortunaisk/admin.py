@@ -7,25 +7,19 @@ from .models import FortunaISKSettings, Lottery, TicketPurchase, Winner
 
 @admin.register(Lottery)
 class LotteryAdmin(admin.ModelAdmin):
-    list_display = (
-        "lottery_reference",
-        "ticket_price",
-        "start_date",
-        "end_date",
-        "status",
-    )
-    list_filter = ("status", "start_date", "end_date")
-    search_fields = ("lottery_reference", "payment_receiver")
-    readonly_fields = ("lottery_reference",)
+    list_display = ("lottery_reference", "is_active", "winner", "next_drawing_date")
+    search_fields = ("lottery_reference", "winner__username")
     actions = ["mark_completed", "mark_cancelled"]
 
-    @admin.action(description="Mark selected lotteries as completed")
+    @admin.action(description="Marquer les loteries sélectionnées comme complétées")
     def mark_completed(self, request, queryset):
-        queryset.update(status="completed", end_date=timezone.now())
+        queryset.update(is_active=False)
+        self.message_user(request, "Loteries marquées comme complétées.")
 
-    @admin.action(description="Mark selected lotteries as cancelled")
+    @admin.action(description="Marquer les loteries sélectionnées comme annulées")
     def mark_cancelled(self, request, queryset):
-        queryset.update(status="cancelled", end_date=timezone.now())
+        queryset.update(is_active=False, winner=None)
+        self.message_user(request, "Loteries marquées comme annulées.")
 
 
 @admin.register(TicketPurchase)
@@ -46,3 +40,7 @@ class FortunaISKSettingsAdmin(admin.ModelAdmin):
         "payment_receiver",
         "lottery_reference",
     )
+    search_fields = ("lottery_reference", "payment_receiver")
+
+    # Vérifiez si ce modèle est utilisé dans les vues
+    # Sinon, envisagez de le supprimer pour éviter les redondances

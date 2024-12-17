@@ -8,8 +8,10 @@ from random import choice
 from corptools.models import CorporationWalletJournalEntry
 
 # Django
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.models import User  # Standard Django user model
+from django.db.models import Count
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
@@ -150,41 +152,29 @@ def ticket_purchases(request):
 
 
 @permission_required("fortunaisk.admin", raise_exception=True)
-def select_winner(request):
-    current_lottery = Lottery.objects.filter(status="active").first()
-    if not current_lottery:
-        return JsonResponse({"error": "No active lottery."}, status=400)
-
-    participants = TicketPurchase.objects.filter(lottery=current_lottery)
-    if not participants.exists():
-        return JsonResponse({"error": "No participants found."}, status=400)
-
-    winner = choice(list(participants))
+def select_winner(request, lottery_id):
     try:
-        Winner.objects.create(character=winner.character, ticket=winner)
-        logger.info(
-            f"Winner selected: {winner.user.username} - {winner.character.character_name}"
-        )
+        lottery = Lottery.objects.get(id=lottery_id, is_active=True)
+    except Lottery.DoesNotExist:
+        messages.error(request, "Loterie non trouvée ou inactivée.")
+        return render(request, "fortunaisk/lottery.html")
 
-        # Update lottery status
-        current_lottery.status = "completed"
-        current_lottery.end_date = timezone.now()
-        current_lottery.save()
-
-    except Exception as e:
-        logger.error(f"Error creating winner: {e}")
-        return JsonResponse({"error": "Error selecting the winner."}, status=500)
-
-    return JsonResponse(
-        {
-            "winner": {
-                "user": winner.user.username,
-                "character": winner.character.character_name,
-                "lottery_reference": winner.lottery.lottery_reference,
-                "date": winner.date.strftime("%Y-%m-%d %H:%M:%S"),
-            }
-        }
+    participants = User.objects.filter(ticketpurchase__lottery=lottery).annotate(
+        ticket_count=Count("ticketpurchase")
     )
+    if not participants.exists():
+        messages.info(request, "Aucun participant pour cette loterie.")
+        return render(request, "fortunaisk/lottery.html")
+
+    winner = participants.order_by("?").first()
+    lottery.winner = winner
+    lottery.is_active = False
+    lottery.save()
+
+    messages.success(
+        request, f"Félicitations à {winner.username} pour avoir gagné la loterie!"
+    )
+    return render(request, "fortunaisk/winner.html", {"winner": winner})
 
 
 @login_required
