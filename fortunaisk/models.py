@@ -40,7 +40,7 @@ class Lottery(models.Model):
     ]
 
     ticket_price = models.DecimalField(
-        max_digits=15, decimal_places=2, default=Decimal("10000000.00")
+        max_digits=15, decimal_places=2, default=10000000.00
     )
     start_date = models.DateTimeField(default=timezone.now)
     end_date = models.DateTimeField()
@@ -66,34 +66,42 @@ class Lottery(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.payment_receiver:
-            # Appliquer la valeur par défaut depuis LotterySettings
+            # Appliquer la valeur par défaut du receiver depuis LotterySettings
             settings = LotterySettings.objects.get_or_create()[0]
             self.payment_receiver = settings.default_payment_receiver
 
         if not self.lottery_reference:
             self.lottery_reference = f"LOTTERY-{self.start_date.strftime('%Y%m%d')}-{self.end_date.strftime('%Y%m%d')}"
 
+        # Enregistrer la loterie
         super().save(*args, **kwargs)
-        self.setup_periodic_task()
+
+        # Si la loterie est activée, configure la tâche périodique (une seule tâche pour toutes les loteries)
+        if self.is_active:
+            self.setup_periodic_task()
 
     def setup_periodic_task(self):
-        # Créer une tâche périodique avec un nom spécifique à la loterie
-        task_name = f"process_wallet_tickets_{self.lottery_reference}"
+        # Une seule tâche périodique pour toutes les loteries actives
+        task_name = "process_wallet_tickets_for_all_lotteries"
         schedule, _ = IntervalSchedule.objects.get_or_create(
             every=5, period=IntervalSchedule.MINUTES
         )
+
+        # Créer ou mettre à jour la tâche périodique
         PeriodicTask.objects.update_or_create(
             name=task_name,
             defaults={
-                "task": "fortunaisk.tasks.process_wallet_tickets",  # Tâche générique
+                "task": "fortunaisk.tasks.process_wallet_tickets_for_all_lotteries",
                 "interval": schedule,
-                "args": json.dumps([self.id]),  # Passer l'ID de la loterie en argument
+                "args": json.dumps(
+                    []
+                ),  # Pas besoin de passer un ID spécifique, la tâche gère toutes les loteries actives
             },
         )
+        logger.info(f"Periodic task set for all active lotteries.")
 
     def delete(self, *args, **kwargs):
-        # Supprimer la tâche périodique associée à la loterie
-        task_name = f"process_wallet_tickets_{self.lottery_reference}"
+        task_name = "process_wallet_tickets_for_all_lotteries"
         PeriodicTask.objects.filter(name=task_name).delete()
         super().delete(*args, **kwargs)
 
@@ -128,16 +136,3 @@ class Winner(models.Model):
 
     def __str__(self):
         return f"Winner: {self.character.character_name}"
-
-
-def get_default_lottery():
-    """Return the ID of the default lottery, creating one if it doesn't exist."""
-    lottery, _ = Lottery.objects.get_or_create(
-        lottery_reference="DEFAULT-LOTTERY",
-        defaults={
-            "ticket_price": 10_000_000,
-            "start_date": timezone.now(),
-            "end_date": timezone.now() + timezone.timedelta(days=30),
-        },
-    )
-    return lottery.id
