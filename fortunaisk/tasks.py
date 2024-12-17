@@ -34,7 +34,9 @@ def process_wallet_tickets(self):
         logger.info("No active lotteries found.")
         return "No active lotteries to process."
 
-    logger.info("Processing wallet entries for active lotteries.")
+    logger.info(
+        f"Processing wallet entries for {len(active_lotteries)} active lotteries."
+    )
 
     processed_entries = 0
 
