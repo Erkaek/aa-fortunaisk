@@ -69,25 +69,50 @@ def ticket_purchases(request):
         return render(
             request,
             "fortunaisk/ticket_purchases.html",
-            {"message": "No active lottery.", "purchases": []},
+            {"purchases": [], "message": "No active lottery."},
         )
 
-    # Optimized query to fetch journal entries
+    # Filter journal entries
     journal_entries = CorporationWalletJournalEntry.objects.filter(
         second_party_name_id=current_lottery.payment_receiver,
         amount=current_lottery.ticket_price,
         reason=f"LOTTERY-{current_lottery.lottery_reference}",
-    ).select_related("evecharacter")
+    )
 
+    if not journal_entries.exists():
+        logger.info("No journal entries found matching the criteria.")
+        return render(
+            request,
+            "fortunaisk/ticket_purchases.html",
+            {"purchases": [], "message": "No matching journal entries found."},
+        )
+
+    # Cache for EveCharacters to reduce redundant queries
+    character_cache = {}
     purchases = []
-    for entry in journal_entries:
-        character = getattr(entry, "evecharacter", None)
-        if not character:
-            logger.warning(f"Character ID {entry.first_party_name_id} not found.")
-            continue
 
-        user = User.objects.filter(character_ownerships__character=character).first()
-        if user:
+    for entry in journal_entries:
+        try:
+            # Use cache for character lookup
+            character_id = entry.first_party_name_id
+            if character_id not in character_cache:
+                character_cache[character_id] = EveCharacter.objects.get(
+                    character_id=character_id
+                )
+
+            character = character_cache[character_id]
+
+            # Find user associated with the character
+            user = User.objects.filter(
+                character_ownerships__character=character
+            ).first()
+            if not user:
+                logger.warning(
+                    f"No user found for character: {character.character_name}"
+                )
+                continue
+
+            # Create or get a ticket
             purchase, created = TicketPurchase.objects.get_or_create(
                 user=user,
                 lottery=current_lottery,
@@ -95,11 +120,13 @@ def ticket_purchases(request):
                 defaults={"amount": entry.amount, "purchase_date": entry.date},
             )
             purchases.append(purchase)
+
             logger.info(
                 f"Ticket purchase {'created' if created else 'already exists'} for user: {user.username}"
             )
-        else:
-            logger.warning(f"No user found for character: {character.character_name}")
+        except EveCharacter.DoesNotExist:
+            logger.warning(f"Character with ID {character_id} not found.")
+            continue
 
     return render(
         request,
