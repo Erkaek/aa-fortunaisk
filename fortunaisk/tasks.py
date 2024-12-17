@@ -22,77 +22,76 @@ logger = logging.getLogger(__name__)
 
 
 @shared_task(bind=True, base=QueueOnce)
-def process_wallet_tickets(self, lottery_id):
+def process_wallet_tickets(self):
     """
-    Process ticket purchases by checking wallet entries and recording valid purchases.
+    Process ticket purchases by checking wallet entries for all active lotteries.
     """
-    try:
-        # Step 1: Retrieve the lottery
-        lottery = Lottery.objects.get(id=lottery_id, status="active")
-    except Lottery.DoesNotExist:
-        logger.error(f"Lottery {lottery_id} does not exist or is inactive.")
-        return f"Lottery {lottery_id} not found."
+    # Étape 1 : Récupérer toutes les loteries actives
+    active_lotteries = Lottery.objects.filter(status="active")
+    if not active_lotteries.exists():
+        logger.info("No active lotteries found.")
+        return "No active lotteries to process."
 
-    logger.info(f"Processing wallet entries for '{lottery.lottery_reference}'.")
+    logger.info("Processing wallet entries for active lotteries.")
 
-    # Step 2: Fetch wallet entries matching lottery
-    payments = CorporationWalletJournalEntry.objects.filter(
-        second_party_name_id=lottery.payment_receiver,
-        amount=float(lottery.ticket_price),
-        reason__startswith=f"LOTTERY-{lottery.lottery_reference}",
-    )
-
+    # Étape 2 : Parcourir toutes les loteries actives et traiter les paiements
     processed_entries = 0
+    for lottery in active_lotteries:
+        payments = CorporationWalletJournalEntry.objects.filter(
+            second_party_name_id=lottery.payment_receiver,
+            amount=float(lottery.ticket_price),
+            reason__startswith=f"LOTTERY-{lottery.lottery_reference}",
+        )
 
-    # Step 3: Process wallet entries
-    for payment in payments:
-        try:
-            # Retrieve EveCharacter and main user
-            character = EveCharacter.objects.get(
-                character_id=payment.first_party_name_id
-            )
-            ownership = character.character_ownerships.first()
-            if not ownership or not ownership.user:
-                logger.warning(
-                    f"No main user for character {character.character_name}."
+        # Étape 3 : Traiter chaque paiement pour chaque loterie active
+        for payment in payments:
+            try:
+                # Étape 3.1 : Récupérer le character et l'utilisateur principal
+                character = EveCharacter.objects.get(
+                    character_id=payment.first_party_name_id
                 )
-                continue
+                ownership = character.character_ownerships.first()
+                if not ownership or not ownership.user:
+                    logger.warning(
+                        f"No main user for character {character.character_name}."
+                    )
+                    continue
 
-            user = ownership.user
+                user = ownership.user
 
-            # Avoid duplicate tickets
-            if TicketPurchase.objects.filter(user=user, lottery=lottery).exists():
-                logger.info(f"Duplicate ticket for user '{user.username}', skipping.")
-                continue
+                # Étape 3.2 : Vérifier si le ticket existe déjà
+                if TicketPurchase.objects.filter(user=user, lottery=lottery).exists():
+                    logger.info(
+                        f"Duplicate ticket for user '{user.username}', skipping."
+                    )
+                    continue
 
-            # Register the ticket purchase
-            with transaction.atomic():
-                TicketPurchase.objects.create(
-                    user=user,
-                    lottery=lottery,
-                    character=character,
-                    amount=int(payment.amount),
-                    purchase_date=timezone.now(),
+                # Étape 3.3 : Enregistrer le ticket
+                with transaction.atomic():
+                    TicketPurchase.objects.create(
+                        user=user,
+                        lottery=lottery,
+                        character=character,
+                        amount=int(payment.amount),
+                        purchase_date=timezone.now(),
+                    )
+                    logger.info(f"Ticket registered for user '{user.username}'.")
+
+                processed_entries += 1
+
+            except EveCharacter.DoesNotExist:
+                logger.error(
+                    f"EveCharacter with ID {payment.first_party_name_id} not found."
                 )
-                logger.info(
-                    f"Ticket registered: User '{user.username}' for '{lottery.lottery_reference}'."
+            except IntegrityError as e:
+                logger.error(f"Integrity error processing payment {payment.id}: {e}")
+            except Exception as e:
+                logger.exception(
+                    f"Unexpected error processing payment {payment.id}: {e}"
                 )
 
-            processed_entries += 1
-
-        except EveCharacter.DoesNotExist:
-            logger.error(
-                f"EveCharacter with ID {payment.first_party_name_id} not found."
-            )
-        except IntegrityError as e:
-            logger.error(f"Database error processing payment {payment.id}: {e}")
-        except Exception as e:
-            logger.exception(f"Unexpected error processing payment {payment.id}: {e}")
-
-    logger.info(
-        f"Processed {processed_entries} tickets for '{lottery.lottery_reference}'."
-    )
-    return f"Processed {processed_entries} tickets for '{lottery.lottery_reference}'."
+    logger.info(f"Processed {processed_entries} tickets across active lotteries.")
+    return f"Processed {processed_entries} tickets for all active lotteries."
 
 
 def setup_tasks(sender, **kwargs):

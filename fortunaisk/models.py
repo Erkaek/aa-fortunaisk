@@ -40,7 +40,7 @@ class Lottery(models.Model):
     ]
 
     ticket_price = models.DecimalField(
-        max_digits=15, decimal_places=2, default=Decimal("10000000.00")
+        max_digits=15, decimal_places=2, default=10000000.00
     )
     start_date = models.DateTimeField(default=timezone.now)
     end_date = models.DateTimeField()
@@ -56,8 +56,17 @@ class Lottery(models.Model):
     def is_active(self):
         return self.status == "active"
 
+    @property
+    def winner(self):
+        return self.winner_name or "No Winner"
+
+    @property
+    def next_drawing_date(self):
+        return self.end_date
+
     def save(self, *args, **kwargs):
         if not self.payment_receiver:
+            # Appliquer la valeur par défaut depuis LotterySettings
             settings = LotterySettings.objects.get_or_create()[0]
             self.payment_receiver = settings.default_payment_receiver
 
@@ -68,17 +77,16 @@ class Lottery(models.Model):
         self.setup_periodic_task()
 
     def setup_periodic_task(self):
-        task_name = f"process_wallet_tickets_{self.id}"
+        task_name = "check_wallet_entries"  # Un nom générique pour la tâche
         schedule, _ = IntervalSchedule.objects.get_or_create(
             every=5, period=IntervalSchedule.MINUTES
         )
         PeriodicTask.objects.update_or_create(
             name=task_name,
             defaults={
-                "task": "fortunaisk.tasks.process_wallet_tickets",
+                "task": "fortunaisk.tasks.process_wallet_tickets",  # Tâche générique
                 "interval": schedule,
-                "args": json.dumps([self.id]),
-                "enabled": self.is_active,
+                "args": json.dumps([]),  # Liste vide pour cette tâche générique
             },
         )
 
