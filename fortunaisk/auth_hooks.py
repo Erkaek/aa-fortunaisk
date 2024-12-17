@@ -1,3 +1,5 @@
+# fortunaisk/auth_hooks.py
+
 # Alliance Auth
 from allianceauth import hooks
 from allianceauth.services.hooks import MenuItemHook, UrlHook
@@ -7,8 +9,7 @@ from . import urls
 
 class FortunaiskMenu(MenuItemHook):
     def __init__(self):
-        MenuItemHook.__init__(
-            self,
+        super().__init__(
             "Fortunaisk",
             "fas fa-ticket-alt fa-fw",
             "fortunaisk:lottery",
@@ -16,7 +17,7 @@ class FortunaiskMenu(MenuItemHook):
         )
 
     def render(self, request):
-        if request.user.has_perm("fortunaisk.view_ticket"):
+        if request.user.has_perm("fortunaisk.view_ticketpurchase"):
             return super().render(request)
         return ""
 

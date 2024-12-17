@@ -1,9 +1,15 @@
 {
     "extends": "stylelint-config-standard",
     "rules": {
-      "indentation": 4,
-      "number-leading-zero": "always",
-      "string-quotes": "double",
-      "rule-empty-line-before": "always"
+        "indentation": 4,
+        "number-leading-zero": "always",
+        "string-quotes": "double",
+        "rule-empty-line-before": [
+            "always",
+            {
+                "except": ["first-nested"],
+                "ignore": ["after-comment"]
+            }
+        ]
     }
-  }
+}

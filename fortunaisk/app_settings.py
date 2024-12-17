@@ -1,4 +1,5 @@
-# app_settings.py
+# fortunaisk/app_settings.py
+
 # Django
 from django.conf import settings
 

@@ -1,4 +1,7 @@
+# fortunaisk/views.py
+
 # Standard Library
+import logging
 from random import choice
 
 # Third Party
@@ -6,30 +9,33 @@ from corptools.models import CorporationWalletJournalEntry
 
 # Django
 from django.contrib.auth.decorators import login_required, permission_required
-from django.contrib.auth.models import User  # Modèle utilisateur standard de Django
+from django.contrib.auth.models import User  # Standard Django user model
 from django.http import JsonResponse
 from django.shortcuts import render
+from django.utils import timezone
 
 # Alliance Auth
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 
-from .models import FortunaISKSettings, TicketPurchase, Winner
+from .models import Lottery, TicketPurchase, Winner
+
+logger = logging.getLogger(__name__)
 
 
 @login_required
 def lottery(request):
-    settings = FortunaISKSettings.objects.first()
-    if not settings:
+    current_lottery = Lottery.objects.filter(status="active").first()
+    if not current_lottery:
         return render(
             request, "fortunaisk/lottery.html", {"message": "No active lottery."}
         )
 
-    # Récupérer le nom de la corporation si le Payment Receiver est un ID de corporation
+    # Retrieve corporation name if Payment Receiver is a corporation ID
     corporation_name = None
-    if settings.payment_receiver.isdigit():  # Vérifie si Payment Receiver est un ID
+    if current_lottery.payment_receiver.isdigit():  # Check if Payment Receiver is an ID
         try:
             corporation = EveCorporationInfo.objects.get(
-                corporation_id=int(settings.payment_receiver)
+                corporation_id=int(current_lottery.payment_receiver)
             )
             corporation_name = corporation.corporation_name
         except EveCorporationInfo.DoesNotExist:
@@ -37,17 +43,17 @@ def lottery(request):
 
     has_ticket = TicketPurchase.objects.filter(
         user=request.user,
-        lottery_reference=settings.lottery_reference,
+        lottery=current_lottery,
     ).exists()
 
     instructions = (
-        f"Send {settings.ticket_price} ISK to {corporation_name or settings.payment_receiver} with reference '{settings.lottery_reference}' to participate."
-        if settings
+        f"Send {current_lottery.ticket_price} ISK to {corporation_name or current_lottery.payment_receiver} with reference '{current_lottery.lottery_reference}' to participate."
+        if current_lottery
         else "No lottery is currently available."
     )
 
     context = {
-        "settings": settings,
+        "current_lottery": current_lottery,
         "corporation_name": corporation_name,
         "has_ticket": has_ticket,
         "instructions": instructions,
@@ -57,102 +63,124 @@ def lottery(request):
 
 
 @login_required
+@permission_required("fortunaisk.view_ticketpurchase", raise_exception=True)
 def ticket_purchases(request):
-    settings = FortunaISKSettings.objects.first()
-    if not settings:
+    current_lottery = Lottery.objects.filter(status="active").first()
+    if not current_lottery:
         return render(
             request,
             "fortunaisk/ticket_purchases.html",
             {"purchases": [], "message": "No active lottery."},
         )
 
-    # Filtrage des entrées de journal
+    # Filter journal entries
     journal_entries = CorporationWalletJournalEntry.objects.filter(
-        second_party_name_id=settings.payment_receiver,
-        amount=settings.ticket_price,
-        reason=f"LOTTERY-{settings.lottery_reference}",  # Assurez-vous que le format correspond
+        second_party_name_id=current_lottery.payment_receiver,
+        amount=current_lottery.ticket_price,
+        reason=f"LOTTERY-{current_lottery.lottery_reference}",  # Ensure format matches
     )
 
     if not journal_entries.exists():
-        print("No journal entries found matching the criteria.")
+        logger.info("No journal entries found matching the criteria.")
         return render(
             request,
             "fortunaisk/ticket_purchases.html",
-            {"purchases": [], "message": "No matching journal entries found."},
+            {
+                "purchases": [],
+                "message": "No matching journal entries found.",
+            },
         )
 
     purchases = []
     for entry in journal_entries:
         try:
-            # Log l'entrée du journal traitée
-            print(
+            # Log processed journal entry
+            logger.debug(
                 f"Processing journal entry {entry.id} for character ID {entry.first_party_name_id}"
             )
 
-            # Recherche du personnage
+            # Find character
             character = EveCharacter.objects.get(character_id=entry.first_party_name_id)
 
-            # Log du personnage trouvé
-            print(
+            # Log found character
+            logger.debug(
                 f"Found character: {character.character_name} (ID: {character.character_id})"
             )
 
-            # Recherche de l'utilisateur associé au personnage
+            # Find user associated with character
             user = User.objects.filter(
                 character_ownerships__character=character
             ).first()
 
             if user:
-                print(f"Found user: {user.username}")
-                # Créer ou obtenir un ticket
+                logger.debug(f"Found user: {user.username}")
+                # Create or get a ticket
                 purchase, created = TicketPurchase.objects.get_or_create(
                     user=user,
                     character=character,
-                    lottery_reference=settings.lottery_reference,
+                    lottery=current_lottery,
                     defaults={"amount": entry.amount, "date": entry.date},
                 )
                 purchases.append(purchase)
 
-                # Log si le ticket a été créé ou existait déjà
+                # Log if ticket was created or already existed
                 if created:
-                    print(f"Created TicketPurchase for user: {user.username}")
+                    logger.info(f"Ticket purchase created for user: {user.username}")
                 else:
-                    print(f"TicketPurchase already exists for user: {user.username}")
+                    logger.info(
+                        f"Ticket purchase already exists for user: {user.username}"
+                    )
             else:
-                print(f"No user found for character: {character.character_name}")
+                logger.warning(
+                    f"No user found for character: {character.character_name}"
+                )
 
         except EveCharacter.DoesNotExist:
-            print(f"Character with ID {entry.first_party_name_id} not found.")
-            continue  # Passer à l'entrée suivante si le personnage n'existe pas
+            logger.error(f"Character with ID {entry.first_party_name_id} not found.")
+            continue  # Skip to next entry if character does not exist
 
     return render(
         request,
         "fortunaisk/ticket_purchases.html",
-        {"purchases": purchases, "lottery_reference": settings.lottery_reference},
+        {
+            "purchases": purchases,
+            "lottery_reference": current_lottery.lottery_reference,
+        },
     )
 
 
-@permission_required("fortunaisk.admin")
+@permission_required("fortunaisk.admin", raise_exception=True)
 def select_winner(request):
-    settings = FortunaISKSettings.objects.first()
-    if not settings:
+    current_lottery = Lottery.objects.filter(status="active").first()
+    if not current_lottery:
         return JsonResponse({"error": "No active lottery."}, status=400)
 
-    participants = TicketPurchase.objects.filter(
-        lottery_reference=settings.lottery_reference
-    )
+    participants = TicketPurchase.objects.filter(lottery=current_lottery)
     if not participants.exists():
         return JsonResponse({"error": "No participants found."}, status=400)
 
-    winner = choice(participants)
-    Winner.objects.create(character=winner.character, ticket=winner)
+    winner = choice(list(participants))
+    try:
+        Winner.objects.create(character=winner.character, ticket=winner)
+        logger.info(
+            f"Winner selected: {winner.user.username} - {winner.character.character_name}"
+        )
+
+        # Update lottery status
+        current_lottery.status = "completed"
+        current_lottery.end_date = timezone.now()
+        current_lottery.save()
+
+    except Exception as e:
+        logger.error(f"Error creating winner: {e}")
+        return JsonResponse({"error": "Error selecting the winner."}, status=500)
 
     return JsonResponse(
         {
             "winner": {
                 "user": winner.user.username,
                 "character": winner.character.character_name,
-                "lottery_reference": winner.lottery_reference,
+                "lottery_reference": winner.lottery.lottery_reference,
                 "date": winner.date.strftime("%Y-%m-%d %H:%M:%S"),
             }
         }
@@ -161,7 +189,7 @@ def select_winner(request):
 
 @login_required
 def winner_list(request):
-    winners = Winner.objects.all().select_related("character", "ticket")
+    winners = Winner.objects.all().select_related("character", "ticket__lottery")
     return render(
         request,
         "fortunaisk/winner_list.html",
@@ -169,17 +197,50 @@ def winner_list(request):
     )
 
 
+@permission_required("fortunaisk.admin", raise_exception=True)
 def admin_dashboard(request):
-    settings = FortunaISKSettings.objects.first()
+    current_lottery = Lottery.objects.filter(status="active").first()
     total_tickets = TicketPurchase.objects.filter(
-        lottery_reference=settings.lottery_reference if settings else None
+        lottery=current_lottery if current_lottery else None
     ).count()
+
+    past_lotteries = Lottery.objects.filter(status="completed").order_by("-end_date")
 
     return render(
         request,
-        "fortunaisk/admin.html",  # Assurez-vous que le chemin du template correspond
+        "fortunaisk/admin.html",  # Ensure the template path is correct
         {
-            "settings": settings,
+            "current_lottery": current_lottery,
             "total_tickets": total_tickets,
+            "past_lotteries": past_lotteries,
         },
+    )
+
+
+@login_required
+def user_dashboard(request):
+    user = request.user
+    ticket_purchases = TicketPurchase.objects.filter(user=user).select_related(
+        "lottery"
+    )
+    winnings = Winner.objects.filter(ticket__user=user).select_related(
+        "ticket__lottery", "character"
+    )
+
+    context = {
+        "ticket_purchases": ticket_purchases,
+        "winnings": winnings,
+    }
+
+    return render(request, "fortunaisk/user_dashboard.html", context)
+
+
+@login_required
+def lottery_history(request):
+    past_lotteries = Lottery.objects.filter(status="completed").order_by("-end_date")
+    winners = Winner.objects.filter(ticket__lottery__in=past_lotteries)
+    return render(
+        request,
+        "fortunaisk/lottery_history.html",
+        {"past_lotteries": past_lotteries, "winners": winners},
     )

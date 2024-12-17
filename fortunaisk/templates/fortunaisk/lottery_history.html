@@ -1,39 +1,16 @@
 {% extends "fortunaisk/base.html" %}
-
 {% load i18n %}
+{% load fortunaisk_tags %}
 
 {% block page_title %}
-    {% trans "Admin Dashboard" %}
+    {% trans "Lottery History" %}
 {% endblock page_title %}
 
 {% block details %}
-    <h2 class="mb-4">{% trans "Admin Dashboard" %}</h2>
-    <div class="card border-primary mb-4">
-        <div class="card-header bg-primary text-white">
-            {% trans "Administration" %}
-        </div>
-        <div class="card-body">
-            <p>{% trans "Manage tickets and winners for Fortunaisk." %}</p>
-            <a href="{% url 'fortunaisk:lottery' %}" class="btn btn-primary mb-2">
-                {% trans "View Lottery" %}
-            </a>
-            <a href="{% url 'fortunaisk:winner_list' %}" class="btn btn-secondary mb-2">
-                {% trans "View Winners" %}
-            </a>
-            <a href="{% url 'fortunaisk:ticket_purchases' %}" class="btn btn-info mb-2">
-                {% trans "View Ticket Purchases" %}
-            </a>
-            <a href="{% url 'fortunaisk:select_winner' %}" class="btn btn-warning mb-2">
-                {% trans "Select Winner" %}
-            </a>
-            <a href="{% url 'fortunaisk:lottery_history' %}" class="btn btn-success mb-2">
-                {% trans "Lottery History" %}
-            </a>
-        </div>
-    </div>
+<div class="container text-center mt-4">
+    <h2 class="mb-4">{% trans "Lottery History" %}</h2>
 
     {% if past_lotteries %}
-        <h3 class="mb-3">{% trans "Lottery History" %}</h3>
         <div class="table-responsive">
             <table class="table table-bordered table-striped">
                 <thead class="thead-dark">
@@ -43,6 +20,7 @@
                         <th>{% trans "Start Date" %}</th>
                         <th>{% trans "End Date" %}</th>
                         <th>{% trans "Status" %}</th>
+                        <th>{% trans "Winner" %}</th>
                         <th>{% trans "Actions" %}</th>
                     </tr>
                 </thead>
@@ -54,6 +32,15 @@
                             <td>{{ lottery.start_date|date:"Y-m-d H:i" }}</td>
                             <td>{{ lottery.end_date|date:"Y-m-d H:i" }}</td>
                             <td>{{ lottery.get_status_display }}</td>
+                            <td>
+                                {% with winner=winners|get_winner:lottery.id %}
+                                    {% if winner %}
+                                        {{ winner.character.character_name }} ({{ winner.ticket.user.username }})
+                                    {% else %}
+                                        {% trans "No winner" %}
+                                    {% endif %}
+                                {% endwith %}
+                            </td>
                             <td>
                                 <a href="{% url 'admin:fortunaisk_winner_changelist' %}?lottery__id__exact={{ lottery.id }}" class="btn btn-sm btn-primary">
                                     {% trans "View Winners" %}
@@ -67,5 +54,10 @@
                 </tbody>
             </table>
         </div>
+    {% else %}
+        <div class="alert alert-warning">
+            {% trans "No past lotteries found." %}
+        </div>
     {% endif %}
+</div>
 {% endblock details %}

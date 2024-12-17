@@ -2,28 +2,28 @@
 {% load i18n %}
 
 {% block page_title %}
-    {% translate "Winners" %}
+    {% trans "Winners" %}
 {% endblock page_title %}
 
 {% block details %}
 <div class="container text-center mt-4">
-    <h2 class="mb-4">{% translate "Winners" %}</h2>
+    <h2 class="mb-4">{% trans "Winners" %}</h2>
 
     {% if winners %}
         <div class="table-responsive">
             <table class="table table-bordered table-striped">
                 <thead class="thead-dark">
                     <tr>
-                        <th>{% translate "Character" %}</th>
-                        <th>{% translate "Ticket Reference" %}</th>
-                        <th>{% translate "Won At" %}</th>
+                        <th>{% trans "Character" %}</th>
+                        <th>{% trans "Ticket Reference" %}</th>
+                        <th>{% trans "Win Date" %}</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for winner in winners %}
                         <tr>
                             <td>{{ winner.character.character_name }}</td>
-                            <td>{{ winner.ticket.ticket_ref }}</td>
+                            <td>{{ winner.ticket.lottery.lottery_reference }}</td>
                             <td>{{ winner.won_at|date:"Y-m-d H:i" }}</td>
                         </tr>
                     {% endfor %}
@@ -32,7 +32,7 @@
         </div>
     {% else %}
         <div class="alert alert-warning">
-            <strong>{% translate "No winners yet." %}</strong>
+            <strong>{% trans "No winners at the moment." %}</strong>
         </div>
     {% endif %}
 </div>

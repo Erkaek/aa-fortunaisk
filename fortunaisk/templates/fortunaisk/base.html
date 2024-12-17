@@ -5,45 +5,61 @@
 {% load navactive %}
 
 {% block page_title %}
-    {% translate "Fortunaisk" %}
+    {% trans "Fortunaisk" %}
 {% endblock page_title %}
 
 {% block head %}
-    {{ block.super }} <!-- Garde les styles de base de AllianceAuth -->
+    {{ block.super }} <!-- Keep the base styles from AllianceAuth -->
     <link rel="stylesheet" href="{% static 'fortunaisk/style.css' %}">
 {% endblock head %}
 
 {% block header_nav_brand %}
-    {% translate "Fortunaisk" %}
+    {% trans "Fortunaisk" %}
 {% endblock header_nav_brand %}
 
 {% block header_nav_collapse_left %}
     <ul class="nav navbar-nav">
         <li class="nav-item {% navactive request 'fortunaisk:lottery' %}">
             <a class="nav-link" href="{% url 'fortunaisk:lottery' %}">
-                {% translate "Lottery" %}
+                {% trans "Lottery" %}
             </a>
         </li>
         <li class="nav-item {% navactive request 'fortunaisk:winner_list' %}">
             <a class="nav-link" href="{% url 'fortunaisk:winner_list' %}">
-                {% translate "Winners" %}
+                {% trans "Winners" %}
+            </a>
+        </li>
+        <li class="nav-item {% navactive request 'fortunaisk:lottery_history' %}">
+            <a class="nav-link" href="{% url 'fortunaisk:lottery_history' %}">
+                {% trans "Lottery History" %}
             </a>
         </li>
         {% if perms.fortunaisk.admin %}
             <li class="nav-item {% navactive request 'fortunaisk:ticket_purchases' %}">
                 <a class="nav-link" href="{% url 'fortunaisk:ticket_purchases' %}">
-                    {% translate "Ticket Purchases" %}
+                    {% trans "Ticket Purchases" %}
                 </a>
             </li>
-            <li class="nav-item {% navactive request 'fortunaisk:admin' %}">
-                <a class="nav-link" href="{% url 'fortunaisk:admin' %}">
-                    {% translate "Admin Dashboard" %}
+            <li class="nav-item {% navactive request 'fortunaisk:admin_dashboard' %}">
+                <a class="nav-link" href="{% url 'fortunaisk:admin_dashboard' %}">
+                    {% trans "Admin Dashboard" %}
                 </a>
             </li>
         {% endif %}
     </ul>
 {% endblock header_nav_collapse_left %}
 
+{% block header_nav_collapse_right %}
+    <ul class="nav navbar-nav ml-auto">
+        {% if user.is_authenticated %}
+            <li class="nav-item {% navactive request 'fortunaisk:user_dashboard' %}">
+                <a class="nav-link" href="{% url 'fortunaisk:user_dashboard' %}">
+                    {% trans "My Dashboard" %}
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+{% endblock header_nav_collapse_right %}
 
 {% block content %}
     <div class="container mt-4">

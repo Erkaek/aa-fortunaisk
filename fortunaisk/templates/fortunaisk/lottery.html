@@ -2,41 +2,42 @@
 {% load i18n %}
 
 {% block page_title %}
-    {% translate "Lottery" %}
+    {% trans "Lottery" %}
 {% endblock page_title %}
 
 {% block details %}
 <div class="container text-center mt-4">
-    <h2 class="mb-4">{% translate "Current Lottery" %}</h2>
+    <h2 class="mb-4">{% trans "Current Lottery" %}</h2>
 
-    {% if settings %}
+    {% if current_lottery %}
         <div class="card text-center mb-4">
             <div class="card-header bg-primary text-white">
-                {% translate "Lottery Details" %}
+                {% trans "Lottery Details" %}
             </div>
             <div class="card-body">
-                <p><strong>{% translate "Start Date" %}:</strong> {{ settings.next_drawing_date|date:"Y-m-d H:i" }}</p>
-                <p><strong>{% translate "Ticket Price" %}:</strong> {{ settings.ticket_price }} ISK</p>
-                <p><strong>{% translate "Payment Receiver" %}:</strong>
-                    {{ corporation_name|default:settings.payment_receiver }}
+                <p><strong>{% trans "Start Date" %} :</strong> {{ current_lottery.start_date|date:"Y-m-d H:i" }}</p>
+                <p><strong>{% trans "End Date" %} :</strong> {{ current_lottery.end_date|date:"Y-m-d H:i" }}</p>
+                <p><strong>{% trans "Ticket Price" %} :</strong> {{ current_lottery.ticket_price }} ISK</p>
+                <p><strong>{% trans "Payment Receiver" %} :</strong>
+                    {{ corporation_name|default:current_lottery.payment_receiver }}
                 </p>
-                <p><strong>{% translate "Lottery Reference" %}:</strong> {{ settings.lottery_reference }}</p>
-                <p><strong>{% translate "Has Ticket?" %}:</strong>
+                <p><strong>{% trans "Lottery Reference" %} :</strong> {{ current_lottery.lottery_reference }}</p>
+                <p><strong>{% trans "Has a Ticket?" %} :</strong>
                     {% if has_ticket %}
-                        <span class="badge bg-success">{% translate "Yes" %}</span>
+                        <span class="badge bg-success">{% trans "Yes" %}</span>
                     {% else %}
-                        <span class="badge bg-danger">{% translate "No" %}</span>
+                        <span class="badge bg-danger">{% trans "No" %}</span>
                     {% endif %}
                 </p>
                 <p class="mt-3">
-                    <strong>{% translate "Instructions to Participate" %}:</strong><br>
+                    <strong>{% trans "Participation Instructions" %} :</strong><br>
                     {{ instructions }}
                 </p>
             </div>
         </div>
     {% else %}
         <div class="alert alert-warning">
-            {% translate "No lottery is currently available." %}
+            {% trans "No lottery is currently available." %}
         </div>
     {% endif %}
 </div>

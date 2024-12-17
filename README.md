@@ -1,10 +1,8 @@
-# ⚠️ WARNING: DO NOT INSTALL ⚠️
-
-**This project is still in active development and is not functional. Do not attempt to install or use it in any environment, especially production.**
-
 # FortunaISK
 
-FortunaISK is a monthly lottery module for Alliance Auth. **Please note: this project is still in development and is not yet functional for production use.**
+![Licence: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+
+FortunaISK est un module de loterie mensuel pour Alliance Auth. **Veuillez noter : ce projet est toujours en développement et n'est pas encore fonctionnel pour une utilisation en production.**
 
 ## Features
 
