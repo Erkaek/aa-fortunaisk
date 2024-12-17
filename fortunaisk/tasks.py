@@ -1,9 +1,11 @@
 # Standard Library
+import json
 import logging
 
 # Third Party
 from celery import shared_task
 from corptools.models import CorporationWalletJournalEntry
+from django_celery_beat.models import IntervalSchedule, PeriodicTask
 
 # Django
 from django.db import IntegrityError, transaction
@@ -91,3 +93,30 @@ def process_wallet_tickets(self, lottery_id):
         f"Processed {processed_entries} tickets for '{lottery.lottery_reference}'."
     )
     return f"Processed {processed_entries} tickets for '{lottery.lottery_reference}'."
+
+
+def setup_tasks(sender, **kwargs):
+    """
+    Configure periodic tasks for all active lotteries. This ensures that wallet entries
+    are periodically processed to check for ticket purchases.
+    """
+    from .models import Lottery
+
+    active_lotteries = Lottery.objects.filter(status="active")
+
+    for lottery in active_lotteries:
+        task_name = f"process_wallet_tickets_{lottery.lottery_reference}"
+        schedule, _ = IntervalSchedule.objects.get_or_create(
+            every=5, period=IntervalSchedule.MINUTES
+        )
+
+        # Create or update the periodic task for each active lottery
+        PeriodicTask.objects.update_or_create(
+            name=task_name,
+            defaults={
+                "task": "fortunaisk.tasks.process_wallet_tickets",
+                "interval": schedule,
+                "args": json.dumps([lottery.id]),
+            },
+        )
+        logger.info(f"Periodic task set for lottery '{lottery.lottery_reference}'.")
