@@ -5,7 +5,7 @@
 from django.contrib import admin
 from django.contrib.auth.decorators import permission_required
 from django.shortcuts import redirect, render
-from django.urls import path
+from django.urls import include, path
 from django.utils import timezone
 
 from .models import Lottery, LotterySettings, TicketAnomaly, TicketPurchase
@@ -147,10 +147,17 @@ def update_notifications(request):
     )
 
 
-admin.site.urls += tuple(
-    [
-        path(
-            "update_notifications/", update_notifications, name="update_notifications"
-        ),
-    ]
-)
+# Ajouter les URL personnalisées
+urlpatterns = [
+    path(
+        "admin/fortunaisk/update_notifications/",
+        update_notifications,
+        name="update_notifications",
+    ),
+]
+
+# Django
+# Inclure les URL personnalisées dans les URL de l'admin
+
+
+admin.site.urls += [path("", include(urlpatterns))]
