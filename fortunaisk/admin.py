@@ -155,8 +155,8 @@ class WebhookConfigurationAdmin(admin.ModelAdmin):
         return super().has_add_permission(request)
 
 
-@login_required  # Ajoutez ce décorateur
-@permission_required("fortunaisk.admin", raise_exception=True)  # Ajoutez ce décorateur
+@login_required
+@permission_required("fortunaisk.admin", raise_exception=True)
 def admin_dashboard(request):
     # Fetch all active lotteries
     active_lotteries = Lottery.objects.filter(status="active")
@@ -172,7 +172,7 @@ def admin_dashboard(request):
     return render(request, "fortunaisk/admin.html", context)
 
 
-@login_required  # Ajoutez ce décorateur
+@login_required
 def current_lotteries(request):
     # Fetch all active lotteries
     active_lotteries = Lottery.objects.filter(status="active")
