@@ -1,10 +1,12 @@
+# Django
 from django import template
-from django.template.defaultfilters import intcomma
+from django.contrib.humanize.templatetags.humanize import intcomma
 
 register = template.Library()
+
 
 @register.filter
 def space_separated(value):
     if value is None:
-        return ''
-    return intcomma(value).replace(',', ' ')
+        return ""
+    return intcomma(value).replace(",", " ")
