@@ -147,7 +147,6 @@ def process_wallet_tickets():
                     anomaly_reason = f"Duplicate ticket for user '{user.username}'."
 
             if anomaly_reason:
-                # Enregistrer l'anomalie si aucune n'existe déjà pour ce paiement
                 TicketAnomaly.objects.create(
                     lottery=lottery,
                     character=character,

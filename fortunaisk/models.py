@@ -122,7 +122,6 @@ class TicketPurchase(models.Model):
     """
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-
     character = models.ForeignKey(EveCharacter, on_delete=models.CASCADE)
     lottery = models.ForeignKey(Lottery, on_delete=models.CASCADE)
     purchase_date = models.DateTimeField(default=timezone.now)
@@ -171,7 +170,7 @@ class TicketAnomaly(models.Model):
     payment_date = models.DateTimeField()
     amount = models.PositiveBigIntegerField(default=0)
     recorded_at = models.DateTimeField(default=timezone.now)
-    payment_id = models.BigIntegerField(default=0)# Identifiant unique du paiement
+    payment_id = models.BigIntegerField(default=0)  # Identifiant unique du paiement
 
     class Meta:
         ordering = ["-recorded_at"]
