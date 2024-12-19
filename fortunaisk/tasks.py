@@ -20,10 +20,11 @@ from .models import Lottery, TicketPurchase
 
 logger = logging.getLogger(__name__)
 
-
 # Tâche pour traiter les paiements de tickets pour toutes les loteries actives
 @shared_task(bind=True)
 def process_wallet_tickets(self):
+    logger.info("Processing wallet entries for active lotteries.")
+    
     # Logique de la tâche pour traiter les tickets de loterie
     active_lotteries = Lottery.objects.filter(status="active")
     if not active_lotteries.exists():
@@ -32,12 +33,19 @@ def process_wallet_tickets(self):
 
     processed_entries = 0
     for lottery in active_lotteries:
+        logger.info(f"Processing lottery: {lottery.id}, reference: {lottery.lottery_reference}")
+        
         payments = CorporationWalletJournalEntry.objects.filter(
             second_party_name_id=lottery.payment_receiver,
             amount=lottery.ticket_price,
             reason__contains=f"LOTTERY-{lottery.lottery_reference}",
         )
+        if not payments.exists():
+            logger.info(f"No payments found for lottery: {lottery.id}")
+            continue
+            
         for payment in payments:
+            logger.info(f"Processing payment: {payment.id}, amount: {payment.amount}, reason: {payment.reason}")
             try:
                 character = EveCharacter.objects.get(
                     character_id=payment.first_party_name_id
@@ -45,7 +53,7 @@ def process_wallet_tickets(self):
                 ownership = character.character_ownerships.first()
                 if not ownership or not ownership.user:
                     logger.warning(
-                        f"No main user for character {character.character_name}."
+                        f"No main user for character {character.character_name} (ID: {character.character_id})."
                     )
                     continue
 
@@ -53,10 +61,10 @@ def process_wallet_tickets(self):
                 user_profile = user.profile
                 if user_profile.main_character_id != character.id:
                     logger.warning(
-                        f"Character {character.character_name} is not the main character for user {user.username}."
+                        f"Character {character.character_name} (ID: {character.character_id}) is not the main character for user {user.username}."
                     )
                     continue
-
+                
                 if TicketPurchase.objects.filter(user=user, lottery=lottery).exists():
                     logger.info(
                         f"Duplicate ticket for user '{user.username}', skipping."
@@ -87,7 +95,6 @@ def process_wallet_tickets(self):
 
     logger.info(f"Processed {processed_entries} tickets across active lotteries.")
     return f"Processed {processed_entries} tickets for all active lotteries."
-
 
 def setup_tasks(sender, **kwargs):
     task_name = "process_wallet_tickets_for_all_lotteries"
