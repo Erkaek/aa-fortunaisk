@@ -1,6 +1,7 @@
 {% extends "fortunaisk/base.html" %}
 {% load i18n %}
 {% load humanize %}
+{% load fortunaisk_filters %}
 
 {% block page_title %}
     {% trans "Ticket Purchases" %}
@@ -26,7 +27,7 @@
                 <tr>
                     <td>{{ purchase.user.username }}</td>
                     <td>{{ purchase.character.character_name }}</td>
-                    <td>{{ purchase.amount|intcomma|replace:","," " }} ISK</td>
+                    <td>{{ purchase.amount|space_separated }} ISK</td>
                     <td>{{ purchase.date|date:"Y-m-d H:i" }}</td>
                     <td>{{ purchase.lottery.lottery_reference }}</td>
                 </tr>
