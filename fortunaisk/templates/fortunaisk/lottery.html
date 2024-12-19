@@ -17,16 +17,17 @@
             <p><strong>{% trans "Start Date" %}:</strong> {{ current_lottery.start_date|date:"Y-m-d H:i" }}</p>
             <p><strong>{% trans "End Date" %}:</strong> {{ current_lottery.end_date|date:"Y-m-d H:i" }}</p>
             <p><strong>{% trans "Ticket Price" %}:</strong> {{ current_lottery.ticket_price }} ISK</p>
-            <p><strong>{% trans "Payment Receiver" %}:</strong> {{ current_lottery.payment_receiver }}</p>
+            <p><strong>{% trans "Payment Receiver" %}:</strong> {{ corporation_name or current_lottery.payment_receiver }}</p>
             <p><strong>{% trans "Lottery Reference" %}:</strong> {{ current_lottery.lottery_reference }}</p>
-            <p><strong>{% trans "Has a Ticket?" %}:</strong>
+            <p><strong>{% trans "Do you have a ticket?" %}:</strong>
                 {% if has_ticket %}
                     <span class="badge bg-success">{% trans "Yes" %}</span>
                 {% else %}
                     <span class="badge bg-danger">{% trans "No" %}</span>
                 {% endif %}
             </p>
-            <p class="mt-3"><strong>{% trans "Participation Instructions" %}:</strong></p>
+            <hr>
+            <p class="mt-3"><strong>{% trans "How to Participate:" %}</strong></p>
             <p>{{ instructions }}</p>
         </div>
     </div>

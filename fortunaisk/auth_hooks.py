@@ -1,6 +1,5 @@
 # fortunaisk/auth_hooks.py
-
-# Django
+"""Alliance Auth hooks for adding FortunaIsk to the navigation menu."""
 
 # Alliance Auth
 from allianceauth import hooks
@@ -10,9 +9,13 @@ from . import urls
 
 
 class FortunaiskMenu(MenuItemHook):
+    """
+    Adds a menu item for FortunaIsk in the Alliance Auth navigation, visible to users with the appropriate permissions.
+    """
+
     def __init__(self):
         super().__init__(
-            "Fortunaisk",
+            "FortunaIsk",
             "fas fa-ticket-alt fa-fw",
             "fortunaisk:lottery",
             navactive=["fortunaisk:lottery"],

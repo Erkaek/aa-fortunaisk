@@ -1,3 +1,6 @@
+# fortunaisk/admin.py
+"""Django admin configuration for the FortunaIsk lottery application."""
+
 # Django
 from django.contrib import admin
 
@@ -8,14 +11,13 @@ from .models import Lottery, LotterySettings, TicketPurchase
 class LotteryAdmin(admin.ModelAdmin):
     """
     Admin interface for the Lottery model.
+    Allows marking lotteries as completed or cancelled and pre-filling payment receiver.
     """
 
     list_display = ("id", "lottery_reference", "winner_name_display", "status")
     search_fields = ("lottery_reference", "winner__username")
     actions = ["mark_completed", "mark_cancelled"]
     readonly_fields = ("id", "lottery_reference", "status")
-
-    # Inclure tous les champs nécessaires dans le formulaire d'administration
     fields = (
         "ticket_price",
         "start_date",
@@ -28,32 +30,23 @@ class LotteryAdmin(admin.ModelAdmin):
 
     def get_changeform_initial_data(self, request):
         """
-        Pré-remplir le champ 'payment_receiver' avec la valeur par défaut depuis LotterySettings.
+        Prefill the 'payment_receiver' field with the default value from LotterySettings.
         """
-        settings = LotterySettings.objects.get_or_create()[
-            0
-        ]  # Récupère les paramètres globaux
+        settings = LotterySettings.objects.get_or_create()[0]
         return {"payment_receiver": settings.default_payment_receiver}
 
     def save_model(self, request, obj, form, change):
         """
-        Automatiquement générer 'lottery_reference' lors de la sauvegarde.
+        Automatically generate 'lottery_reference' if it does not exist on save.
         """
         if not obj.lottery_reference:
             obj.lottery_reference = obj.generate_unique_reference()
         super().save_model(request, obj, form, change)
 
-    @admin.display(description="Next Drawing Date")
-    def get_next_drawing_date(self, obj):
-        """
-        Affiche la prochaine date de tirage.
-        """
-        return obj.next_drawing_date.strftime("%Y-%m-%d %H:%M")
-
-    @admin.action(description="Marquer les loteries sélectionnées comme complétées")
+    @admin.action(description="Mark selected lotteries as completed")
     def mark_completed(self, request, queryset):
         """
-        Marquer les loteries comme 'completed' et définir le gagnant.
+        Mark selected active lotteries as completed and randomly choose a winner if available.
         """
         for lottery in queryset.filter(status="active"):
             ticket = (
@@ -69,14 +62,14 @@ class LotteryAdmin(admin.ModelAdmin):
             else:
                 self.message_user(
                     request,
-                    f"No tickets for {lottery.lottery_reference}.",
+                    f"No tickets found for {lottery.lottery_reference}.",
                     level="warning",
                 )
 
-    @admin.action(description="Marquer les loteries sélectionnées comme annulées")
+    @admin.action(description="Mark selected lotteries as cancelled")
     def mark_cancelled(self, request, queryset):
         """
-        Marquer les loteries comme 'cancelled' et retirer le gagnant.
+        Mark selected lotteries as cancelled and remove the winner.
         """
         queryset.update(status="cancelled", winner=None)
         self.message_user(request, "Selected lotteries marked as cancelled.")
@@ -84,6 +77,3 @@ class LotteryAdmin(admin.ModelAdmin):
     @admin.display(description="Winner Name")
     def winner_name_display(self, obj):
         return obj.winner.username if obj.winner else "No winner yet"
-
-
-# Assurez-vous qu'il n'y a pas de duplication d'enregistrement du modèle Lottery

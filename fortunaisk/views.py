@@ -1,4 +1,5 @@
 # fortunaisk/views.py
+"""Django views for the FortunaIsk lottery application."""
 
 # Standard Library
 import logging
@@ -24,13 +25,18 @@ logger = logging.getLogger(__name__)
 
 @login_required
 def lottery(request):
+    """
+    Display the current active lottery if available.
+    Show instructions on how to participate if the user has no ticket.
+    """
     current_lottery = Lottery.objects.filter(status="active").first()
     if not current_lottery:
         return render(
-            request, "fortunaisk/lottery.html", {"message": "No active lottery."}
+            request,
+            "fortunaisk/lottery.html",
+            {"message": "No active lottery available."},
         )
 
-    # Retrieve corporation name if Payment Receiver is a corporation ID
     corporation_name = None
     if str(current_lottery.payment_receiver).isdigit():
         corporation_name = (
@@ -45,9 +51,11 @@ def lottery(request):
     has_ticket = TicketPurchase.objects.filter(
         user=request.user, lottery=current_lottery
     ).exists()
+
     instructions = (
-        f"Send {current_lottery.ticket_price} ISK to {corporation_name or current_lottery.payment_receiver} "
-        f"with reference '{current_lottery.lottery_reference}' to participate."
+        f"To participate, please send {current_lottery.ticket_price} ISK "
+        f"to {corporation_name or current_lottery.payment_receiver} with the reference "
+        f"'{current_lottery.lottery_reference}' in the payment reason."
     )
 
     return render(
@@ -65,6 +73,9 @@ def lottery(request):
 @login_required
 @permission_required("fortunaisk.view_ticketpurchase", raise_exception=True)
 def ticket_purchases(request):
+    """
+    Display all ticket purchases for the current active lottery.
+    """
     current_lottery = Lottery.objects.filter(status="active").first()
     if not current_lottery:
         return render(
@@ -73,37 +84,33 @@ def ticket_purchases(request):
             {"purchases": [], "message": "No active lottery."},
         )
 
-    # Filter journal entries
+    # Attempt to match journal entries (already processed by the periodic task or not)
     journal_entries = CorporationWalletJournalEntry.objects.filter(
         second_party_name_id=current_lottery.payment_receiver,
         amount=current_lottery.ticket_price,
-        reason=f"LOTTERY-{current_lottery.lottery_reference}",
+        reason__contains=current_lottery.lottery_reference.replace("LOTTERY-", ""),
     )
 
     if not journal_entries.exists():
-        logger.info("No journal entries found matching the criteria.")
+        logger.info("No matching journal entries found.")
         return render(
             request,
             "fortunaisk/ticket_purchases.html",
             {"purchases": [], "message": "No matching journal entries found."},
         )
 
-    # Cache for EveCharacters to reduce redundant queries
     character_cache = {}
     purchases = []
 
     for entry in journal_entries:
         try:
-            # Use cache for character lookup
             character_id = entry.first_party_name_id
             if character_id not in character_cache:
                 character_cache[character_id] = EveCharacter.objects.get(
                     character_id=character_id
                 )
-
             character = character_cache[character_id]
 
-            # Find user associated with the character
             user = User.objects.filter(
                 character_ownerships__character=character
             ).first()
@@ -113,7 +120,6 @@ def ticket_purchases(request):
                 )
                 continue
 
-            # Create or get a ticket
             purchase, created = TicketPurchase.objects.get_or_create(
                 user=user,
                 lottery=current_lottery,
@@ -141,34 +147,45 @@ def ticket_purchases(request):
 
 @permission_required("fortunaisk.admin", raise_exception=True)
 def select_winner(request, lottery_id):
+    """
+    Manually select a winner for a given active lottery.
+    Only accessible to admins.
+    """
     lottery = get_object_or_404(Lottery, id=lottery_id, status="active")
     participants = User.objects.filter(ticketpurchase__lottery=lottery).annotate(
         ticket_count=Count("ticketpurchase")
     )
 
     if not participants.exists():
-        messages.info(request, "Aucun participant pour cette loterie.")
+        messages.info(request, "No participants for this lottery.")
         return render(request, "fortunaisk/lottery.html")
 
-    winner = participants.order_by("?").first()
-    lottery.winner = winner
+    winner_user = participants.order_by("?").first()
+    lottery.winner = winner_user
     lottery.status = "completed"
     lottery.save()
 
     messages.success(
-        request, f"Félicitations à {winner.username} pour avoir gagné la loterie!"
+        request, f"Congratulations to {winner_user.username} for winning the lottery!"
     )
-    return render(request, "fortunaisk/winner.html", {"winner": winner})
+    return render(request, "fortunaisk/winner.html", {"winner": winner_user})
 
 
 @login_required
 def winner_list(request):
+    """
+    Display a list of all past winners.
+    """
     winners = Winner.objects.select_related("character", "ticket__lottery")
     return render(request, "fortunaisk/winner_list.html", {"winners": winners})
 
 
 @permission_required("fortunaisk.admin", raise_exception=True)
 def admin_dashboard(request):
+    """
+    Admin dashboard to view the current active lottery, past lotteries and global settings.
+    Allows updating the default payment receiver.
+    """
     current_lottery = Lottery.objects.filter(status="active").first()
     total_tickets = (
         TicketPurchase.objects.filter(lottery=current_lottery).count()
@@ -177,7 +194,6 @@ def admin_dashboard(request):
     )
     past_lotteries = Lottery.objects.filter(status="completed").order_by("-end_date")
 
-    # Configuration Payment Receiver
     settings, _ = LotterySettings.objects.get_or_create()
     if request.method == "POST":
         form = LotterySettingsForm(request.POST, instance=settings)
@@ -201,6 +217,9 @@ def admin_dashboard(request):
 
 @login_required
 def user_dashboard(request):
+    """
+    Display the user's ticket purchases and winnings.
+    """
     user = request.user
     ticket_purchases = TicketPurchase.objects.filter(user=user).select_related(
         "lottery", "character"
@@ -218,6 +237,9 @@ def user_dashboard(request):
 
 @login_required
 def lottery_history(request):
+    """
+    Display the history of all completed lotteries and their winners.
+    """
     past_lotteries = Lottery.objects.filter(status="completed").order_by("-end_date")
     winners = Winner.objects.filter(ticket__lottery__in=past_lotteries).select_related(
         "character", "ticket__lottery"
@@ -234,7 +256,8 @@ def lottery_history(request):
 @permission_required("fortunaisk.view_ticketpurchase", raise_exception=True)
 def lottery_participants(request, lottery_id):
     """
-    Vue pour afficher les participants d'une loterie.
+    Display all participants of a specific lottery.
+    Only accessible to users with the appropriate permission.
     """
     lottery = get_object_or_404(Lottery, id=lottery_id)
     participants = TicketPurchase.objects.filter(lottery=lottery).select_related(

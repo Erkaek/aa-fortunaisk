@@ -3,7 +3,7 @@
 {% load navactive %}
 
 {% block page_title %}
-    {% trans "Fortunaisk" %}
+    {% trans "FortunaIsk" %}
 {% endblock page_title %}
 
 {% block head %}
@@ -11,11 +11,7 @@
     <style>
         body {
             background-color: #f8f9fa;
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
         }
-
         .card {
             margin-bottom: 20px;
             padding: 15px;
@@ -24,34 +20,28 @@
             background-color: #fff;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
-
         .table {
             width: 100%;
             margin-bottom: 1rem;
             border-collapse: collapse;
             color: #212529;
         }
-
         .table th, .table td {
             padding: 10px;
             text-align: left;
             border-bottom: 1px solid #ddd;
         }
-
         .table th {
             background-color: #343a40;
             color: white;
         }
-
         .table tr:hover {
             background-color: #f1f1f1;
         }
-
         .alert {
             padding: 10px 20px;
             border-radius: 5px;
         }
-
         .alert-icon {
             margin-right: 8px;
         }
@@ -59,7 +49,7 @@
 {% endblock head %}
 
 {% block header_nav_brand %}
-    {% trans "Fortunaisk" %}
+    {% trans "FortunaIsk" %}
 {% endblock header_nav_brand %}
 
 {% block header_nav_collapse_left %}
@@ -98,4 +88,4 @@
     <div class="container mt-4">
         {% block details %}{% endblock %}
     </div>
-{% endblock %}
+{% endblock content %}

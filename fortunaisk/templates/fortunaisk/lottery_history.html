@@ -2,7 +2,7 @@
 {% load i18n %}
 {% load fortunaisk_tags %}
 {% load humanize %}
-{% load fortunaisk_filters %}
+{% load fortunaisk_filter %}
 
 {% block page_title %}
     {% trans "Lottery History" %}
@@ -14,7 +14,7 @@
     {% if past_lotteries %}
     <div class="table-responsive">
         <table class="table table-striped table-hover">
-            <thead class="thead-light">
+            <thead>
                 <tr>
                     <th>{% trans "Lottery Reference" %}</th>
                     <th>{% trans "Ticket Price" %}</th>

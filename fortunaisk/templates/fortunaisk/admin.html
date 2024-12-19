@@ -9,7 +9,7 @@
 <div class="container mt-4">
     <h2 class="text-center mb-4">{% trans "Admin Dashboard" %}</h2>
 
-    <!-- Formulaire pour le Payment Receiver -->
+    <!-- Global Settings Form -->
     <div class="card shadow mb-4">
         <div class="card-header bg-info text-white">
             <h5 class="mb-0">{% trans "Configure Default Payment Receiver" %}</h5>
@@ -38,6 +38,11 @@
             <p><strong>{% trans "Total Tickets:" %}</strong> {{ total_tickets }}</p>
         </div>
     </div>
+    {% else %}
+    <div class="alert alert-warning text-center">
+        <i class="fas fa-exclamation-circle alert-icon"></i>
+        {% trans "No active lottery." %}
+    </div>
     {% endif %}
 
     <!-- Lottery History -->
@@ -49,7 +54,7 @@
             {% if past_lotteries %}
             <div class="table-responsive">
                 <table class="table table-striped table-hover">
-                    <thead class="table-dark">
+                    <thead>
                         <tr>
                             <th>{% trans "Lottery Reference" %}</th>
                             <th>{% trans "Ticket Price" %}</th>
