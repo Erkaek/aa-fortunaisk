@@ -5,14 +5,13 @@ from .models import Lottery, LotterySettings, TicketPurchase
 
 
 @admin.register(Lottery)
-@admin.register(Lottery)
 class LotteryAdmin(admin.ModelAdmin):
     """
     Admin interface for the Lottery model.
     """
 
-    list_display = ("id", "lottery_reference", "winner_name", "status")
-    search_fields = ("lottery_reference", "winner_name")
+    list_display = ("id", "lottery_reference", "winner_name_display", "status")
+    search_fields = ("lottery_reference", "winner_name_display")
     actions = ["mark_completed", "mark_cancelled"]
     readonly_fields = ("id", "lottery_reference", "start_date", "end_date", "status")
 
@@ -30,7 +29,7 @@ class LotteryAdmin(admin.ModelAdmin):
         Automatiquement générer 'lottery_reference' lors de la sauvegarde.
         """
         if not obj.lottery_reference:
-            obj.lottery_reference = f"LOTTERY-{obj.start_date.strftime('%Y%m%d')}-{obj.end_date.strftime('%Y%m%d')}"
+            obj.lottery_reference = obj.generate_unique_reference()
         super().save_model(request, obj, form, change)
 
     @admin.display(description="Next Drawing Date")
@@ -50,7 +49,7 @@ class LotteryAdmin(admin.ModelAdmin):
                 TicketPurchase.objects.filter(lottery=lottery).order_by("?").first()
             )
             if ticket:
-                lottery.winner_name = ticket.character.character_name
+                lottery.winner = ticket.user
                 lottery.status = "completed"
                 lottery.save()
                 self.message_user(
@@ -68,10 +67,9 @@ class LotteryAdmin(admin.ModelAdmin):
         """
         Marquer les loteries comme 'cancelled' et retirer le gagnant.
         """
-        queryset.update(status="cancelled", winner_name=None)
+        queryset.update(status="cancelled", winner=None)
         self.message_user(request, "Selected lotteries marked as cancelled.")
 
     @admin.display(description="Winner Name")
-    def winner_name(self, obj):
-        # Assurez-vous que cette méthode existe et retourne le nom du gagnant
-        return obj.winner.name if obj.winner else "No winner yet"
+    def winner_name_display(self, obj):
+        return obj.winner.username if obj.winner else "No winner yet"

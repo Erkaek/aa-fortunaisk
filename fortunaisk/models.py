@@ -46,9 +46,7 @@ class Lottery(models.Model):
     payment_receiver = models.IntegerField()
     lottery_reference = models.CharField(max_length=20, unique=True)
     status = models.CharField(max_length=20, default="active")
-    winner = models.ForeignKey(
-        "auth.User", null=True, blank=True, on_delete=models.SET_NULL
-    )
+    winner = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
 
     class Meta:
         ordering = ["-start_date"]
@@ -56,10 +54,6 @@ class Lottery(models.Model):
     @property
     def is_active(self):
         return self.status == "active"
-
-    @property
-    def winner(self):
-        return self.winner_name or "No Winner"
 
     @property
     def next_drawing_date(self):
@@ -81,10 +75,6 @@ class Lottery(models.Model):
             reference = f"LOTTERY-{''.join(random.choices(string.digits, k=10))}"
             if not Lottery.objects.filter(lottery_reference=reference).exists():
                 return reference
-
-            # Si la loterie est activée, configure la tâche périodique (une seule tâche pour toutes les loteries)
-            if self.is_active:
-                self.setup_periodic_task()
 
     def setup_periodic_task(self):
         # Une seule tâche périodique pour toutes les loteries actives
