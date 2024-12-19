@@ -11,7 +11,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.models import User
 from django.db.models import Count
-from django.shortcuts import get_object_or_404, redirect, render  # Import de redirect
+from django.shortcuts import get_object_or_404, redirect, render
 
 # Alliance Auth
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
@@ -32,7 +32,7 @@ def lottery(request):
 
     # Retrieve corporation name if Payment Receiver is a corporation ID
     corporation_name = None
-    if current_lottery.payment_receiver.isdigit():
+    if str(current_lottery.payment_receiver).isdigit():
         corporation_name = (
             EveCorporationInfo.objects.filter(
                 corporation_id=int(current_lottery.payment_receiver)
@@ -151,7 +151,7 @@ def select_winner(request, lottery_id):
         return render(request, "fortunaisk/lottery.html")
 
     winner = participants.order_by("?").first()
-    lottery.winner_name = winner.username
+    lottery.winner = winner
     lottery.status = "completed"
     lottery.save()
 
