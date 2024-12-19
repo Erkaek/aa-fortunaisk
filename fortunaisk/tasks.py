@@ -21,7 +21,7 @@ from .models import Lottery, TicketPurchase
 # Configuration du logger pour Celery
 logger = logging.getLogger(__name__)
 handler = logging.StreamHandler()
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levellevelname)s - %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)
@@ -41,8 +41,11 @@ def process_wallet_tickets(self):
     for lottery in active_lotteries:
         logger.info(f"Processing lottery: {lottery.id}, reference: {lottery.lottery_reference}")
         
-        # Utilisation directe de la référence de la loterie sans ajout de 'LOTTERY-'
+        # Correction de la formation de la chaîne reason
         reason_filter = lottery.lottery_reference
+        if not reason_filter.startswith("LOTTERY-"):
+            reason_filter = f"LOTTERY-{reason_filter}"
+        
         logger.info(f"Filtering payments with: second_party_name_id={lottery.payment_receiver}, amount={lottery.ticket_price}, reason contains '{reason_filter}'")
         
         payments = CorporationWalletJournalEntry.objects.filter(
