@@ -171,7 +171,7 @@ class TicketAnomaly(models.Model):
     payment_date = models.DateTimeField()
     amount = models.PositiveBigIntegerField(default=0)
     recorded_at = models.DateTimeField(default=timezone.now)
-    payment_id = models.BigIntegerField()  # Identifiant unique du paiement
+    payment_id = models.BigIntegerField(default=0)# Identifiant unique du paiement
 
     class Meta:
         ordering = ["-recorded_at"]
