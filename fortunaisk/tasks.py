@@ -141,7 +141,7 @@ def select_winner_for_lottery(lottery):
 
     winner = participants.order_by("?").first()
     lottery.winner = winner
-    lottery.status = "completed"
+    lottery.status = "completed"  # Update the status to completed
     lottery.save()
 
     Winner.objects.create(
