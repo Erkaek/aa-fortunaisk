@@ -29,8 +29,42 @@ logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
 
-@shared_task(bind=True)
-def process_wallet_tickets(self):
+@shared_task
+def check_lotteries():
+    now = timezone.now()
+    active_lotteries = Lottery.objects.filter(status="active", end_date__lte=now)
+
+    for lottery in active_lotteries:
+        select_winner_for_lottery(lottery)
+
+
+def select_winner_for_lottery(lottery):
+    participants = User.objects.filter(ticketpurchase__lottery=lottery).annotate(
+        ticket_count=Count("ticketpurchase")
+    )
+
+    if not participants.exists():
+        logger.info(f"No participants for lottery {lottery.lottery_reference}")
+        return
+
+    winner = participants.order_by("?").first()
+    lottery.winner = winner
+    lottery.status = "completed"
+    lottery.save()
+
+    Winner.objects.create(
+        character=winner.profile.main_character,
+        ticket=TicketPurchase.objects.filter(user=winner, lottery=lottery).first(),
+        won_at=timezone.now(),
+    )
+
+    logger.info(
+        f"Winner selected for lottery {lottery.lottery_reference}: {winner.username}"
+    )
+
+
+@shared_task
+def process_wallet_tickets():
     logger.info("Processing wallet entries for active lotteries.")
 
     active_lotteries = Lottery.objects.filter(status="active")
@@ -119,40 +153,6 @@ def process_wallet_tickets(self):
 
     logger.info(f"Processed {processed_entries} tickets across active lotteries.")
     return f"Processed {processed_entries} tickets for all active lotteries."
-
-
-@shared_task
-def check_lotteries():
-    now = timezone.now()
-    active_lotteries = Lottery.objects.filter(status="active", end_date__lte=now)
-
-    for lottery in active_lotteries:
-        select_winner_for_lottery(lottery)
-
-
-def select_winner_for_lottery(lottery):
-    participants = User.objects.filter(ticketpurchase__lottery=lottery).annotate(
-        ticket_count=Count("ticketpurchase")
-    )
-
-    if not participants.exists():
-        logger.info(f"No participants for lottery {lottery.lottery_reference}")
-        return
-
-    winner = participants.order_by("?").first()
-    lottery.winner = winner
-    lottery.status = "completed"  # Update the status to completed
-    lottery.save()
-
-    Winner.objects.create(
-        character=winner.profile.main_character,
-        ticket=TicketPurchase.objects.filter(user=winner, lottery=lottery).first(),
-        won_at=timezone.now(),
-    )
-
-    logger.info(
-        f"Winner selected for lottery {lottery.lottery_reference}: {winner.username}"
-    )
 
 
 def setup_tasks(sender, **kwargs):
