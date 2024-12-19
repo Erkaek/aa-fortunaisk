@@ -21,7 +21,6 @@ from .models import Lottery, TicketAnomaly, TicketPurchase, Winner
 
 logger = logging.getLogger(__name__)
 
-
 @login_required
 def lottery(request):
     """
@@ -67,7 +66,6 @@ def lottery(request):
             "instructions": instructions,
         },
     )
-
 
 @login_required
 @permission_required("fortunaisk.view_ticketpurchase", raise_exception=True)
@@ -143,7 +141,6 @@ def ticket_purchases(request):
         },
     )
 
-
 @permission_required("fortunaisk.admin", raise_exception=True)
 def select_winner(request, lottery_id):
     """
@@ -169,7 +166,6 @@ def select_winner(request, lottery_id):
     )
     return render(request, "fortunaisk/winner.html", {"winner": winner_user})
 
-
 @login_required
 def winner_list(request):
     """
@@ -177,7 +173,6 @@ def winner_list(request):
     """
     winners = Winner.objects.select_related("character", "ticket__lottery")
     return render(request, "fortunaisk/winner_list.html", {"winners": winners})
-
 
 @permission_required("fortunaisk.admin", raise_exception=True)
 def admin_dashboard(request):
@@ -194,9 +189,9 @@ def admin_dashboard(request):
     anomalies = TicketAnomaly.objects.all()
 
     stats = {
-        "total_tickets": TicketPurchase.objects.count(),
-        "total_lotteries": Lottery.objects.count(),
-        "total_anomalies": anomalies.count(),
+        'total_tickets': TicketPurchase.objects.count(),
+        'total_lotteries': Lottery.objects.count(),
+        'total_anomalies': anomalies.count(),
     }
 
     return render(
@@ -210,7 +205,6 @@ def admin_dashboard(request):
             "stats": stats,
         },
     )
-
 
 @login_required
 def user_dashboard(request):
@@ -231,7 +225,6 @@ def user_dashboard(request):
         {"ticket_purchases": ticket_purchases, "winnings": winnings},
     )
 
-
 @login_required
 def lottery_history(request):
     """
@@ -247,7 +240,6 @@ def lottery_history(request):
         "fortunaisk/lottery_history.html",
         {"past_lotteries": past_lotteries, "winners": winners},
     )
-
 
 @login_required
 @permission_required("fortunaisk.view_ticketpurchase", raise_exception=True)

@@ -147,6 +147,10 @@ def update_notifications(request):
     )
 
 
-admin.site.urls += [
-    path("update_notifications/", update_notifications, name="update_notifications"),
-]
+admin.site.urls += tuple(
+    [
+        path(
+            "update_notifications/", update_notifications, name="update_notifications"
+        ),
+    ]
+)
