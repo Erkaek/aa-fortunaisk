@@ -1,24 +1,16 @@
-# Standard Library
 import json
 import logging
 
-# Third Party
 from celery import shared_task
 from corptools.models import CorporationWalletJournalEntry
 from django_celery_beat.models import IntervalSchedule, PeriodicTask
-
-# Django
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
-# Alliance Auth
 from allianceauth.eveonline.models import EveCharacter
 from allianceauth.services.tasks import QueueOnce
-
-# Local imports
 from .models import Lottery, TicketPurchase
 
-# Configuration du logger pour Celery
 logger = logging.getLogger(__name__)
 handler = logging.StreamHandler()
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levellevelname)s - %(message)s')
@@ -26,12 +18,10 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
-# Tâche pour traiter les paiements de tickets pour toutes les loteries actives
 @shared_task(bind=True)
 def process_wallet_tickets(self):
     logger.info("Processing wallet entries for active lotteries.")
     
-    # Logique de la tâche pour traiter les tickets de loterie
     active_lotteries = Lottery.objects.filter(status="active")
     if not active_lotteries.exists():
         logger.info("No active lotteries found.")
@@ -40,12 +30,9 @@ def process_wallet_tickets(self):
     processed_entries = 0
     for lottery in active_lotteries:
         logger.info(f"Processing lottery: {lottery.id}, reference: {lottery.lottery_reference}")
-        
-        # Correction de la formation de la chaîne reason
+
+        # Utilisation directe de la référence de loterie sans ajout
         reason_filter = lottery.lottery_reference
-        if not reason_filter.startswith("LOTTERY-"):
-            reason_filter = f"LOTTERY-{reason_filter}"
-        
         logger.info(f"Filtering payments with: second_party_name_id={lottery.payment_receiver}, amount={lottery.ticket_price}, reason contains '{reason_filter}'")
         
         payments = CorporationWalletJournalEntry.objects.filter(
@@ -53,8 +40,7 @@ def process_wallet_tickets(self):
             amount=lottery.ticket_price,
             reason__contains=reason_filter,
         )
-        
-        # Ajout d'un log pour afficher les paiements trouvés
+
         logger.info(f"Found {payments.count()} payments for lottery: {lottery.id}")
         
         if not payments.exists():
