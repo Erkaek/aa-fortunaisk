@@ -18,7 +18,13 @@ from allianceauth.services.tasks import QueueOnce
 # Local imports
 from .models import Lottery, TicketPurchase
 
+# Configuration du logger pour Celery
 logger = logging.getLogger(__name__)
+handler = logging.StreamHandler()
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+logger.setLevel(logging.INFO)
 
 # Tâche pour traiter les paiements de tickets pour toutes les loteries actives
 @shared_task(bind=True)
