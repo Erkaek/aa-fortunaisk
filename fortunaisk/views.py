@@ -18,7 +18,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 
 from .forms import LotterySettingsForm
-from .models import Lottery, LotterySettings, TicketPurchase, Winner
+from .models import Lottery, LotterySettings, TicketAnomaly, TicketPurchase, Winner
 
 logger = logging.getLogger(__name__)
 
@@ -193,6 +193,7 @@ def admin_dashboard(request):
         else 0
     )
     past_lotteries = Lottery.objects.filter(status="completed").order_by("-end_date")
+    anomalies = TicketAnomaly.objects.all()  # ou filtrer selon vos besoins
 
     settings, _ = LotterySettings.objects.get_or_create()
     if request.method == "POST":
@@ -211,6 +212,7 @@ def admin_dashboard(request):
             "total_tickets": total_tickets,
             "past_lotteries": past_lotteries,
             "form": form,
+            "anomalies": anomalies,
         },
     )
 

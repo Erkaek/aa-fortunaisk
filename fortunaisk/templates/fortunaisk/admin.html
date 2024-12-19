@@ -51,7 +51,40 @@
             <h5 class="mb-0">{% trans "Ticket Anomalies" %}</h5>
         </div>
         <div class="card-body">
-            <p>{% trans "Please review anomalies in the Django admin:" %} <a href="/admin/fortunaisk/ticketanomaly/">{% trans "View Anomalies" %}</a></p>
+            {% if anomalies %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>{% trans "Reason" %}</th>
+                            <th>{% trans "Lottery" %}</th>
+                            <th>{% trans "User" %}</th>
+                            <th>{% trans "Character" %}</th>
+                            <th>{% trans "Payment Date" %}</th>
+                            <th>{% trans "Amount" %}</th>
+                            <th>{% trans "Recorded At" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for anomaly in anomalies %}
+                        <tr>
+                            <td>{{ anomaly.reason }}</td>
+                            <td>{{ anomaly.lottery.lottery_reference }}</td>
+                            <td>{{ anomaly.user.username if anomaly.user else "N/A" }}</td>
+                            <td>{{ anomaly.character.character_name if anomaly.character else "N/A" }}</td>
+                            <td>{{ anomaly.payment_date|date:"Y-m-d H:i" }}</td>
+                            <td>{{ anomaly.amount }}</td>
+                            <td>{{ anomaly.recorded_at|date:"Y-m-d H:i" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info text-center">
+                {% trans "No anomalies found." %}
+            </div>
+            {% endif %}
         </div>
     </div>
 
