@@ -3,6 +3,7 @@
 
 # Django
 from django.contrib import admin
+from django.shortcuts import render  # Ajoutez cet import
 from django.utils import timezone
 
 from .models import (
@@ -163,3 +164,14 @@ def admin_dashboard(request):
     }
 
     return render(request, "fortunaisk/admin.html", context)
+
+
+def current_lotteries(request):
+    # Fetch all active lotteries
+    active_lotteries = Lottery.objects.filter(status="active")
+
+    context = {
+        "active_lotteries": active_lotteries,
+    }
+
+    return render(request, "fortunaisk/lottery.html", context)
