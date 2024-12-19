@@ -33,8 +33,15 @@ def process_wallet_tickets(self):
 
         # Utilisation directe de la référence de loterie sans ajout
         reason_filter = lottery.lottery_reference
+        logger.info(f"Original lottery reference: {reason_filter}")
+
+        # Vérification et correction de la référence de loterie
+        if reason_filter.startswith("LOTTERY-"):
+            reason_filter = reason_filter[len("LOTTERY-"):]
+        logger.info(f"Corrected lottery reference: {reason_filter}")
+
+        # Filtrage des paiements
         logger.info(f"Filtering payments with: second_party_name_id={lottery.payment_receiver}, amount={lottery.ticket_price}, reason contains '{reason_filter}'")
-        
         payments = CorporationWalletJournalEntry.objects.filter(
             second_party_name_id=lottery.payment_receiver,
             amount=lottery.ticket_price,
