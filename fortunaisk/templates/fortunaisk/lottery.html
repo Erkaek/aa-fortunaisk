@@ -8,6 +8,10 @@
 {% block details %}
 <div class="text-center mt-4">
     <h2 class="mb-4">{% trans "Current Lotteries" %}</h2>
+
+    <!-- Debugging: Afficher le contenu de active_lotteries -->
+    <pre>{{ active_lotteries }}</pre>
+
     {% if active_lotteries %}
         {% for lottery in active_lotteries %}
         <div class="card shadow mb-4">
