@@ -12,6 +12,7 @@ from django_celery_beat.models import IntervalSchedule, PeriodicTask
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError, transaction
+from django.db.models import Count
 from django.utils import timezone
 
 # Alliance Auth
@@ -120,26 +121,6 @@ def process_wallet_tickets(self):
     return f"Processed {processed_entries} tickets for all active lotteries."
 
 
-def setup_tasks(sender, **kwargs):
-    task_name = "process_wallet_tickets_for_all_lotteries"
-    schedule, created = IntervalSchedule.objects.get_or_create(
-        every=5,
-        period=IntervalSchedule.MINUTES,
-    )
-    PeriodicTask.objects.update_or_create(
-        name=task_name,
-        defaults={
-            "task": "fortunaisk.tasks.process_wallet_tickets",
-            "interval": schedule,
-            "args": json.dumps([]),
-        },
-    )
-    if created:
-        logger.info(f"Created new periodic task: {task_name}")
-    else:
-        logger.info(f"Updated existing periodic task: {task_name}")
-
-
 @shared_task
 def check_lotteries():
     now = timezone.now()
@@ -192,3 +173,17 @@ def setup_periodic_tasks(sender, **kwargs):
         logger.info(f"Created new periodic task: {task_name}")
     else:
         logger.info(f"Updated existing periodic task: {task_name}")
+
+
+# Django
+from django.apps import AppConfig
+
+# Connect the setup_tasks function to the post_migrate signal
+from django.db.models.signals import post_migrate
+
+
+class FortunaiskConfig(AppConfig):
+    name = "fortunaisk"
+
+    def ready(self):
+        post_migrate.connect(setup_periodic_tasks, sender=self)
