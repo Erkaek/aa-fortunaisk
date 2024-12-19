@@ -9,4 +9,5 @@ class FortunaiskConfig(AppConfig):
 
     def ready(self):
         from .tasks import setup_tasks  # Assurez-vous que cette ligne est correcte
+
         setup_tasks()
