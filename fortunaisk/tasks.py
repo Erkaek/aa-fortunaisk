@@ -1,6 +1,7 @@
 # Standard Library
 import json
 import logging
+from datetime import datetime
 
 # Third Party
 from celery import shared_task
@@ -8,6 +9,8 @@ from corptools.models import CorporationWalletJournalEntry
 from django_celery_beat.models import IntervalSchedule, PeriodicTask
 
 # Django
+from django.contrib.auth.models import User
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
@@ -15,7 +18,7 @@ from django.utils import timezone
 from allianceauth.eveonline.models import EveCharacter
 from allianceauth.services.tasks import QueueOnce
 
-from .models import Lottery, TicketPurchase
+from .models import Lottery, TicketPurchase, Winner
 
 logger = logging.getLogger(__name__)
 handler = logging.StreamHandler()
@@ -127,6 +130,60 @@ def setup_tasks(sender, **kwargs):
         name=task_name,
         defaults={
             "task": "fortunaisk.tasks.process_wallet_tickets",
+            "interval": schedule,
+            "args": json.dumps([]),
+        },
+    )
+    if created:
+        logger.info(f"Created new periodic task: {task_name}")
+    else:
+        logger.info(f"Updated existing periodic task: {task_name}")
+
+
+@shared_task
+def check_lotteries():
+    now = timezone.now()
+    active_lotteries = Lottery.objects.filter(status="active", end_date__lte=now)
+
+    for lottery in active_lotteries:
+        select_winner_for_lottery(lottery)
+
+
+def select_winner_for_lottery(lottery):
+    participants = User.objects.filter(ticketpurchase__lottery=lottery).annotate(
+        ticket_count=Count("ticketpurchase")
+    )
+
+    if not participants.exists():
+        logger.info(f"No participants for lottery {lottery.lottery_reference}")
+        return
+
+    winner = participants.order_by("?").first()
+    lottery.winner = winner
+    lottery.status = "completed"
+    lottery.save()
+
+    Winner.objects.create(
+        character=winner.profile.main_character,
+        ticket=TicketPurchase.objects.filter(user=winner, lottery=lottery).first(),
+        won_at=timezone.now(),
+    )
+
+    logger.info(
+        f"Winner selected for lottery {lottery.lottery_reference}: {winner.username}"
+    )
+
+
+def setup_periodic_tasks(sender, **kwargs):
+    task_name = "check_lotteries"
+    schedule, created = IntervalSchedule.objects.get_or_create(
+        every=1,
+        period=IntervalSchedule.HOURS,
+    )
+    PeriodicTask.objects.update_or_create(
+        name=task_name,
+        defaults={
+            "task": "fortunaisk.tasks.check_lotteries",
             "interval": schedule,
             "args": json.dumps([]),
         },
