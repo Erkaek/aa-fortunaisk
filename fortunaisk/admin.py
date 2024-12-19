@@ -3,6 +3,10 @@
 
 # Django
 from django.contrib import admin
+from django.contrib.auth.decorators import (  # Ajoutez cet import
+    login_required,
+    permission_required,
+)
 from django.shortcuts import render  # Ajoutez cet import
 from django.utils import timezone
 
@@ -151,6 +155,8 @@ class WebhookConfigurationAdmin(admin.ModelAdmin):
         return super().has_add_permission(request)
 
 
+@login_required  # Ajoutez ce décorateur
+@permission_required("fortunaisk.admin", raise_exception=True)  # Ajoutez ce décorateur
 def admin_dashboard(request):
     # Fetch all active lotteries
     active_lotteries = Lottery.objects.filter(status="active")
@@ -166,6 +172,7 @@ def admin_dashboard(request):
     return render(request, "fortunaisk/admin.html", context)
 
 
+@login_required  # Ajoutez ce décorateur
 def current_lotteries(request):
     # Fetch all active lotteries
     active_lotteries = Lottery.objects.filter(status="active")
