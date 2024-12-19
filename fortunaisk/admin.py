@@ -13,7 +13,18 @@ class LotteryAdmin(admin.ModelAdmin):
     list_display = ("id", "lottery_reference", "winner_name_display", "status")
     search_fields = ("lottery_reference", "winner_name_display")
     actions = ["mark_completed", "mark_cancelled"]
-    readonly_fields = ("id", "lottery_reference", "start_date", "end_date", "status")
+    readonly_fields = ("id", "lottery_reference", "status")
+
+    # Inclure tous les champs nécessaires dans le formulaire d'administration
+    fields = (
+        "ticket_price",
+        "start_date",
+        "end_date",
+        "payment_receiver",
+        "lottery_reference",
+        "status",
+        "winner",
+    )
 
     def get_changeform_initial_data(self, request):
         """
