@@ -158,3 +158,7 @@ class Winner(models.Model):
 
     def __str__(self):
         return f"Winner: {self.character.character_name}"
+
+
+def get_default_lottery():
+    return None
