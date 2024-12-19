@@ -11,7 +11,7 @@ class LotteryAdmin(admin.ModelAdmin):
     """
 
     list_display = ("id", "lottery_reference", "winner_name_display", "status")
-    search_fields = ("lottery_reference", "winner_name_display")
+    search_fields = ("lottery_reference", "winner__username")
     actions = ["mark_completed", "mark_cancelled"]
     readonly_fields = ("id", "lottery_reference", "status")
 
@@ -84,3 +84,6 @@ class LotteryAdmin(admin.ModelAdmin):
     @admin.display(description="Winner Name")
     def winner_name_display(self, obj):
         return obj.winner.username if obj.winner else "No winner yet"
+
+
+# Enlever toute référence supplémentaire à l'enregistrement du modèle Lottery
