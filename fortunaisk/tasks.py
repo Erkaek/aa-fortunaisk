@@ -13,7 +13,7 @@ from .models import Lottery, TicketPurchase
 
 logger = logging.getLogger(__name__)
 handler = logging.StreamHandler()
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levellevelname)s - %(message)s')
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)
@@ -60,7 +60,7 @@ def process_wallet_tickets(self):
                 character = EveCharacter.objects.get(
                     character_id=payment.first_party_name_id
                 )
-                ownership = character.character_ownerships.first()
+                ownership = character.character_ownership
                 if not ownership or not ownership.user:
                     logger.warning(
                         f"No main user for character {character.character_name} (ID: {character.character_id})."
