@@ -3,7 +3,6 @@
 {% load humanize %}
 {% load fortunaisk_filters %}
 
-
 {% block page_title %}
     {% trans "My Dashboard" %}
 {% endblock page_title %}
@@ -23,7 +22,7 @@
                     {% if ticket_purchases %}
                     <div class="table-responsive">
                         <table class="table table-striped table-hover">
-                            <thead>
+                            <thead class="thead-light">
                                 <tr>
                                     <th>{% trans "Lottery Reference" %}</th>
                                     <th>{% trans "Character" %}</th>
@@ -63,7 +62,7 @@
                     {% if winnings %}
                     <div class="table-responsive">
                         <table class="table table-striped table-hover">
-                            <thead>
+                            <thead class="thead-light">
                                 <tr>
                                     <th>{% trans "Lottery Reference" %}</th>
                                     <th>{% trans "Character" %}</th>

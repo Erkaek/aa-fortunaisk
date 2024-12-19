@@ -3,7 +3,6 @@
 {% load humanize %}
 {% load fortunaisk_filters %}
 
-
 {% block page_title %}
     {% trans "Ticket Purchases" %}
 {% endblock page_title %}
@@ -14,7 +13,7 @@
     {% if purchases %}
     <div class="table-responsive">
         <table class="table table-bordered table-hover">
-            <thead>
+            <thead class="thead-light">
                 <tr>
                     <th>{% trans "User" %}</th>
                     <th>{% trans "Character" %}</th>
