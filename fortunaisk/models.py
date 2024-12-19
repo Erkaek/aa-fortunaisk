@@ -1,6 +1,8 @@
 # Standard Library
 import json
 import logging
+import random
+import string
 
 # Third Party
 from django_celery_beat.models import IntervalSchedule, PeriodicTask
@@ -38,15 +40,14 @@ class Lottery(models.Model):
         ("cancelled", "Cancelled"),
     ]
 
-    ticket_price = models.DecimalField(
-        max_digits=15, decimal_places=2, default=10000000.00
-    )
-    start_date = models.DateTimeField(default=timezone.now)
+    ticket_price = models.DecimalField(max_digits=20, decimal_places=2)
+    start_date = models.DateTimeField()
     end_date = models.DateTimeField()
-    payment_receiver = models.CharField(max_length=100, blank=True)
-    lottery_reference = models.CharField(max_length=50, unique=True, blank=True)
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="active")
-    winner_name = models.CharField(max_length=100, null=True, blank=True)
+    payment_receiver = models.IntegerField()
+    lottery_reference = models.CharField(
+        max_length=20, unique=True
+    )  # Assurez-vous que la référence est unique
+    status = models.CharField(max_length=20, default="active")
 
     class Meta:
         ordering = ["-start_date"]
@@ -70,10 +71,15 @@ class Lottery(models.Model):
             self.payment_receiver = settings.default_payment_receiver
 
         if not self.lottery_reference:
-            self.lottery_reference = f"LOTTERY-{self.start_date.strftime('%Y%m%d')}-{self.end_date.strftime('%Y%m%d')}"
-
-        # Enregistrer la loterie
+            self.lottery_reference = self.generate_unique_reference()
         super().save(*args, **kwargs)
+
+    @staticmethod
+    def generate_unique_reference():
+        while True:
+            reference = f"LOTTERY-{''.join(random.choices(string.digits, k=10))}"
+            if not Lottery.objects.filter(lottery_reference=reference).exists():
+                return reference
 
         # Si la loterie est activée, configure la tâche périodique (une seule tâche pour toutes les loteries)
         if self.is_active:
