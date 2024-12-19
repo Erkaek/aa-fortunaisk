@@ -41,13 +41,14 @@ def process_wallet_tickets(self):
     for lottery in active_lotteries:
         logger.info(f"Processing lottery: {lottery.id}, reference: {lottery.lottery_reference}")
         
-        # Ajout de logs pour vérifier les critères de filtrage
-        logger.info(f"Filtering payments with: second_party_name_id={lottery.payment_receiver}, amount={lottery.ticket_price}, reason contains 'LOTTERY-{lottery.lottery_reference}'")
+        # Correction de la formation de la chaîne reason
+        reason_filter = f"LOTTERY-{lottery.lottery_reference}"
+        logger.info(f"Filtering payments with: second_party_name_id={lottery.payment_receiver}, amount={lottery.ticket_price}, reason contains '{reason_filter}'")
         
         payments = CorporationWalletJournalEntry.objects.filter(
             second_party_name_id=lottery.payment_receiver,
             amount=lottery.ticket_price,
-            reason__contains=f"LOTTERY-{lottery.lottery_reference}",
+            reason__contains=reason_filter,
         )
         
         # Ajout d'un log pour afficher les paiements trouvés
