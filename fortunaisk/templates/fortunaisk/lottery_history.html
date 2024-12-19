@@ -1,6 +1,7 @@
 {% extends "fortunaisk/base.html" %}
 {% load i18n %}
 {% load fortunaisk_tags %}
+{% load humanize %}
 
 {% block page_title %}
     {% trans "Lottery History" %}
@@ -26,7 +27,7 @@
                 {% for lottery in past_lotteries %}
                 <tr>
                     <td>{{ lottery.lottery_reference }}</td>
-                    <td>{{ lottery.ticket_price }} ISK</td>
+                    <td>{{ lottery.ticket_price|intcomma|replace:","," " }} ISK</td>
                     <td>{{ lottery.start_date|date:"Y-m-d H:i" }}</td>
                     <td>{{ lottery.end_date|date:"Y-m-d H:i" }}</td>
                     <td>{{ lottery.get_status_display }}</td>
