@@ -3,6 +3,7 @@
 
 # Django
 from django.contrib import admin
+from django.utils import timezone
 
 from .models import Lottery, LotterySettings, TicketPurchase
 
@@ -11,13 +12,17 @@ from .models import Lottery, LotterySettings, TicketPurchase
 class LotteryAdmin(admin.ModelAdmin):
     """
     Admin interface for the Lottery model.
-    Allows marking lotteries as completed or cancelled and pre-filling payment receiver.
+    Only allows editing essential fields during creation:
+    - ticket_price
+    - end_date
+    - payment_receiver (prefilled)
+    start_date is automatically set to now and winner is read-only.
     """
 
     list_display = ("id", "lottery_reference", "winner_name_display", "status")
     search_fields = ("lottery_reference", "winner__username")
     actions = ["mark_completed", "mark_cancelled"]
-    readonly_fields = ("id", "lottery_reference", "status")
+    readonly_fields = ("id", "lottery_reference", "status", "start_date", "winner")
     fields = (
         "ticket_price",
         "start_date",
@@ -38,7 +43,12 @@ class LotteryAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         """
         Automatically generate 'lottery_reference' if it does not exist on save.
+        Automatically set 'start_date' if this is a new object.
         """
+        if not change:
+            # Set the start_date only on creation if not already set
+            if not obj.start_date:
+                obj.start_date = timezone.now()
         if not obj.lottery_reference:
             obj.lottery_reference = obj.generate_unique_reference()
         super().save_model(request, obj, form, change)
