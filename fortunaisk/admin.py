@@ -4,11 +4,17 @@
 # Django
 from django.contrib import admin
 from django.contrib.auth.decorators import permission_required
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect
 from django.urls import include, path
 from django.utils import timezone
 
-from .models import Lottery, LotterySettings, TicketAnomaly, TicketPurchase
+from .models import (
+    Lottery,
+    LotterySettings,
+    TicketAnomaly,
+    TicketPurchase,
+    WebhookConfiguration,
+)
 
 
 @admin.register(Lottery)
@@ -49,7 +55,6 @@ class LotteryAdmin(admin.ModelAdmin):
         Automatically set 'start_date' if this is a new object.
         """
         if not change:
-            # Set the start_date only on creation if not already set
             if not obj.start_date:
                 obj.start_date = timezone.now()
         if not obj.lottery_reference:
@@ -134,17 +139,14 @@ class TicketAnomalyAdmin(admin.ModelAdmin):
 
 @permission_required("fortunaisk.admin", raise_exception=True)
 def update_notifications(request):
-    settings, _ = LotterySettings.objects.get_or_create()
     if request.method == "POST":
-        discord_webhook = request.POST.get("discord_webhook")
-        settings.discord_webhook = discord_webhook
-        settings.save()
+        webhook_url = request.POST.get("webhook_url")
+        WebhookConfiguration.objects.update_or_create(
+            id=1,
+            defaults={"webhook_url": webhook_url},
+        )
         return redirect("admin:index")
-    return render(
-        request,
-        "fortunaisk/update_notifications.html",
-        {"settings": settings},
-    )
+    return redirect("admin:index")
 
 
 # Ajouter les URL personnalisées
@@ -156,8 +158,5 @@ urlpatterns = [
     ),
 ]
 
-# Django
 # Inclure les URL personnalisées dans les URL de l'admin
-
-
-admin.site.urls += [path("", include(urlpatterns))]
+admin.site.urls += (path("", include(urlpatterns)),)

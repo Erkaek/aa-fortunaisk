@@ -180,3 +180,13 @@ class TicketAnomaly(models.Model):
                 fields=["lottery", "payment_id"], name="unique_anomaly_for_payment"
             )
         ]
+
+
+class WebhookConfiguration(models.Model):
+    webhook_url = models.URLField("URL du Webhook")
+
+    class Meta:
+        verbose_name = "Configuration du Webhook"
+
+    def __str__(self):
+        return self.webhook_url
