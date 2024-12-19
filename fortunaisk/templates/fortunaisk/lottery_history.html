@@ -4,7 +4,6 @@
 {% load humanize %}
 {% load fortunaisk_filters %}
 
-
 {% block page_title %}
     {% trans "Lottery History" %}
 {% endblock page_title %}
@@ -23,6 +22,9 @@
                     <th>{% trans "End Date" %}</th>
                     <th>{% trans "Status" %}</th>
                     <th>{% trans "Winner" %}</th>
+                    {% if perms.fortunaisk.view_ticketpurchase %}
+                    <th>{% trans "Participants" %}</th>
+                    {% endif %}
                 </tr>
             </thead>
             <tbody>
@@ -42,6 +44,13 @@
                             {% endif %}
                         {% endwith %}
                     </td>
+                    {% if perms.fortunaisk.view_ticketpurchase %}
+                    <td>
+                        <a href="{% url 'fortunaisk:lottery_participants' lottery.id %}" class="btn btn-sm btn-info">
+                            {% trans "View Participants" %}
+                        </a>
+                    </td>
+                    {% endif %}
                 </tr>
                 {% endfor %}
             </tbody>

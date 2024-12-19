@@ -16,6 +16,9 @@ from django.contrib.auth.models import User
 from django.db import models
 from django.utils import timezone
 
+# Alliance Auth
+from allianceauth.eveonline.models import EveCharacter
+
 logger = logging.getLogger(__name__)
 
 
@@ -119,9 +122,6 @@ class TicketPurchase(models.Model):
     """
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    # EveCharacter is required by allianceauth, ensuring user has a main character
-    # Alliance Auth
-    from allianceauth.eveonline.models import EveCharacter
 
     character = models.ForeignKey(EveCharacter, on_delete=models.CASCADE)
     lottery = models.ForeignKey(Lottery, on_delete=models.CASCADE)
@@ -146,9 +146,6 @@ class Winner(models.Model):
     Represents a winner of a lottery.
     """
 
-    # Alliance Auth
-    from allianceauth.eveonline.models import EveCharacter
-
     character = models.ForeignKey(EveCharacter, on_delete=models.CASCADE)
     ticket = models.OneToOneField(TicketPurchase, on_delete=models.CASCADE)
     won_at = models.DateTimeField(default=timezone.now)
@@ -162,3 +159,25 @@ class Winner(models.Model):
 
 def get_default_lottery():
     return None
+
+
+class TicketAnomaly(models.Model):
+    """
+    Stores anomalies encountered when processing wallet entries that do not result in a valid TicketPurchase.
+    """
+
+    lottery = models.ForeignKey("Lottery", on_delete=models.CASCADE)
+    character = models.ForeignKey(
+        EveCharacter, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
+    reason = models.CharField(max_length=255)
+    payment_date = models.DateTimeField()
+    amount = models.PositiveBigIntegerField(default=0)
+    recorded_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["-recorded_at"]
+
+    def __str__(self):
+        return f"Anomaly for lottery {self.lottery.lottery_reference}: {self.reason}"

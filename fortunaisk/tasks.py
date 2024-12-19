@@ -10,6 +10,7 @@ from celery import shared_task
 from corptools.models import CorporationWalletJournalEntry
 
 # Django
+from django.contrib.auth.models import User
 from django.db import IntegrityError, transaction
 from django.db.models import Count
 from django.utils import timezone
@@ -17,31 +18,20 @@ from django.utils import timezone
 # Alliance Auth
 from allianceauth.eveonline.models import EveCharacter
 
-from .models import Lottery, TicketPurchase, Winner
+from .models import Lottery, TicketAnomaly, TicketPurchase, Winner
 
 logger = logging.getLogger(__name__)
 
 
 @shared_task
 def check_lotteries():
-    """
-    Check all lotteries that have passed their end_date and are still active.
-    If so, select a winner and mark them as completed.
-    """
     now = timezone.now()
     active_lotteries = Lottery.objects.filter(status="active", end_date__lte=now)
-
     for lottery in active_lotteries:
         select_winner_for_lottery(lottery)
 
 
 def select_winner_for_lottery(lottery):
-    """
-    Select a winner randomly among the participants of a given lottery.
-    """
-    # Django
-    from django.contrib.auth.models import User
-
     participants = User.objects.filter(ticketpurchase__lottery=lottery).annotate(
         ticket_count=Count("ticketpurchase")
     )
@@ -68,10 +58,6 @@ def select_winner_for_lottery(lottery):
 
 @shared_task
 def process_wallet_tickets():
-    """
-    Process all wallet entries from the corporation's journal to register new
-    ticket purchases for all active lotteries.
-    """
     logger.info("Processing wallet entries for active lotteries.")
     active_lotteries = Lottery.objects.filter(status="active")
 
@@ -96,30 +82,57 @@ def process_wallet_tickets():
             continue
 
         for payment in payments:
+            anomaly_reason = None
+            character = None
+            user = None
+
+            # Vérification de la date de paiement
+            if not (lottery.start_date <= payment.date <= lottery.end_date):
+                anomaly_reason = "Payment date not within lottery start/end date."
+
             try:
                 character = EveCharacter.objects.get(
                     character_id=payment.first_party_name_id
                 )
                 ownership = character.character_ownership
                 if not ownership or not ownership.user:
-                    logger.warning(
-                        f"No main user for character {character.character_name} (ID: {character.character_id})."
+                    if anomaly_reason is None:
+                        anomaly_reason = "No main user for character."
+                else:
+                    user = ownership.user
+                    if user.profile.main_character_id != character.id:
+                        if anomaly_reason is None:
+                            anomaly_reason = (
+                                "Character is not the main character of the user."
+                            )
+            except EveCharacter.DoesNotExist:
+                if anomaly_reason is None:
+                    anomaly_reason = (
+                        f"EveCharacter with ID {payment.first_party_name_id} not found."
                     )
-                    continue
 
-                user = ownership.user
-                if user.profile.main_character_id != character.id:
-                    logger.warning(
-                        f"Character {character.character_name} is not the main character of user {user.username}."
-                    )
-                    continue
+            if (
+                user
+                and TicketPurchase.objects.filter(user=user, lottery=lottery).exists()
+            ):
+                if anomaly_reason is None:
+                    anomaly_reason = f"Duplicate ticket for user '{user.username}'."
 
-                if TicketPurchase.objects.filter(user=user, lottery=lottery).exists():
-                    logger.info(
-                        f"Duplicate ticket for user '{user.username}', skipping."
-                    )
-                    continue
+            if anomaly_reason:
+                # Enregistrer l'anomalie
+                TicketAnomaly.objects.create(
+                    lottery=lottery,
+                    character=character,
+                    user=user,
+                    reason=anomaly_reason,
+                    payment_date=payment.date,
+                    amount=int(payment.amount),
+                )
+                logger.info(f"Anomaly detected: {anomaly_reason}")
+                continue
 
+            # Si aucune anomalie, création du ticket
+            try:
                 with transaction.atomic():
                     TicketPurchase.objects.create(
                         user=user,
@@ -130,14 +143,27 @@ def process_wallet_tickets():
                     )
                     logger.info(f"Ticket registered for user '{user.username}'.")
                 processed_entries += 1
-
-            except EveCharacter.DoesNotExist:
-                logger.error(
-                    f"EveCharacter with ID {payment.first_party_name_id} not found."
-                )
             except IntegrityError as e:
+                # En cas d'erreur d'intégrité, on enregistre une anomalie
+                TicketAnomaly.objects.create(
+                    lottery=lottery,
+                    character=character,
+                    user=user,
+                    reason=f"Integrity error: {e}",
+                    payment_date=payment.date,
+                    amount=int(payment.amount),
+                )
                 logger.error(f"Integrity error processing payment {payment.id}: {e}")
             except Exception as e:
+                # Toute autre exception, également enregistrer une anomalie
+                TicketAnomaly.objects.create(
+                    lottery=lottery,
+                    character=character,
+                    user=user,
+                    reason=f"Unexpected error: {e}",
+                    payment_date=payment.date,
+                    amount=int(payment.amount),
+                )
                 logger.exception(
                     f"Unexpected error processing payment {payment.id}: {e}"
                 )
@@ -147,10 +173,6 @@ def process_wallet_tickets():
 
 
 def setup_tasks(sender, **kwargs):
-    """
-    Setup periodic tasks for checking lotteries and processing wallet tickets.
-    This is connected to the post_migrate signal in apps.py.
-    """
     # Third Party
     from django_celery_beat.models import IntervalSchedule, PeriodicTask
 

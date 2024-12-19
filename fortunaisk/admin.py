@@ -5,7 +5,7 @@
 from django.contrib import admin
 from django.utils import timezone
 
-from .models import Lottery, LotterySettings, TicketPurchase
+from .models import Lottery, LotterySettings, TicketAnomaly, TicketPurchase
 
 
 @admin.register(Lottery)
@@ -87,3 +87,43 @@ class LotteryAdmin(admin.ModelAdmin):
     @admin.display(description="Winner Name")
     def winner_name_display(self, obj):
         return obj.winner.username if obj.winner else "No winner yet"
+
+
+@admin.register(TicketAnomaly)
+class TicketAnomalyAdmin(admin.ModelAdmin):
+    """
+    Admin interface to view ticket anomalies.
+    """
+
+    list_display = (
+        "lottery",
+        "user",
+        "character",
+        "reason",
+        "payment_date",
+        "recorded_at",
+    )
+    search_fields = (
+        "lottery__lottery_reference",
+        "reason",
+        "user__username",
+        "character__character_name",
+    )
+    readonly_fields = (
+        "lottery",
+        "character",
+        "user",
+        "reason",
+        "payment_date",
+        "amount",
+        "recorded_at",
+    )
+    fields = (
+        "lottery",
+        "character",
+        "user",
+        "reason",
+        "payment_date",
+        "amount",
+        "recorded_at",
+    )
