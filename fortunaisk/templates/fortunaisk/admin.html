@@ -98,23 +98,6 @@
         </div>
     </div>
 
-    <!-- Section for Discord Notification Settings -->
-    <div class="card shadow mt-4">
-        <div class="card-header bg-info text-white">
-            <h5 class="mb-0">{% trans "Discord Notifications" %}</h5>
-        </div>
-        <div class="card-body">
-            <form method="post" action="{% url 'fortunaisk:update_notifications' %}">
-                {% csrf_token %}
-                <div class="form-group">
-                    <label for="discord_webhook">{% trans "Discord Webhook URL" %}</label>
-                    <input type="url" class="form-control" id="discord_webhook" name="discord_webhook" placeholder="{% trans 'Enter Discord Webhook URL' %}" required>
-                </div>
-                <button type="submit" class="btn btn-primary">{% trans "Save" %}</button>
-            </form>
-        </div>
-    </div>
-
     <!-- Section for Statistics -->
     <div class="card shadow mt-4">
         <div class="card-header bg-success text-white">
@@ -126,6 +109,5 @@
             <!-- Add charts here using chart.js or another library -->
         </div>
     </div>
-
 </div>
 {% endblock details %}
