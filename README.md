@@ -4,19 +4,12 @@
 
 **Note: This project is under active development and is not ready for production use.**
 
-FortunaISK is a monthly lottery module for Alliance Auth.
+FortunaISK is a monthly lottery module for Alliance Auth, currently being developed and not yet suitable for production deployment.
 
 ## Features
 
-- Configurable ticket price and unique reference ID (feature under development).
+- Configurable ticket price and unique reference ID (under development).
 - Automatic payment verification using `allianceauth-corp-tools` (in progress).
 - History of winners available in the UI (coming soon).
 
-## Installation
-
-### Prerequisites
-
-- Python 3.8+
-- Alliance Auth 2.9+
-- Django 3.2+
-- `allianceauth-corp-tools` 1.0.0+
+Further documentation and instructions will be provided once the project reaches a stable release.
