@@ -1,6 +1,4 @@
-# fortunaisk/__init__.py
-
-"""Initialize the Fortunaisk app."""
+"""Initialize the app"""
 
 __version__ = "0.0.1"
 __title__ = "fortunaisk"

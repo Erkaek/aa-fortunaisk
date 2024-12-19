@@ -176,14 +176,7 @@ def setup_tasks(sender, **kwargs):
 
 
 # Django
-from django.apps import AppConfig
-
 # Connect the setup_tasks function to the post_migrate signal
 from django.db.models.signals import post_migrate
 
-
-class FortunaiskConfig(AppConfig):
-    name = "fortunaisk"
-
-    def ready(self):
-        post_migrate.connect(setup_tasks, sender=self)
+post_migrate.connect(setup_tasks, sender=None)
