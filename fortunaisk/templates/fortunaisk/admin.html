@@ -11,27 +11,29 @@
 <div class="container mt-4">
     <h2 class="text-center mb-4">{% trans "Admin Dashboard" %}</h2>
 
-    <!-- Current Lottery -->
-    {% if current_lottery %}
-    <div class="card shadow mb-4">
-        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">{% trans "Current Lottery" %}</h5>
-            <a href="{% url 'fortunaisk:lottery_participants' current_lottery.id %}" class="btn btn-sm btn-info">
-                {% trans "View Participants" %}
-            </a>
+    <!-- Current Lotteries -->
+    {% if active_lotteries %}
+        {% for lottery in active_lotteries %}
+        <div class="card shadow mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">{% trans "Current Lottery" %}</h5>
+                <a href="{% url 'fortunaisk:lottery_participants' lottery.id %}" class="btn btn-sm btn-info">
+                    {% trans "View Participants" %}
+                </a>
+            </div>
+            <div class="card-body">
+                <p><strong>{% trans "Reference:" %}</strong> {{ lottery.lottery_reference }}</p>
+                <p><strong>{% trans "Status:" %}</strong> {{ lottery.get_status_display }}</p>
+                <p><strong>{% trans "Total Tickets:" %}</strong> {{ lottery.total_tickets }}</p>
+            </div>
         </div>
-        <div class="card-body">
-            <p><strong>{% trans "Reference:" %}</strong> {{ current_lottery.lottery_reference }}</p>
-            <p><strong>{% trans "Status:" %}</strong> {{ current_lottery.get_status_display }}</p>
-            <p><strong>{% trans "Total Tickets:" %}</strong> {{ total_tickets }}</p>
-        </div>
-    </div>
+        {% endfor %}
     {% else %}
-    <div class="alert alert-warning text-center">
-        <i class="fas fa-exclamation-circle alert-icon"></i>
-        {% trans "No active lottery." %}
-    </div>
-    {% endif %}
+        <div class="alert alert-warning text-center">
+            <i class="fas fa-exclamation-circle alert-icon"></i>
+            {% trans "No active lottery." %}
+        </div>
+{% endif %}
 
     <!-- Ticket Anomalies -->
     <div class="card shadow mt-4">

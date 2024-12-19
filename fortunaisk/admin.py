@@ -148,3 +148,18 @@ class WebhookConfigurationAdmin(admin.ModelAdmin):
         if WebhookConfiguration.objects.exists():
             return False
         return super().has_add_permission(request)
+
+
+def admin_dashboard(request):
+    # Fetch all active lotteries
+    active_lotteries = Lottery.objects.filter(status="active")
+
+    # Fetch ticket anomalies
+    anomalies = TicketAnomaly.objects.all()
+
+    context = {
+        "active_lotteries": active_lotteries,
+        "anomalies": anomalies,
+    }
+
+    return render(request, "fortunaisk/admin.html", context)
