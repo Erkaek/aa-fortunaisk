@@ -70,8 +70,20 @@
                         <tr>
                             <td>{{ anomaly.reason }}</td>
                             <td>{{ anomaly.lottery.lottery_reference }}</td>
-                            <td>{{ anomaly.user.username if anomaly.user else "N/A" }}</td>
-                            <td>{{ anomaly.character.character_name if anomaly.character else "N/A" }}</td>
+                            <td>
+                                {% if anomaly.user %}
+                                    {{ anomaly.user.username }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if anomaly.character %}
+                                    {{ anomaly.character.character_name }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
                             <td>{{ anomaly.payment_date|date:"Y-m-d H:i" }}</td>
                             <td>{{ anomaly.amount }}</td>
                             <td>{{ anomaly.recorded_at|date:"Y-m-d H:i" }}</td>
