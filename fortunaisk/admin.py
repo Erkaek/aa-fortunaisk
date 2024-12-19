@@ -5,7 +5,7 @@
 from django.contrib import admin
 from django.contrib.auth.decorators import permission_required
 from django.shortcuts import redirect
-from django.urls import include, path
+from django.urls import path
 from django.utils import timezone
 
 from .models import (
@@ -157,6 +157,3 @@ urlpatterns = [
         name="update_notifications",
     ),
 ]
-
-# Inclure les URL personnalisées dans les URL de l'admin
-admin.site.urls += (path("", include(urlpatterns)),)
