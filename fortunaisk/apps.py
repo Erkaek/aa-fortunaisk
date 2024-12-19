@@ -8,6 +8,5 @@ class FortunaiskConfig(AppConfig):
     verbose_name = "Fortunaisk Lottery System"
 
     def ready(self):
-        from .tasks import setup_tasks
-
-        post_migrate.connect(setup_tasks, sender=self)
+        from .tasks import setup_tasks  # Assurez-vous que cette ligne est correcte
+        setup_tasks()
