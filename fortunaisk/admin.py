@@ -86,4 +86,4 @@ class LotteryAdmin(admin.ModelAdmin):
         return obj.winner.username if obj.winner else "No winner yet"
 
 
-# Enlever toute référence supplémentaire à l'enregistrement du modèle Lottery
+# Assurez-vous qu'il n'y a pas de duplication d'enregistrement du modèle Lottery

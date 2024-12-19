@@ -1,86 +1,140 @@
+# Standard Library
+import json
+import logging
+
+# Third Party
+from celery import shared_task
+from corptools.models import CorporationWalletJournalEntry
+from django_celery_beat.models import IntervalSchedule, PeriodicTask
+
 # Django
-from django.contrib import admin
+from django.db import IntegrityError, transaction
+from django.utils import timezone
 
-from .models import Lottery, LotterySettings, TicketPurchase
+# Alliance Auth
+from allianceauth.eveonline.models import EveCharacter
+from allianceauth.services.tasks import QueueOnce
+
+from .models import Lottery, TicketPurchase
+
+logger = logging.getLogger(__name__)
+handler = logging.StreamHandler()
+formatter = logging.Formatter("%(asctime)s - %(name)s - %levelname)s - %(message)s")
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+logger.setLevel(logging.INFO)
 
 
-@admin.register(Lottery)
-class LotteryAdmin(admin.ModelAdmin):
-    """
-    Admin interface for the Lottery model.
-    """
+@shared_task(bind=True)
+def process_wallet_tickets(self):
+    logger.info("Processing wallet entries for active lotteries.")
 
-    list_display = ("id", "lottery_reference", "winner_name_display", "status")
-    search_fields = ("lottery_reference", "winner__username")
-    actions = ["mark_completed", "mark_cancelled"]
-    readonly_fields = ("id", "lottery_reference", "status")
+    active_lotteries = Lottery.objects.filter(status="active")
+    if not active_lotteries.exists():
+        logger.info("No active lotteries found.")
+        return "No active lotteries to process."
 
-    # Inclure tous les champs nécessaires dans le formulaire d'administration
-    fields = (
-        "ticket_price",
-        "start_date",
-        "end_date",
-        "payment_receiver",
-        "lottery_reference",
-        "status",
-        "winner",
-    )
+    processed_entries = 0
+    for lottery in active_lotteries:
+        logger.info(
+            f"Processing lottery: {lottery.id}, reference: {lottery.lottery_reference}"
+        )
 
-    def get_changeform_initial_data(self, request):
-        """
-        Pré-remplir le champ 'payment_receiver' avec la valeur par défaut depuis LotterySettings.
-        """
-        settings = LotterySettings.objects.get_or_create()[
-            0
-        ]  # Récupère les paramètres globaux
-        return {"payment_receiver": settings.default_payment_receiver}
+        reason_filter = lottery.lottery_reference
+        logger.info(f"Original lottery reference: {reason_filter}")
 
-    def save_model(self, request, obj, form, change):
-        """
-        Automatiquement générer 'lottery_reference' lors de la sauvegarde.
-        """
-        if not obj.lottery_reference:
-            obj.lottery_reference = obj.generate_unique_reference()
-        super().save_model(request, obj, form, change)
+        if reason_filter.startswith("LOTTERY-"):
+            reason_filter = reason_filter[len("LOTTERY-") :]
+        logger.info(f"Corrected lottery reference: {reason_filter}")
 
-    @admin.display(description="Next Drawing Date")
-    def get_next_drawing_date(self, obj):
-        """
-        Affiche la prochaine date de tirage.
-        """
-        return obj.next_drawing_date.strftime("%Y-%m-%d %H:%M")
+        logger.info(
+            f"Filtering payments with: second_party_name_id={lottery.payment_receiver}, amount={lottery.ticket_price}, reason contains '{reason_filter}'"
+        )
+        payments = CorporationWalletJournalEntry.objects.filter(
+            second_party_name_id=lottery.payment_receiver,
+            amount=lottery.ticket_price,
+            reason__contains=reason_filter,
+        )
 
-    @admin.action(description="Marquer les loteries sélectionnées comme complétées")
-    def mark_completed(self, request, queryset):
-        """
-        Marquer les loteries comme 'completed' et définir le gagnant.
-        """
-        for lottery in queryset.filter(status="active"):
-            ticket = (
-                TicketPurchase.objects.filter(lottery=lottery).order_by("?").first()
+        logger.info(f"Found {payments.count()} payments for lottery: {lottery.id}")
+
+        if not payments.exists():
+            logger.info(f"No payments found for lottery: {lottery.id}")
+            continue
+
+        for payment in payments:
+            logger.info(
+                f"Processing payment: {payment.id}, amount: {payment.amount}, reason: {payment.reason}"
             )
-            if ticket:
-                lottery.winner = ticket.user
-                lottery.status = "completed"
-                lottery.save()
-                self.message_user(
-                    request, f"{lottery.lottery_reference} marked as completed."
+            try:
+                character = EveCharacter.objects.get(
+                    character_id=payment.first_party_name_id
                 )
-            else:
-                self.message_user(
-                    request,
-                    f"No tickets for {lottery.lottery_reference}.",
-                    level="warning",
+                ownership = character.character_ownership
+                if not ownership or not ownership.user:
+                    logger.warning(
+                        f"No main user for character {character.character_name} (ID: {character.character_id})."
+                    )
+                    continue
+
+                user = ownership.user
+                user_profile = user.profile
+                if user_profile.main_character_id != character.id:
+                    logger.warning(
+                        f"Character {character.character_name} (ID: {character.character_id}) is not the main character for user {user.username}."
+                    )
+                    continue
+
+                if TicketPurchase.objects.filter(user=user, lottery=lottery).exists():
+                    logger.info(
+                        f"Duplicate ticket for user '{user.username}', skipping."
+                    )
+                    continue
+
+                with transaction.atomic():
+                    TicketPurchase.objects.create(
+                        user=user,
+                        lottery=lottery,
+                        character=character,
+                        amount=int(payment.amount),
+                        purchase_date=timezone.now(),
+                    )
+                    logger.info(f"Ticket registered for user '{user.username}'.")
+                processed_entries += 1
+
+            except EveCharacter.DoesNotExist:
+                logger.error(
+                    f"EveCharacter with ID {payment.first_party_name_id} not found."
+                )
+            except IntegrityError as e:
+                logger.error(f"Integrity error processing payment {payment.id}: {e}")
+            except Exception as e:
+                logger.exception(
+                    f"Unexpected error processing payment {payment.id}: {e}"
                 )
 
-    @admin.action(description="Marquer les loteries sélectionnées comme annulées")
-    def mark_cancelled(self, request, queryset):
-        """
-        Marquer les loteries comme 'cancelled' et retirer le gagnant.
-        """
-        queryset.update(status="cancelled", winner=None)
-        self.message_user(request, "Selected lotteries marked as cancelled.")
+    logger.info(f"Processed {processed_entries} tickets across active lotteries.")
+    return f"Processed {processed_entries} tickets for all active lotteries."
 
-    @admin.display(description="Winner Name")
-    def winner_name_display(self, obj):
-        return obj.winner.username if obj.winner else "No winner yet"
+
+def setup_tasks(sender, **kwargs):
+    task_name = "process_wallet_tickets_for_all_lotteries"
+    schedule, created = IntervalSchedule.objects.get_or_create(
+        every=5,
+        period=IntervalSchedule.MINUTES,
+    )
+    PeriodicTask.objects.update_or_create(
+        name=task_name,
+        defaults={
+            "task": "fortunaisk.tasks.process_wallet_tickets",
+            "interval": schedule,
+            "args": json.dumps([]),
+        },
+    )
+    if created:
+        logger.info(f"Created new periodic task: {task_name}")
+    else:
+        logger.info(f"Updated existing periodic task: {task_name}")
+
+
+# Assurez-vous qu'il n'y a pas de duplication d'enregistrement du modèle Lottery dans ce fichier
