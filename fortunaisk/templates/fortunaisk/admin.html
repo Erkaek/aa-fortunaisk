@@ -106,8 +106,63 @@
         <div class="card-body">
             <h5 class="card-title">{% trans "Lottery Statistics" %}</h5>
             <p>{% trans "Total Tickets Sold" %}: {{ stats.total_tickets }}</p>
-            <!-- Add charts here using chart.js or another library -->
+
+            <!-- Ticket Purchases per Lottery Chart -->
+            <canvas id="ticketsChart"></canvas>
+
+            <!-- Total Pot Evolution Chart -->
+            <canvas id="potsChart" class="mt-4"></canvas>
         </div>
     </div>
 </div>
+
+<!-- Include Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Data for tickets per lottery
+    const ticketsCtx = document.getElementById('ticketsChart').getContext('2d');
+    const ticketsChart = new Chart(ticketsCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ lottery_names|safe }},
+            datasets: [{
+                label: '{% trans "Tickets Purchased" %}',
+                data: {{ tickets_per_lottery|safe }},
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // Data for total pots evolution
+    const potsCtx = document.getElementById('potsChart').getContext('2d');
+    const potsChart = new Chart(potsCtx, {
+        type: 'line',
+        data: {
+            labels: {{ lottery_names|safe }},
+            datasets: [{
+                label: '{% trans "Total Pot Amount" %}',
+                data: {{ total_pots|safe }},
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+</script>
 {% endblock details %}

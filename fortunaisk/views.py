@@ -11,7 +11,7 @@ from corptools.models import CorporationWalletJournalEntry
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.models import User
-from django.db.models import Count
+from django.db.models import Count, Sum
 from django.shortcuts import get_object_or_404, render
 
 # Alliance Auth
@@ -179,37 +179,54 @@ def winner_list(request):
     return render(request, "fortunaisk/winner_list.html", {"winners": winners})
 
 
+@login_required
 @permission_required("fortunaisk.admin", raise_exception=True)
 def admin_dashboard(request):
-    """
-    Admin dashboard to view the current active lottery, past lotteries and global settings.
-    """
+    # Current active lottery
     current_lottery = Lottery.objects.filter(status="active").first()
     total_tickets = (
         TicketPurchase.objects.filter(lottery=current_lottery).count()
         if current_lottery
         else 0
     )
+
+    # Past lotteries
     past_lotteries = Lottery.objects.filter(status="completed").order_by("-end_date")
     anomalies = TicketAnomaly.objects.all()
 
+    # Statistics
     stats = {
         "total_tickets": TicketPurchase.objects.count(),
         "total_lotteries": Lottery.objects.count(),
         "total_anomalies": anomalies.count(),
     }
 
-    return render(
-        request,
-        "fortunaisk/admin.html",
-        {
-            "current_lottery": current_lottery,
-            "total_tickets": total_tickets,
-            "past_lotteries": past_lotteries,
-            "anomalies": anomalies,
-            "stats": stats,
-        },
-    )
+    # Data for charts
+    lotteries = Lottery.objects.all()
+    lottery_names = [lottery.lottery_reference for lottery in lotteries]
+    tickets_per_lottery = [
+        TicketPurchase.objects.filter(lottery=lottery).count() for lottery in lotteries
+    ]
+    total_pots = [
+        TicketPurchase.objects.filter(lottery=lottery).aggregate(total=Sum("amount"))[
+            "total"
+        ]
+        or 0
+        for lottery in lotteries
+    ]
+
+    context = {
+        "current_lottery": current_lottery,
+        "total_tickets": total_tickets,
+        "past_lotteries": past_lotteries,
+        "anomalies": anomalies,
+        "stats": stats,
+        "lottery_names": lottery_names,
+        "tickets_per_lottery": tickets_per_lottery,
+        "total_pots": total_pots,
+    }
+
+    return render(request, "fortunaisk/admin.html", context)
 
 
 @login_required
