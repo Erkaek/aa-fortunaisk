@@ -3,9 +3,6 @@
 
 # Django
 from django.contrib import admin
-from django.contrib.auth.decorators import permission_required
-from django.shortcuts import redirect
-from django.urls import path
 from django.utils import timezone
 
 from .models import (
@@ -137,23 +134,17 @@ class TicketAnomalyAdmin(admin.ModelAdmin):
     )
 
 
-@permission_required("fortunaisk.admin", raise_exception=True)
-def update_notifications(request):
-    if request.method == "POST":
-        webhook_url = request.POST.get("webhook_url")
-        WebhookConfiguration.objects.update_or_create(
-            id=1,
-            defaults={"webhook_url": webhook_url},
-        )
-        return redirect("admin:index")
-    return redirect("admin:index")
+@admin.register(WebhookConfiguration)
+class WebhookConfigurationAdmin(admin.ModelAdmin):
+    """
+    Admin interface for the WebhookConfiguration model.
+    """
 
+    list_display = ("webhook_url",)
+    fields = ("webhook_url",)
 
-# Ajouter les URL personnalisées
-urlpatterns = [
-    path(
-        "admin/fortunaisk/update_notifications/",
-        update_notifications,
-        name="update_notifications",
-    ),
-]
+    def has_add_permission(self, request):
+        # Prevent adding multiple configurations
+        if WebhookConfiguration.objects.exists():
+            return False
+        return super().has_add_permission(request)
