@@ -1,24 +1,20 @@
 # Django
 from django.contrib import admin
 
-from .models import Lottery, LotterySettings, TicketPurchase, Winner
+from .models import Lottery, LotterySettings, TicketPurchase
 
 
+@admin.register(Lottery)
 @admin.register(Lottery)
 class LotteryAdmin(admin.ModelAdmin):
     """
     Admin interface for the Lottery model.
     """
 
-    list_display = (
-        "lottery_reference",
-        "is_active",
-        "winner_name",
-        "get_next_drawing_date",  # Remplacer next_drawing_date par une méthode
-    )
+    list_display = ("id", "lottery_reference", "winner_name", "status")
     search_fields = ("lottery_reference", "winner_name")
     actions = ["mark_completed", "mark_cancelled"]
-    readonly_fields = ("lottery_reference", "winner_name")  # Champs en lecture seule
+    readonly_fields = ("id", "lottery_reference", "start_date", "end_date", "status")
 
     def get_changeform_initial_data(self, request):
         """
@@ -74,3 +70,8 @@ class LotteryAdmin(admin.ModelAdmin):
         """
         queryset.update(status="cancelled", winner_name=None)
         self.message_user(request, "Selected lotteries marked as cancelled.")
+
+    @admin.display(description="Winner Name")
+    def winner_name(self, obj):
+        # Assurez-vous que cette méthode existe et retourne le nom du gagnant
+        return obj.winner.name if obj.winner else "No winner yet"
