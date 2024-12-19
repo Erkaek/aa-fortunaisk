@@ -162,10 +162,6 @@ def get_default_lottery():
 
 
 class TicketAnomaly(models.Model):
-    """
-    Stores anomalies encountered when processing wallet entries that do not result in a valid TicketPurchase.
-    """
-
     lottery = models.ForeignKey("Lottery", on_delete=models.CASCADE)
     character = models.ForeignKey(
         EveCharacter, on_delete=models.SET_NULL, null=True, blank=True
@@ -175,9 +171,12 @@ class TicketAnomaly(models.Model):
     payment_date = models.DateTimeField()
     amount = models.PositiveBigIntegerField(default=0)
     recorded_at = models.DateTimeField(default=timezone.now)
+    payment_id = models.BigIntegerField()  # Identifiant unique du paiement
 
     class Meta:
         ordering = ["-recorded_at"]
-
-    def __str__(self):
-        return f"Anomaly for lottery {self.lottery.lottery_reference}: {self.reason}"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["lottery", "payment_id"], name="unique_anomaly_for_payment"
+            )
+        ]

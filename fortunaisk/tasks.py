@@ -25,6 +25,9 @@ logger = logging.getLogger(__name__)
 
 @shared_task
 def check_lotteries():
+    """
+    Check all active lotteries that have passed their end date and select a winner.
+    """
     now = timezone.now()
     active_lotteries = Lottery.objects.filter(status="active", end_date__lte=now)
     for lottery in active_lotteries:
@@ -32,6 +35,9 @@ def check_lotteries():
 
 
 def select_winner_for_lottery(lottery):
+    """
+    Randomly select a winner from the participants of a given lottery.
+    """
     participants = User.objects.filter(ticketpurchase__lottery=lottery).annotate(
         ticket_count=Count("ticketpurchase")
     )
@@ -58,6 +64,10 @@ def select_winner_for_lottery(lottery):
 
 @shared_task
 def process_wallet_tickets():
+    """
+    Process wallet entries for all active lotteries.
+    Register tickets or anomalies depending on various validation checks.
+    """
     logger.info("Processing wallet entries for active lotteries.")
     active_lotteries = Lottery.objects.filter(status="active")
 
@@ -85,17 +95,28 @@ def process_wallet_tickets():
             anomaly_reason = None
             character = None
             user = None
+            payment_id = payment.id  # Assurez-vous que payment.id existe et est unique.
 
             logger.info(
                 f"DEBUG: Checking payment date for lottery {lottery.lottery_reference}: "
                 f"lottery.start_date={lottery.start_date}, lottery.end_date={lottery.end_date}, "
                 f"payment.date={payment.date} (type={type(payment.date)})"
             )
-             
+
+            # Check if an anomaly for this payment already exists
+            if TicketAnomaly.objects.filter(
+                lottery=lottery, payment_id=payment_id
+            ).exists():
+                logger.info(
+                    f"Anomaly already recorded for payment {payment_id}, skipping."
+                )
+                continue
+
             # Vérification de la date de paiement
             if not (lottery.start_date <= payment.date <= lottery.end_date):
                 anomaly_reason = "Payment date not within lottery start/end date."
 
+            # Vérification du personnage et de l'utilisateur
             try:
                 character = EveCharacter.objects.get(
                     character_id=payment.first_party_name_id
@@ -117,6 +138,7 @@ def process_wallet_tickets():
                         f"EveCharacter with ID {payment.first_party_name_id} not found."
                     )
 
+            # Vérification du ticket dupliqué
             if (
                 user
                 and TicketPurchase.objects.filter(user=user, lottery=lottery).exists()
@@ -125,7 +147,7 @@ def process_wallet_tickets():
                     anomaly_reason = f"Duplicate ticket for user '{user.username}'."
 
             if anomaly_reason:
-                # Enregistrer l'anomalie
+                # Enregistrer l'anomalie si aucune n'existe déjà pour ce paiement
                 TicketAnomaly.objects.create(
                     lottery=lottery,
                     character=character,
@@ -133,6 +155,7 @@ def process_wallet_tickets():
                     reason=anomaly_reason,
                     payment_date=payment.date,
                     amount=int(payment.amount),
+                    payment_id=payment_id,
                 )
                 logger.info(f"Anomaly detected: {anomaly_reason}")
                 continue
@@ -150,7 +173,6 @@ def process_wallet_tickets():
                     logger.info(f"Ticket registered for user '{user.username}'.")
                 processed_entries += 1
             except IntegrityError as e:
-                # En cas d'erreur d'intégrité, on enregistre une anomalie
                 TicketAnomaly.objects.create(
                     lottery=lottery,
                     character=character,
@@ -158,10 +180,10 @@ def process_wallet_tickets():
                     reason=f"Integrity error: {e}",
                     payment_date=payment.date,
                     amount=int(payment.amount),
+                    payment_id=payment_id,
                 )
                 logger.error(f"Integrity error processing payment {payment.id}: {e}")
             except Exception as e:
-                # Toute autre exception, également enregistrer une anomalie
                 TicketAnomaly.objects.create(
                     lottery=lottery,
                     character=character,
@@ -169,6 +191,7 @@ def process_wallet_tickets():
                     reason=f"Unexpected error: {e}",
                     payment_date=payment.date,
                     amount=int(payment.amount),
+                    payment_id=payment_id,
                 )
                 logger.exception(
                     f"Unexpected error processing payment {payment.id}: {e}"
