@@ -12,13 +12,12 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.models import User
 from django.db.models import Count
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import get_object_or_404, render
 
 # Alliance Auth
 from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 
-from .forms import LotterySettingsForm
-from .models import Lottery, LotterySettings, TicketAnomaly, TicketPurchase, Winner
+from .models import Lottery, TicketAnomaly, TicketPurchase, Winner
 
 logger = logging.getLogger(__name__)
 
@@ -184,7 +183,6 @@ def winner_list(request):
 def admin_dashboard(request):
     """
     Admin dashboard to view the current active lottery, past lotteries and global settings.
-    Allows updating the default payment receiver.
     """
     current_lottery = Lottery.objects.filter(status="active").first()
     total_tickets = (
@@ -193,16 +191,13 @@ def admin_dashboard(request):
         else 0
     )
     past_lotteries = Lottery.objects.filter(status="completed").order_by("-end_date")
-    anomalies = TicketAnomaly.objects.all()  # ou filtrer selon vos besoins
+    anomalies = TicketAnomaly.objects.all()
 
-    settings, _ = LotterySettings.objects.get_or_create()
-    if request.method == "POST":
-        form = LotterySettingsForm(request.POST, instance=settings)
-        if form.is_valid():
-            form.save()
-            return redirect("fortunaisk:admin_dashboard")
-    else:
-        form = LotterySettingsForm(instance=settings)
+    stats = {
+        "total_tickets": TicketPurchase.objects.count(),
+        "total_lotteries": Lottery.objects.count(),
+        "total_anomalies": anomalies.count(),
+    }
 
     return render(
         request,
@@ -211,8 +206,8 @@ def admin_dashboard(request):
             "current_lottery": current_lottery,
             "total_tickets": total_tickets,
             "past_lotteries": past_lotteries,
-            "form": form,
             "anomalies": anomalies,
+            "stats": stats,
         },
     )
 

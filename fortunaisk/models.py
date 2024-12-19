@@ -31,6 +31,7 @@ class LotterySettings(SingletonModel):
     default_payment_receiver = models.CharField(
         max_length=100, default="Default Receiver"
     )
+    discord_webhook = models.URLField(null=True, blank=True)
 
     def __str__(self):
         return "Lottery Settings"

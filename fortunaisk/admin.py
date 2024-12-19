@@ -3,6 +3,9 @@
 
 # Django
 from django.contrib import admin
+from django.contrib.auth.decorators import permission_required
+from django.shortcuts import redirect, render
+from django.urls import path
 from django.utils import timezone
 
 from .models import Lottery, LotterySettings, TicketAnomaly, TicketPurchase
@@ -127,3 +130,23 @@ class TicketAnomalyAdmin(admin.ModelAdmin):
         "amount",
         "recorded_at",
     )
+
+
+@permission_required("fortunaisk.admin", raise_exception=True)
+def update_notifications(request):
+    settings, _ = LotterySettings.objects.get_or_create()
+    if request.method == "POST":
+        discord_webhook = request.POST.get("discord_webhook")
+        settings.discord_webhook = discord_webhook
+        settings.save()
+        return redirect("admin:index")
+    return render(
+        request,
+        "fortunaisk/update_notifications.html",
+        {"settings": settings},
+    )
+
+
+admin.site.urls += [
+    path("update_notifications/", update_notifications, name="update_notifications"),
+]

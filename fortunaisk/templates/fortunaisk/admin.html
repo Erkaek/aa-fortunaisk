@@ -1,5 +1,7 @@
 {% extends "fortunaisk/base.html" %}
 {% load i18n %}
+{% load humanize %}
+{% load fortunaisk_filters %}
 
 {% block page_title %}
     {% trans "Admin Dashboard" %}
@@ -8,20 +10,6 @@
 {% block details %}
 <div class="container mt-4">
     <h2 class="text-center mb-4">{% trans "Admin Dashboard" %}</h2>
-
-    <!-- Global Settings Form -->
-    <div class="card shadow mb-4">
-        <div class="card-header bg-info text-white">
-            <h5 class="mb-0">{% trans "Configure Default Payment Receiver" %}</h5>
-        </div>
-        <div class="card-body">
-            <form method="post">
-                {% csrf_token %}
-                {{ form.as_p }}
-                <button type="submit" class="btn btn-success">{% trans "Save" %}</button>
-            </form>
-        </div>
-    </div>
 
     <!-- Current Lottery -->
     {% if current_lottery %}
@@ -110,5 +98,34 @@
         </div>
     </div>
 
+    <!-- Section for Discord Notification Settings -->
+    <div class="card shadow mt-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">{% trans "Discord Notifications" %}</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" action="{% url 'fortunaisk:update_notifications' %}">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="discord_webhook">{% trans "Discord Webhook URL" %}</label>
+                    <input type="url" class="form-control" id="discord_webhook" name="discord_webhook" placeholder="{% trans 'Enter Discord Webhook URL' %}" required>
+                </div>
+                <button type="submit" class="btn btn-primary">{% trans "Save" %}</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Section for Statistics -->
+    <div class="card shadow mt-4">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0">{% trans "Statistics and Reports" %}</h5>
+        </div>
+        <div class="card-body">
+            <h5 class="card-title">{% trans "Lottery Statistics" %}</h5>
+            <p>{% trans "Total Tickets Sold" %}: {{ stats.total_tickets }}</p>
+            <!-- Add charts here using chart.js or another library -->
+        </div>
+    </div>
+
 </div>
-{% endblock %}
+{% endblock details %}
