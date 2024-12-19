@@ -8,32 +8,28 @@
 {% endblock page_title %}
 
 {% block details %}
-<div class="mt-4">
+<div class="container mt-4">
     <h2 class="text-center mb-4">{% trans "Ticket Purchases" %}</h2>
     {% if purchases %}
-    <div class="table-responsive">
-        <table class="table table-bordered table-hover">
-            <thead class="thead-light">
-                <tr>
-                    <th>{% trans "User" %}</th>
-                    <th>{% trans "Character" %}</th>
-                    <th>{% trans "Amount" %}</th>
-                    <th>{% trans "Date" %}</th>
-                    <th>{% trans "Lottery Reference" %}</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for purchase in purchases %}
-                <tr>
-                    <td>{{ purchase.user.username }}</td>
-                    <td>{{ purchase.character.character_name }}</td>
-                    <td>{{ purchase.amount|space_separated }} ISK</td>
-                    <td>{{ purchase.date|date:"Y-m-d H:i" }}</td>
-                    <td>{{ purchase.lottery.lottery_reference }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div class="row">
+        {% for purchase in purchases %}
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <i class="fas fa-ticket-alt"></i> {% trans "Ticket Purchase" %}
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-user"></i> {{ purchase.user.username }}</h5>
+                    <p class="card-text">
+                        <strong>{% trans "Character" %}:</strong> {{ purchase.character.character_name }}<br>
+                        <strong>{% trans "Amount" %}:</strong> {{ purchase.amount|space_separated }} ISK<br>
+                        <strong>{% trans "Date" %}:</strong> {{ purchase.date|date:"Y-m-d H:i" }}<br>
+                        <strong>{% trans "Lottery Reference" %}:</strong> {{ purchase.lottery.lottery_reference }}
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
     </div>
     {% else %}
     <div class="alert alert-info text-center">
