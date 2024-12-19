@@ -3,11 +3,13 @@ from django.contrib import admin
 
 from .models import Lottery, LotterySettings, TicketPurchase, Winner
 
+
 @admin.register(Lottery)
 class LotteryAdmin(admin.ModelAdmin):
     """
     Admin interface for the Lottery model.
     """
+
     list_display = (
         "lottery_reference",
         "is_active",
@@ -22,7 +24,9 @@ class LotteryAdmin(admin.ModelAdmin):
         """
         Pré-remplir le champ 'payment_receiver' avec la valeur par défaut depuis LotterySettings.
         """
-        settings = LotterySettings.objects.get_or_create()[0]  # Récupère les paramètres globaux
+        settings = LotterySettings.objects.get_or_create()[
+            0
+        ]  # Récupère les paramètres globaux
         return {"payment_receiver": settings.default_payment_receiver}
 
     def save_model(self, request, obj, form, change):
@@ -46,14 +50,22 @@ class LotteryAdmin(admin.ModelAdmin):
         Marquer les loteries comme 'completed' et définir le gagnant.
         """
         for lottery in queryset.filter(status="active"):
-            ticket = TicketPurchase.objects.filter(lottery=lottery).order_by("?").first()
+            ticket = (
+                TicketPurchase.objects.filter(lottery=lottery).order_by("?").first()
+            )
             if ticket:
                 lottery.winner_name = ticket.character.character_name
                 lottery.status = "completed"
                 lottery.save()
-                self.message_user(request, f"{lottery.lottery_reference} marked as completed.")
+                self.message_user(
+                    request, f"{lottery.lottery_reference} marked as completed."
+                )
             else:
-                self.message_user(request, f"No tickets for {lottery.lottery_reference}.", level="warning")
+                self.message_user(
+                    request,
+                    f"No tickets for {lottery.lottery_reference}.",
+                    level="warning",
+                )
 
     @admin.action(description="Marquer les loteries sélectionnées comme annulées")
     def mark_cancelled(self, request, queryset):
