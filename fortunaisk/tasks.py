@@ -50,6 +50,13 @@ def process_wallet_tickets(self):
                     continue
 
                 user = ownership.user
+                user_profile = user.profile
+                if user_profile.main_character_id != character.id:
+                    logger.warning(
+                        f"Character {character.character_name} is not the main character for user {user.username}."
+                    )
+                    continue
+
                 if TicketPurchase.objects.filter(user=user, lottery=lottery).exists():
                     logger.info(
                         f"Duplicate ticket for user '{user.username}', skipping."
