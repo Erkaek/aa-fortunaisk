@@ -86,6 +86,12 @@ def process_wallet_tickets():
             character = None
             user = None
 
+            logger.info(
+                f"DEBUG: Checking payment date for lottery {lottery.lottery_reference}: "
+                f"lottery.start_date={lottery.start_date}, lottery.end_date={lottery.end_date}, "
+                f"payment.date={payment.date} (type={type(payment.date)})"
+            )
+             
             # Vérification de la date de paiement
             if not (lottery.start_date <= payment.date <= lottery.end_date):
                 anomaly_reason = "Payment date not within lottery start/end date."
