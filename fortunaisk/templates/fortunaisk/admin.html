@@ -9,25 +9,23 @@
 
 {% block details %}
 <div class="container mt-4">
-    <h2 class="text-center mb-4">Admin Dashboard</h2>
+     <h2 class="text-center mb-4">Admin Dashboard</h2>
 
     {% if active_lotteries %}
-        <div class="row">
+        <div class="d-flex flex-wrap justify-content-center gap-4">
             {% for lottery in active_lotteries %}
-                <div class="col-md-4 mb-4">
-                    <div class="card shadow">
-                        <div class="card-header bg-primary text-white">
-                            <h5 class="mb-0">{{ lottery.lottery_reference }}</h5>
-                        </div>
-                        <div class="card-body">
-                            <p><strong>Status:</strong> {{ lottery.get_status_display }}</p>
-                            <p><strong>Ticket Price:</strong> {{ lottery.ticket_price }} ISK</p>
-                            <p><strong>End Date:</strong> {{ lottery.end_date|date:"Y-m-d H:i" }}</p>
-                            <p><strong>Participants:</strong> {{ lottery.participant_count }}</p>
-                            <p><strong>Total Pot:</strong> {{ lottery.total_pot }} ISK</p>
-                        </div>
-                    </div>
+            <div class="card shadow" style="width: 20rem;">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">{{ lottery.lottery_reference }}</h5>
                 </div>
+                <div class="card-body">
+                    <p><strong>Status:</strong> {{ lottery.get_status_display }}</p>
+                    <p><strong>Ticket Price:</strong> {{ lottery.ticket_price }} ISK</p>
+                    <p><strong>End Date:</strong> {{ lottery.end_date|date:"Y-m-d H:i" }}</p>
+                    <p><strong>Participants:</strong> {{ lottery.participant_count }}</p>
+                    <p><strong>Total Pot:</strong> {{ lottery.total_pot }} ISK</p>
+                </div>
+            </div>
             {% endfor %}
         </div>
     {% else %}
