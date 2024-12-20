@@ -1,64 +1,115 @@
 # fortunaisk/tasks.py
-"""Celery tasks for the FortunaIsk lottery application."""
+"""Celery tasks for the FortunaIsk lottery application with multiple winners and Discord notifications."""
 
 # Standard Library
 import json
 import logging
+from random import shuffle
 
 # Third Party
+import requests
 from celery import shared_task
 from corptools.models import CorporationWalletJournalEntry
 
 # Django
 from django.contrib.auth.models import User
 from django.db import IntegrityError, transaction
-from django.db.models import Count
 from django.utils import timezone
 
 # Alliance Auth
 from allianceauth.eveonline.models import EveCharacter
 
-from .models import Lottery, TicketAnomaly, TicketPurchase, Winner
+from .models import Lottery, LotterySettings, TicketAnomaly, TicketPurchase, Winner
 
 logger = logging.getLogger(__name__)
+
+
+def send_discord_webhook(message):
+    """
+    Send a message to the configured Discord webhook.
+    """
+    settings = LotterySettings.objects.get_or_create()[0]
+    if not settings.discord_webhook:
+        return
+    payload = {"content": message}
+    try:
+        requests.post(settings.discord_webhook, json=payload, timeout=5)
+    except Exception as e:
+        logger.warning(f"Failed to send Discord webhook: {e}")
+
+
+def send_discord_dm(user, message):
+    """
+    Send a DM to the given user on Discord.
+    TODO: Implement actual DM sending logic if user Discord ID is known.
+    """
+    # Placeholder for actual implementation.
+    pass
 
 
 @shared_task
 def check_lotteries():
     """
-    Check all active lotteries that have passed their end date and select a winner.
+    Check all active lotteries that have passed their end date and select winners.
     """
     now = timezone.now()
     active_lotteries = Lottery.objects.filter(status="active", end_date__lte=now)
     for lottery in active_lotteries:
-        select_winner_for_lottery(lottery)
+        select_winners_for_lottery(lottery)
 
 
-def select_winner_for_lottery(lottery):
+def select_winners_for_lottery(lottery):
     """
-    Randomly select a winner from the participants of a given lottery.
+    Select multiple winners for the given lottery, distribute pot.
     """
-    participants = User.objects.filter(ticketpurchase__lottery=lottery).annotate(
-        ticket_count=Count("ticketpurchase")
-    )
+    participants = User.objects.filter(ticketpurchase__lottery=lottery).distinct()
+    participant_count = participants.count()
 
-    if not participants.exists():
-        logger.info(f"No participants for lottery {lottery.lottery_reference}")
+    if participant_count == 0:
+        lottery.status = "completed"
+        lottery.participant_count = 0
+        lottery.total_pot = 0
+        lottery.save()
+        send_discord_webhook(
+            f"No participants for lottery {lottery.lottery_reference}. Lottery ended with no winners."
+        )
         return
 
-    winner_user = participants.order_by("?").first()
-    lottery.winner = winner_user
+    # Récupérer tous les montants de tickets
+    sum_amount = TicketPurchase.objects.filter(lottery=lottery).values_list(
+        "amount", flat=True
+    )
+    pot = sum(sum_amount) if sum_amount else 0
+    lottery.participant_count = participant_count
+    lottery.total_pot = pot
+
+    all_tickets = list(TicketPurchase.objects.filter(lottery=lottery))
+    shuffle(all_tickets)
+
+    winners_count = lottery.winner_count
+    distribution = lottery.winners_distribution or [100]
+
+    chosen_tickets = all_tickets[:winners_count]
+
+    with transaction.atomic():
+        for i, ticket in enumerate(chosen_tickets):
+            percent = distribution[i]
+            prize = (pot * percent) / 100.0
+            Winner.objects.create(
+                character=ticket.character,
+                ticket=ticket,
+                won_at=timezone.now(),
+                prize_amount=prize,
+            )
+            send_discord_dm(
+                ticket.user,
+                f"Félicitations ! Vous avez gagné {prize} ISK dans la loterie {lottery.lottery_reference} !",
+            )
+
     lottery.status = "completed"
     lottery.save()
-
-    Winner.objects.create(
-        character=winner_user.profile.main_character,
-        ticket=TicketPurchase.objects.filter(user=winner_user, lottery=lottery).first(),
-        won_at=timezone.now(),
-    )
-
-    logger.info(
-        f"Winner selected for lottery {lottery.lottery_reference}: {winner_user.username}"
+    send_discord_webhook(
+        f"Lottery {lottery.lottery_reference} ended! {winners_count} winners selected. Total pot: {pot} ISK."
     )
 
 
@@ -66,7 +117,6 @@ def select_winner_for_lottery(lottery):
 def process_wallet_tickets():
     """
     Process wallet entries for all active lotteries.
-    Register tickets or anomalies depending on various validation checks.
     """
     logger.info("Processing wallet entries for active lotteries.")
     active_lotteries = Lottery.objects.filter(status="active")
@@ -95,15 +145,8 @@ def process_wallet_tickets():
             anomaly_reason = None
             character = None
             user = None
-            payment_id = payment.id  # Assurez-vous que payment.id existe et est unique.
+            payment_id = payment.id
 
-            logger.info(
-                f"DEBUG: Checking payment date for lottery {lottery.lottery_reference}: "
-                f"lottery.start_date={lottery.start_date}, lottery.end_date={lottery.end_date}, "
-                f"payment.date={payment.date} (type={type(payment.date)})"
-            )
-
-            # Check if an anomaly for this payment already exists
             if TicketAnomaly.objects.filter(
                 lottery=lottery, payment_id=payment_id
             ).exists():
@@ -112,11 +155,9 @@ def process_wallet_tickets():
                 )
                 continue
 
-            # Vérification de la date de paiement
             if not (lottery.start_date <= payment.date <= lottery.end_date):
-                anomaly_reason = "Payment date not within lottery start/end date."
+                anomaly_reason = "Payment date not within lottery timeframe."
 
-            # Vérification du personnage et de l'utilisateur
             try:
                 character = EveCharacter.objects.get(
                     character_id=payment.first_party_name_id
@@ -127,24 +168,17 @@ def process_wallet_tickets():
                         anomaly_reason = "No main user for character."
                 else:
                     user = ownership.user
-                    if user.profile.main_character_id != character.id:
+                    user_ticket_count = TicketPurchase.objects.filter(
+                        user=user, lottery=lottery
+                    ).count()
+                    if user_ticket_count >= lottery.max_tickets_per_user:
                         if anomaly_reason is None:
-                            anomaly_reason = (
-                                "Character is not the main character of the user."
-                            )
+                            anomaly_reason = f"User '{user.username}' exceeded max tickets ({lottery.max_tickets_per_user})."
             except EveCharacter.DoesNotExist:
                 if anomaly_reason is None:
                     anomaly_reason = (
-                        f"EveCharacter with ID {payment.first_party_name_id} not found."
+                        f"EveCharacter {payment.first_party_name_id} not found."
                     )
-
-            # Vérification du ticket dupliqué
-            if (
-                user
-                and TicketPurchase.objects.filter(user=user, lottery=lottery).exists()
-            ):
-                if anomaly_reason is None:
-                    anomaly_reason = f"Duplicate ticket for user '{user.username}'."
 
             if anomaly_reason:
                 TicketAnomaly.objects.create(
@@ -159,7 +193,7 @@ def process_wallet_tickets():
                 logger.info(f"Anomaly detected: {anomaly_reason}")
                 continue
 
-            # Si aucune anomalie, création du ticket
+            # No anomaly, create the ticket
             try:
                 with transaction.atomic():
                     TicketPurchase.objects.create(

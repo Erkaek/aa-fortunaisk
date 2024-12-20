@@ -1,11 +1,12 @@
 # fortunaisk/models.py
-"""Models for the FortunaIsk lottery application."""
+"""Models for the FortunaIsk lottery application with requested enhancements."""
 
 # Standard Library
 import json
 import logging
 import random
 import string
+from datetime import timedelta
 
 # Third Party
 from django_celery_beat.models import IntervalSchedule, PeriodicTask
@@ -25,13 +26,14 @@ logger = logging.getLogger(__name__)
 class LotterySettings(SingletonModel):
     """
     Global settings for the lottery application.
-    Stores the default payment receiver (e.g. a corporation ID).
     """
 
     default_payment_receiver = models.CharField(
         max_length=100, default="Default Receiver"
     )
     discord_webhook = models.URLField(null=True, blank=True)
+    default_lottery_duration_hours = models.PositiveIntegerField(default=24)
+    default_max_tickets_per_user = models.PositiveIntegerField(default=1)
 
     def __str__(self):
         return "Lottery Settings"
@@ -43,6 +45,7 @@ class LotterySettings(SingletonModel):
 class Lottery(models.Model):
     """
     Represents a single lottery.
+    Supports multiple winners with a given distribution.
     """
 
     STATUS_CHOICES = [
@@ -57,7 +60,14 @@ class Lottery(models.Model):
     payment_receiver = models.IntegerField()
     lottery_reference = models.CharField(max_length=20, unique=True)
     status = models.CharField(max_length=20, default="active")
-    winner = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
+
+    winner_count = models.PositiveIntegerField(default=1)  # Nombre de gagnants
+    # Distribution: ex [50,30,20] pour 3 gagnants, total 100
+    winners_distribution = models.JSONField(default=list, blank=True)
+    max_tickets_per_user = models.PositiveIntegerField(null=True, blank=True)
+
+    participant_count = models.PositiveIntegerField(default=0)
+    total_pot = models.BigIntegerField(default=0)
 
     class Meta:
         ordering = ["-start_date"]
@@ -71,20 +81,34 @@ class Lottery(models.Model):
         return self.end_date
 
     def save(self, *args, **kwargs):
+        settings = LotterySettings.objects.get_or_create()[0]
+
         if not self.payment_receiver:
-            # Apply default receiver from LotterySettings if not provided
-            settings = LotterySettings.objects.get_or_create()[0]
             self.payment_receiver = settings.default_payment_receiver
 
         if not self.lottery_reference:
             self.lottery_reference = self.generate_unique_reference()
+
+        if not self.end_date:
+            self.end_date = self.start_date + timedelta(
+                hours=settings.default_lottery_duration_hours
+            )
+
+        if not self.max_tickets_per_user:
+            self.max_tickets_per_user = settings.default_max_tickets_per_user
+
+        if self.winner_count > 1:
+            if not self.winners_distribution or sum(self.winners_distribution) != 100:
+                dist = [100 // self.winner_count] * self.winner_count
+                remainder = 100 - sum(dist)
+                for i in range(remainder):
+                    dist[i] += 1
+                self.winners_distribution = dist
+
         super().save(*args, **kwargs)
 
     @staticmethod
     def generate_unique_reference():
-        """
-        Generate a unique reference for the lottery.
-        """
         while True:
             reference = f"LOTTERY-{''.join(random.choices(string.digits, k=10))}"
             if not Lottery.objects.filter(lottery_reference=reference).exists():
@@ -109,9 +133,6 @@ class Lottery(models.Model):
         logger.info("Periodic task set for all active lotteries.")
 
     def delete(self, *args, **kwargs):
-        """
-        When a lottery is deleted, remove the periodic task if it exists.
-        """
         task_name = "process_wallet_tickets_for_all_lotteries"
         PeriodicTask.objects.filter(name=task_name).delete()
         super().delete(*args, **kwargs)
@@ -129,11 +150,6 @@ class TicketPurchase(models.Model):
     amount = models.PositiveBigIntegerField()
 
     class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=["user", "lottery"], name="unique_user_lottery"
-            )
-        ]
         ordering = ["-purchase_date"]
 
     @property
@@ -147,18 +163,15 @@ class Winner(models.Model):
     """
 
     character = models.ForeignKey(EveCharacter, on_delete=models.CASCADE)
-    ticket = models.OneToOneField(TicketPurchase, on_delete=models.CASCADE)
+    ticket = models.ForeignKey(TicketPurchase, on_delete=models.CASCADE)
     won_at = models.DateTimeField(default=timezone.now)
+    prize_amount = models.DecimalField(max_digits=20, decimal_places=2, default=0)
 
     class Meta:
         ordering = ["-won_at"]
 
     def __str__(self):
         return f"Winner: {self.character.character_name}"
-
-
-def get_default_lottery():
-    return None
 
 
 class TicketAnomaly(models.Model):
@@ -171,7 +184,7 @@ class TicketAnomaly(models.Model):
     payment_date = models.DateTimeField()
     amount = models.PositiveBigIntegerField(default=0)
     recorded_at = models.DateTimeField(default=timezone.now)
-    payment_id = models.BigIntegerField(default=0)  # Identifiant unique du paiement
+    payment_id = models.BigIntegerField(default=0)
 
     class Meta:
         ordering = ["-recorded_at"]

@@ -3,11 +3,8 @@
 
 # Django
 from django.contrib import admin
-from django.contrib.auth.decorators import (  # Ajoutez cet import
-    login_required,
-    permission_required,
-)
-from django.shortcuts import render  # Ajoutez cet import
+from django.contrib.auth.decorators import login_required, permission_required
+from django.shortcuts import render
 from django.utils import timezone
 
 from .models import (
@@ -21,19 +18,23 @@ from .models import (
 
 @admin.register(Lottery)
 class LotteryAdmin(admin.ModelAdmin):
-    """
-    Admin interface for the Lottery model.
-    Only allows editing essential fields during creation:
-    - ticket_price
-    - end_date
-    - payment_receiver (prefilled)
-    start_date is automatically set to now and winner is read-only.
-    """
-
-    list_display = ("id", "lottery_reference", "winner_name_display", "status")
-    search_fields = ("lottery_reference", "winner__username")
+    list_display = (
+        "id",
+        "lottery_reference",
+        "status",
+        "participant_count",
+        "total_pot",
+    )
+    search_fields = ("lottery_reference",)
     actions = ["mark_completed", "mark_cancelled"]
-    readonly_fields = ("id", "lottery_reference", "status", "start_date", "winner")
+    readonly_fields = (
+        "id",
+        "lottery_reference",
+        "status",
+        "start_date",
+        "participant_count",
+        "total_pot",
+    )
     fields = (
         "ticket_price",
         "start_date",
@@ -41,21 +42,18 @@ class LotteryAdmin(admin.ModelAdmin):
         "payment_receiver",
         "lottery_reference",
         "status",
-        "winner",
+        "winner_count",
+        "winners_distribution",
+        "max_tickets_per_user",
+        "participant_count",
+        "total_pot",
     )
 
     def get_changeform_initial_data(self, request):
-        """
-        Prefill the 'payment_receiver' field with the default value from LotterySettings.
-        """
         settings = LotterySettings.objects.get_or_create()[0]
         return {"payment_receiver": settings.default_payment_receiver}
 
     def save_model(self, request, obj, form, change):
-        """
-        Automatically generate 'lottery_reference' if it does not exist on save.
-        Automatically set 'start_date' if this is a new object.
-        """
         if not change:
             if not obj.start_date:
                 obj.start_date = timezone.now()
@@ -65,46 +63,21 @@ class LotteryAdmin(admin.ModelAdmin):
 
     @admin.action(description="Mark selected lotteries as completed")
     def mark_completed(self, request, queryset):
-        """
-        Mark selected active lotteries as completed and randomly choose a winner if available.
-        """
         for lottery in queryset.filter(status="active"):
-            ticket = (
-                TicketPurchase.objects.filter(lottery=lottery).order_by("?").first()
+            lottery.status = "completed"
+            lottery.save()
+            self.message_user(
+                request, f"{lottery.lottery_reference} marked as completed."
             )
-            if ticket:
-                lottery.winner = ticket.user
-                lottery.status = "completed"
-                lottery.save()
-                self.message_user(
-                    request, f"{lottery.lottery_reference} marked as completed."
-                )
-            else:
-                self.message_user(
-                    request,
-                    f"No tickets found for {lottery.lottery_reference}.",
-                    level="warning",
-                )
 
     @admin.action(description="Mark selected lotteries as cancelled")
     def mark_cancelled(self, request, queryset):
-        """
-        Mark selected lotteries as cancelled and remove the winner.
-        """
-        queryset.update(status="cancelled", winner=None)
+        queryset.update(status="cancelled")
         self.message_user(request, "Selected lotteries marked as cancelled.")
-
-    @admin.display(description="Winner Name")
-    def winner_name_display(self, obj):
-        return obj.winner.username if obj.winner else "No winner yet"
 
 
 @admin.register(TicketAnomaly)
 class TicketAnomalyAdmin(admin.ModelAdmin):
-    """
-    Admin interface to view ticket anomalies.
-    """
-
     list_display = (
         "lottery",
         "user",
@@ -141,15 +114,10 @@ class TicketAnomalyAdmin(admin.ModelAdmin):
 
 @admin.register(WebhookConfiguration)
 class WebhookConfigurationAdmin(admin.ModelAdmin):
-    """
-    Admin interface for the WebhookConfiguration model.
-    """
-
     list_display = ("webhook_url",)
     fields = ("webhook_url",)
 
     def has_add_permission(self, request):
-        # Prevent adding multiple configurations
         if WebhookConfiguration.objects.exists():
             return False
         return super().has_add_permission(request)
@@ -158,27 +126,43 @@ class WebhookConfigurationAdmin(admin.ModelAdmin):
 @login_required
 @permission_required("fortunaisk.admin", raise_exception=True)
 def admin_dashboard(request):
-    # Fetch all active lotteries
     active_lotteries = Lottery.objects.filter(status="active")
-
-    # Fetch ticket anomalies
     anomalies = TicketAnomaly.objects.all()
+
+    total_tickets = TicketPurchase.objects.count()
+    total_lotteries = Lottery.objects.count()
+    total_anomalies = anomalies.count()
+
+    completed_lotteries = Lottery.objects.filter(status="completed")
+    if completed_lotteries.exists():
+        avg_participation = (
+            sum(lot.participant_count for lot in completed_lotteries)
+            / completed_lotteries.count()
+        )
+    else:
+        avg_participation = 0
+
+    lotteries = Lottery.objects.all().order_by("id")
+    lottery_names = [lot.lottery_reference for lot in lotteries]
+    tickets_per_lottery = [
+        TicketPurchase.objects.filter(lottery=lot).count() for lot in lotteries
+    ]
+    total_pots = [lot.total_pot for lot in lotteries]
+
+    stats = {
+        "total_tickets": total_tickets,
+        "total_lotteries": total_lotteries,
+        "total_anomalies": total_anomalies,
+        "avg_participation": avg_participation,
+    }
 
     context = {
         "active_lotteries": active_lotteries,
         "anomalies": anomalies,
+        "stats": stats,
+        "lottery_names": lottery_names,
+        "tickets_per_lottery": tickets_per_lottery,
+        "total_pots": total_pots,
     }
 
     return render(request, "fortunaisk/admin.html", context)
-
-
-@login_required
-def current_lotteries(request):
-    # Fetch all active lotteries
-    active_lotteries = Lottery.objects.filter(status="active")
-
-    context = {
-        "active_lotteries": active_lotteries,
-    }
-
-    return render(request, "fortunaisk/lottery.html", context)
