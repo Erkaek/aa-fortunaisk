@@ -9,33 +9,32 @@
 
 {% block details %}
 <div class="container mt-4">
-    <h2 class="text-center mb-4">{% trans "Admin Dashboard" %}</h2>
+    <h2 class="text-center mb-4">Admin Dashboard</h2>
 
-    <!-- Debugging: Afficher le contenu de active_lotteries -->
-    <pre>{{ active_lotteries }}</pre>
-
-    <!-- Current Lotteries -->
     {% if active_lotteries %}
-        {% for lottery in active_lotteries %}
-        <div class="card shadow mb-4">
-            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">{% trans "Current Lottery" %}</h5>
-                <a href="{% url 'fortunaisk:lottery_participants' lottery.id %}" class="btn btn-sm btn-info">
-                    {% trans "View Participants" %}
-                </a>
-            </div>
-            <div class="card-body">
-                <p><strong>{% trans "Reference:" %}</strong> {{ lottery.lottery_reference }}</p>
-                <p><strong>{% trans "Status:" %}</strong> {{ lottery.get_status_display }}</p>
-                <p><strong>{% trans "Total Tickets:" %}</strong> {{ lottery.total_tickets }}</p>
-            </div>
+        <div class="row">
+            {% for lottery in active_lotteries %}
+                <div class="col-md-4 mb-4">
+                    <div class="card shadow">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">{{ lottery.lottery_reference }}</h5>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Status:</strong> {{ lottery.get_status_display }}</p>
+                            <p><strong>Ticket Price:</strong> {{ lottery.ticket_price }} ISK</p>
+                            <p><strong>End Date:</strong> {{ lottery.end_date|date:"Y-m-d H:i" }}</p>
+                            <p><strong>Participants:</strong> {{ lottery.participant_count }}</p>
+                            <p><strong>Total Pot:</strong> {{ lottery.total_pot }} ISK</p>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
         </div>
-        {% endfor %}
     {% else %}
-    <div class="alert alert-warning text-center">
-        <i class="fas fa-exclamation-circle alert-icon"></i>
-        {% trans "No active lottery." %}
-    </div>
+        <div class="alert alert-warning text-center">
+            <i class="fas fa-exclamation-circle alert-icon"></i>
+            No active lottery.
+        </div>
     {% endif %}
 
     <!-- Ticket Anomalies -->
