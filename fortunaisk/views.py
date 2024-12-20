@@ -156,6 +156,7 @@ def create_lottery(request):
         form = LotteryCreateForm(request.POST)
         if form.is_valid():
             form.save()
+            messages.success(request, "Loterie créée avec succès.")
             return redirect("fortunaisk:lottery")
     else:
         form = LotteryCreateForm()

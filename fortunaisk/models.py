@@ -57,7 +57,9 @@ class Lottery(models.Model):
     start_date = models.DateTimeField()
     end_date = models.DateTimeField()
     payment_receiver = models.IntegerField()
-    lottery_reference = models.CharField(max_length=20, unique=True)
+    lottery_reference = models.CharField(
+        max_length=20, unique=True, blank=True, null=True
+    )
     status = models.CharField(max_length=20, default="active")
 
     winner_count = models.PositiveIntegerField(default=1)
@@ -84,7 +86,11 @@ class Lottery(models.Model):
         return self.end_date
 
     def save(self, *args, **kwargs):
-        # Convert winners_distribution_str -> winners_distribution
+        # Générer la référence de la loterie si elle n'est pas définie
+        if not self.lottery_reference:
+            self.lottery_reference = self.generate_unique_reference()
+
+        # Convertir winners_distribution_str en winners_distribution
         if self.winners_distribution_str:
             parts = self.winners_distribution_str.split(",")
             distribution_list = []

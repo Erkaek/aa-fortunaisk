@@ -20,7 +20,10 @@
                         <!-- Ticket Price -->
                         <div class="mb-4">
                             <label for="id_ticket_price" class="form-label">{% trans "Ticket Price" %}</label>
-                            {{ form.ticket_price }}
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-coins"></i></span>
+                                {{ form.ticket_price }}
+                            </div>
                             {% if form.ticket_price.errors %}
                                 <div class="invalid-feedback d-block">
                                     {{ form.ticket_price.errors|striptags }}
@@ -31,7 +34,10 @@
                         <!-- End Date -->
                         <div class="mb-4">
                             <label for="id_end_date" class="form-label">{% trans "End Date" %}</label>
-                            {{ form.end_date }}
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                                {{ form.end_date }}
+                            </div>
                             <small class="form-text text-muted">{% trans "Format: YYYY-MM-DD HH:MM (selon le navigateur)" %}</small>
                             {% if form.end_date.errors %}
                                 <div class="invalid-feedback d-block">
@@ -43,7 +49,10 @@
                         <!-- Payment Receiver -->
                         <div class="mb-4">
                             <label for="id_payment_receiver" class="form-label">{% trans "Payment Receiver" %}</label>
-                            {{ form.payment_receiver }}
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-money-bill-wave"></i></span>
+                                {{ form.payment_receiver }}
+                            </div>
                             {% if form.payment_receiver.errors %}
                                 <div class="invalid-feedback d-block">
                                     {{ form.payment_receiver.errors|striptags }}
@@ -54,7 +63,10 @@
                         <!-- Number of Winners -->
                         <div class="mb-4">
                             <label for="id_winner_count" class="form-label">{% trans "Number of Winners" %}</label>
-                            {{ form.winner_count }}
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-users"></i></span>
+                                {{ form.winner_count }}
+                            </div>
                             {% if form.winner_count.errors %}
                                 <div class="invalid-feedback d-block">
                                     {{ form.winner_count.errors|striptags }}
@@ -65,7 +77,10 @@
                         <!-- Winners Distribution -->
                         <div class="mb-4">
                             <label for="id_winners_distribution_str" class="form-label">{% trans "Winners Distribution" %}</label>
-                            {{ form.winners_distribution_str }}
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-percent"></i></span>
+                                {{ form.winners_distribution_str }}
+                            </div>
                             <small class="form-text text-muted">{{ form.winners_distribution_str.help_text }}</small>
                             {% if form.winners_distribution_str.errors %}
                                 <div class="invalid-feedback d-block">
@@ -77,7 +92,10 @@
                         <!-- Max Tickets/User -->
                         <div class="mb-4">
                             <label for="id_max_tickets_per_user" class="form-label">{% trans "Max Tickets/User" %}</label>
-                            {{ form.max_tickets_per_user }}
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user-plus"></i></span>
+                                {{ form.max_tickets_per_user }}
+                            </div>
                             {% if form.max_tickets_per_user.errors %}
                                 <div class="invalid-feedback d-block">
                                     {{ form.max_tickets_per_user.errors|striptags }}
