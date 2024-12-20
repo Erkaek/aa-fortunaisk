@@ -272,6 +272,7 @@ def setup_tasks(sender, **kwargs):
     )
 
 
+@shared_task
 def create_lottery_from_auto(autolottery_id):
     """
     Task to create a lottery based on an AutoLottery configuration.
