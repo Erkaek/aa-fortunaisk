@@ -8,6 +8,7 @@ import logging
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.translation import gettext as _
 
 # Alliance Auth
 from allianceauth.eveonline.models import EveCorporationInfo
@@ -22,9 +23,10 @@ logger = logging.getLogger(__name__)
 def lottery(request):
     active_lotteries = Lottery.objects.filter(status="active")
     lotteries_info = []
+
     for lot in active_lotteries:
-        if str(lot.payment_receiver).isdigit():
-            corp_name = (
+        corp_name = (
+            (
                 EveCorporationInfo.objects.filter(
                     corporation_id=int(lot.payment_receiver)
                 )
@@ -32,17 +34,21 @@ def lottery(request):
                 .first()
                 or "Unknown Corporation"
             )
-        else:
-            corp_name = lot.payment_receiver
+            if str(lot.payment_receiver).isdigit()
+            else lot.payment_receiver
+        )
 
         user_ticket_count = TicketPurchase.objects.filter(
             user=request.user, lottery=lot
         ).count()
         has_ticket = user_ticket_count > 0
 
-        instructions = (
-            f"Pour participer, envoyez {lot.ticket_price} ISK à {corp_name} "
-            f"avec la référence '{lot.lottery_reference}' dans la raison de paiement."
+        instructions = _(
+            "To participate, send {ticket_price} ISK to {corp_name} with the reference '{lottery_reference}' in the payment reason."
+        ).format(
+            ticket_price=lot.ticket_price,
+            corp_name=corp_name,
+            lottery_reference=lot.lottery_reference,
         )
 
         lotteries_info.append(
@@ -56,11 +62,7 @@ def lottery(request):
         )
 
     return render(
-        request,
-        "fortunaisk/lottery.html",
-        {
-            "active_lotteries": lotteries_info,
-        },
+        request, "fortunaisk/lottery.html", {"active_lotteries": lotteries_info}
     )
 
 
@@ -71,18 +73,11 @@ def ticket_purchases(request):
     purchases = TicketPurchase.objects.filter(
         lottery__in=current_lotteries
     ).select_related("user", "character", "lottery")
-    return render(
-        request,
-        "fortunaisk/ticket_purchases.html",
-        {
-            "purchases": purchases,
-        },
-    )
+    return render(request, "fortunaisk/ticket_purchases.html", {"purchases": purchases})
 
 
 @permission_required("fortunaisk.admin", raise_exception=True)
 def select_winner(request, lottery_id):
-    # Cette vue n'est plus vraiment utilisée car la sélection est automatique
     messages.info(
         request,
         "Use the automated tasks to select winners. Manual selection not recommended now.",
@@ -126,7 +121,6 @@ def lottery_history(request):
     winners = Winner.objects.filter(ticket__lottery__in=past_lotteries).select_related(
         "character", "ticket__lottery"
     )
-
     return render(
         request,
         "fortunaisk/lottery_history.html",
@@ -141,7 +135,6 @@ def lottery_participants(request, lottery_id):
     participants = TicketPurchase.objects.filter(lottery=lottery_obj).select_related(
         "user", "character"
     )
-
     return render(
         request,
         "fortunaisk/lottery_participants.html",
@@ -156,12 +149,16 @@ def create_lottery(request):
         form = LotteryCreateForm(request.POST)
         if form.is_valid():
             form.save()
-            messages.success(request, "Loterie créée avec succès.")
+            messages.success(request, _("Lottery created successfully."))
             return redirect("fortunaisk:lottery")
     else:
         form = LotteryCreateForm()
 
-    return render(request, "fortunaisk/lottery_create.html", {"form": form})
+    return render(
+        request,
+        "fortunaisk/lottery_form.html",
+        {"form": form, "is_auto_lottery": False},
+    )
 
 
 @login_required
@@ -171,13 +168,15 @@ def create_auto_lottery(request):
         form = AutoLotteryForm(request.POST)
         if form.is_valid():
             form.save()
-            messages.success(request, "Automatic lottery created successfully.")
+            messages.success(request, _("Automatic lottery created successfully."))
             return redirect("fortunaisk:auto_lottery_list")
         else:
-            messages.error(request, "Please correct the errors below.")
+            messages.error(request, _("Please correct the errors below."))
     else:
         form = AutoLotteryForm()
-    return render(request, "fortunaisk/auto_lottery_create.html", {"form": form})
+    return render(
+        request, "fortunaisk/lottery_form.html", {"form": form, "is_auto_lottery": True}
+    )
 
 
 @login_required
@@ -188,16 +187,14 @@ def edit_auto_lottery(request, autolottery_id):
         form = AutoLotteryForm(request.POST, instance=autolottery)
         if form.is_valid():
             form.save()
-            messages.success(request, "Automatic lottery updated successfully.")
+            messages.success(request, _("Automatic lottery updated successfully."))
             return redirect("fortunaisk:auto_lottery_list")
         else:
-            messages.error(request, "Please correct the errors below.")
+            messages.error(request, _("Please correct the errors below."))
     else:
         form = AutoLotteryForm(instance=autolottery)
     return render(
-        request,
-        "fortunaisk/auto_lottery_edit.html",
-        {"form": form, "autolottery": autolottery},
+        request, "fortunaisk/lottery_form.html", {"form": form, "is_auto_lottery": True}
     )
 
 
@@ -207,7 +204,7 @@ def delete_auto_lottery(request, autolottery_id):
     autolottery = get_object_or_404(AutoLottery, id=autolottery_id)
     if request.method == "POST":
         autolottery.delete()
-        messages.success(request, "Automatic lottery deleted successfully.")
+        messages.success(request, _("Automatic lottery deleted successfully."))
         return redirect("fortunaisk:auto_lottery_list")
     return render(
         request,

@@ -1,0 +1,229 @@
+{% extends "fortunaisk/base.html" %}
+{% load i18n %}
+
+{% block page_title %}
+    {% if is_auto_lottery %}
+        {% trans "Create Automatic Lottery" %}
+    {% else %}
+        {% trans "Create New Lottery" %}
+    {% endif %}
+{% endblock page_title %}
+
+{% block details %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header {% if is_auto_lottery %}bg-success{% else %}bg-primary{% endif %} text-white">
+                    <h4 class="mb-0">
+                        {% if is_auto_lottery %}
+                            {% trans "Create Automatic Lottery" %}
+                        {% else %}
+                            {% trans "Create a New Lottery" %}
+                        {% endif %}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+
+                        {% if is_auto_lottery %}
+                        <!-- Name -->
+                        <div class="mb-4">
+                            <label for="id_name" class="form-label">{% trans "Name" %}</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-tag"></i></span>
+                                {{ form.name }}
+                            </div>
+                            {% if form.name.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.name.errors|striptags }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Frequency -->
+                        <div class="mb-4">
+                            <label for="id_frequency" class="form-label">{% trans "Frequency" %}</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-clock"></i></span>
+                                {{ form.frequency }}
+                                {{ form.frequency_unit }}
+                            </div>
+                            {% if form.frequency.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.frequency.errors|striptags }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
+                        <!-- Ticket Price -->
+                        <div class="mb-4">
+                            <label for="id_ticket_price" class="form-label">{% trans "Ticket Price" %}</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-coins"></i></span>
+                                {{ form.ticket_price }}
+                            </div>
+                            {% if form.ticket_price.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.ticket_price.errors|striptags }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        {% if not is_auto_lottery %}
+                        <!-- End Date -->
+                        <div class="mb-4">
+                            <label for="id_end_date" class="form-label">{% trans "End Date" %}</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                                {{ form.end_date }}
+                            </div>
+                            <small class="form-text text-muted">{% trans "Format: YYYY-MM-DD HH:MM (depending on the browser)" %}</small>
+                            {% if form.end_date.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.end_date.errors|striptags }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
+                        {% if is_auto_lottery %}
+                        <!-- Duration Hours -->
+                        <div class="mb-4">
+                            <label for="id_duration_hours" class="form-label">{% trans "Duration (Hours)" %}</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-hourglass-half"></i></span>
+                                {{ form.duration_hours }}
+                            </div>
+                            {% if form.duration_hours.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.duration_hours.errors|striptags }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
+                        <!-- Payment Receiver -->
+                        <div class="mb-4">
+                            <label for="id_payment_receiver" class="form-label">{% trans "Payment Receiver" %}</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-money-bill-wave"></i></span>
+                                {{ form.payment_receiver }}
+                            </div>
+                            {% if form.payment_receiver.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.payment_receiver.errors|striptags }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Number of Winners -->
+                        <div class="mb-4">
+                            <label for="id_winner_count" class="form-label">{% trans "Number of Winners" %}</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-users"></i></span>
+                                {{ form.winner_count }}
+                            </div>
+                            {% if form.winner_count.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.winner_count.errors|striptags }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Winners Distribution -->
+                        <div class="mb-4">
+                            <label for="id_winners_distribution_str" class="form-label">{% trans "Winners Distribution" %}</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-percent"></i></span>
+                                {{ form.winners_distribution_str }}
+                            </div>
+                            <small class="form-text text-muted">{{ form.winners_distribution_str.help_text }}</small>
+                            {% if form.winners_distribution_str.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.winners_distribution_str.errors|striptags }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Max Tickets/User -->
+                        <div class="mb-4">
+                            <label for="id_max_tickets_per_user" class="form-label">{% trans "Max Tickets/User" %}</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user-plus"></i></span>
+                                {{ form.max_tickets_per_user }}
+                            </div>
+                            {% if form.max_tickets_per_user.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.max_tickets_per_user.errors|striptags }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        {% if is_auto_lottery %}
+                        <!-- Is Active -->
+                        <div class="mb-4 form-check">
+                            {{ form.is_active }}
+                            <label for="id_is_active" class="form-check-label">{% trans "Active" %}</label>
+                            {% if form.is_active.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.is_active.errors|striptags }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
+                        <!-- Submit Button -->
+                        <div class="d-grid">
+                            <button type="submit" class="btn {% if is_auto_lottery %}btn-success{% else %}btn-primary{% endif %} btn-lg">
+                                {% if is_auto_lottery %}
+                                    {% trans "Create Automatic Lottery" %}
+                                {% else %}
+                                    {% trans "Create Lottery" %}
+                                {% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Back Link -->
+            <div class="mt-3 text-center">
+                <a href="{% if is_auto_lottery %}{% url 'fortunaisk:auto_lottery_list' %}{% else %}{% url 'fortunaisk:lottery' %}{% endif %}" class="btn btn-link">
+                    <i class="fas fa-arrow-left"></i> 
+                    {% if is_auto_lottery %}
+                        {% trans "Back to Automatic Lotteries" %}
+                    {% else %}
+                        {% trans "Back to Lotteries" %}
+                    {% endif %}
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Optional: Add client-side validation script -->
+<script>
+    (function () {
+        'use strict'
+
+        // Fetch all forms we want to apply custom Bootstrap validation styles to
+        var forms = document.querySelectorAll('form')
+
+        // Loop over them and prevent submission if not valid
+        Array.prototype.slice.call(forms)
+            .forEach(function (form) {
+                form.addEventListener('submit', function (event) {
+                    if (!form.checkValidity()) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                    }
+
+                    form.classList.add('was-validated')
+                }, false)
+            })
+    })()
+</script>
+{% endblock details %}
