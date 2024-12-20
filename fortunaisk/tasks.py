@@ -272,6 +272,7 @@ def setup_tasks(sender, **kwargs):
     )
 
 
+@shared_task
 def create_lottery_from_auto(autolottery_id):
     """
     Task to create a lottery based on an AutoLottery configuration.
@@ -300,5 +301,3 @@ def create_lottery_from_auto(autolottery_id):
     logger.info(
         f"Automatic Lottery '{autolottery.name}' created with reference {lottery.lottery_reference}."
     )
-
-    # Optionnel : Envoyer une notification ou effectuer d'autres actions
