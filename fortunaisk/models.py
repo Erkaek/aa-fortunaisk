@@ -61,9 +61,13 @@ class Lottery(models.Model):
     lottery_reference = models.CharField(max_length=20, unique=True)
     status = models.CharField(max_length=20, default="active")
 
-    winner_count = models.PositiveIntegerField(default=1)  # Nombre de gagnants
-    # Distribution: ex [50,30,20] pour 3 gagnants, total 100
+    winner_count = models.PositiveIntegerField(default=1)
     winners_distribution = models.JSONField(default=list, blank=True)
+    winners_distribution_str = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="List of percentages for each winner, separated by commas. Example: '50,30,20' for 3 winners.",
+    )
     max_tickets_per_user = models.PositiveIntegerField(null=True, blank=True)
 
     participant_count = models.PositiveIntegerField(default=0)
@@ -81,29 +85,40 @@ class Lottery(models.Model):
         return self.end_date
 
     def save(self, *args, **kwargs):
-        settings = LotterySettings.objects.get_or_create()[0]
+        # Convert winners_distribution_str -> winners_distribution
+        if self.winners_distribution_str:
+            parts = self.winners_distribution_str.split(",")
+            distribution_list = []
+            for part in parts:
+                part = part.strip()
+                if part.isdigit():
+                    distribution_list.append(int(part))
+                else:
+                    # Si une des parties n'est pas un nombre, lever une exception
+                    raise ValueError("All percentages must be integer values.")
 
-        if not self.payment_receiver:
-            self.payment_receiver = settings.default_payment_receiver
+            total = sum(distribution_list)
+            if total != 100:
+                if total == 0:
+                    # Si la somme est 0, un seul gagnant à 100%
+                    distribution_list = [100]
+                else:
+                    # Normaliser la distribution
+                    normalized = [
+                        int(round((p / total) * 100)) for p in distribution_list
+                    ]
+                    diff = 100 - sum(normalized)
+                    if diff != 0 and normalized:
+                        for i in range(abs(diff)):
+                            normalized[i % len(normalized)] += 1 if diff > 0 else -1
+                    distribution_list = normalized
 
-        if not self.lottery_reference:
-            self.lottery_reference = self.generate_unique_reference()
-
-        if not self.end_date:
-            self.end_date = self.start_date + timedelta(
-                hours=settings.default_lottery_duration_hours
-            )
-
-        if not self.max_tickets_per_user:
-            self.max_tickets_per_user = settings.default_max_tickets_per_user
-
-        if self.winner_count > 1:
-            if not self.winners_distribution or sum(self.winners_distribution) != 100:
-                dist = [100 // self.winner_count] * self.winner_count
-                remainder = 100 - sum(dist)
-                for i in range(remainder):
-                    dist[i] += 1
-                self.winners_distribution = dist
+            self.winners_distribution = distribution_list
+            self.winner_count = len(distribution_list)
+        else:
+            # Si pas de distribution fournie, un seul gagnant à 100%
+            self.winners_distribution = [100]
+            self.winner_count = 1
 
         super().save(*args, **kwargs)
 

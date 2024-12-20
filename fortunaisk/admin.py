@@ -43,7 +43,7 @@ class LotteryAdmin(admin.ModelAdmin):
         "lottery_reference",
         "status",
         "winner_count",
-        "winners_distribution",
+        "winners_distribution_str",
         "max_tickets_per_user",
         "participant_count",
         "total_pot",
