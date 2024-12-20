@@ -6,7 +6,6 @@ import json
 import logging
 import random
 import string
-from datetime import timedelta
 
 # Third Party
 from django_celery_beat.models import IntervalSchedule, PeriodicTask

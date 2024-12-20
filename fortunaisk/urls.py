@@ -21,4 +21,7 @@ urlpatterns = [
         views.lottery_participants,
         name="lottery_participants",
     ),
+    path(
+        "lottery_create/", views.create_lottery, name="lottery_create"
+    ),  # nouvelle URL
 ]

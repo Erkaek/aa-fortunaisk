@@ -7,11 +7,12 @@ import logging
 # Django
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 
 # Alliance Auth
 from allianceauth.eveonline.models import EveCorporationInfo
 
+from .forms import LotteryCreateForm
 from .models import Lottery, TicketPurchase, Winner
 
 logger = logging.getLogger(__name__)
@@ -146,3 +147,17 @@ def lottery_participants(request, lottery_id):
         "fortunaisk/lottery_participants.html",
         {"lottery": lottery_obj, "participants": participants},
     )
+
+
+@login_required
+@permission_required("fortunaisk.add_lottery", raise_exception=True)
+def create_lottery(request):
+    if request.method == "POST":
+        form = LotteryCreateForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect("fortunaisk:lottery")
+    else:
+        form = LotteryCreateForm()
+
+    return render(request, "fortunaisk/lottery_create.html", {"form": form})

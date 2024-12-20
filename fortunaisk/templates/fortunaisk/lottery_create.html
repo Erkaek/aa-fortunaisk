@@ -1,0 +1,42 @@
+{% extends "fortunaisk/base.html" %}
+{% load i18n %}
+
+{% block page_title %}
+    {% trans "Create New Lottery" %}
+{% endblock page_title %}
+
+{% block details %}
+<div class="container mt-4">
+    <h2 class="text-center mb-4">{% trans "Create a New Lottery" %}</h2>
+    <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="id_ticket_price">{% trans "Ticket Price" %}</label>
+            {{ form.ticket_price }}
+        </div>
+        <div class="mb-3">
+            <label for="id_end_date">{% trans "End Date" %}</label>
+            {{ form.end_date }}
+            <small class="form-text text-muted">{% trans "Format: YYYY-MM-DD HH:MM (selon le navigateur)" %}</small>
+        </div>
+        <div class="mb-3">
+            <label for="id_payment_receiver">{% trans "Payment Receiver" %}</label>
+            {{ form.payment_receiver }}
+        </div>
+        <div class="mb-3">
+            <label for="id_winner_count">{% trans "Number of Winners" %}</label>
+            {{ form.winner_count }}
+        </div>
+        <div class="mb-3">
+            <label for="id_winners_distribution_str">{% trans "Winners Distribution" %}</label>
+            {{ form.winners_distribution_str }}
+            <small class="form-text text-muted">{{ form.winners_distribution_str.help_text }}</small>
+        </div>
+        <div class="mb-3">
+            <label for="id_max_tickets_per_user">{% trans "Max Tickets/User" %}</label>
+            {{ form.max_tickets_per_user }}
+        </div>
+        <button type="submit" class="btn btn-primary">{% trans "Create Lottery" %}</button>
+    </form>
+</div>
+{% endblock details %}
