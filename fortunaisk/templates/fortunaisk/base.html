@@ -72,6 +72,10 @@
         <li class="nav-item {% navactive request 'fortunaisk:lottery_create' %}">
             <a class="nav-link" href="{% url 'fortunaisk:lottery_create' %}">{% trans "lottery create" %}</a>
         </li>
+
+        <li class="nav-item {% navactive request 'fortunaisk:auto_lotteries' %}">
+            <a class="nav-link" href="{% url 'fortunaisk:auto_lotteries' %}">{% trans "auto lotteries creation" %}</a>
+        </li>
         {% endif %}
     </ul>
 {% endblock header_nav_collapse_left %}

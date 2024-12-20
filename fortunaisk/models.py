@@ -223,3 +223,89 @@ class WebhookConfiguration(models.Model):
 
     def __str__(self):
         return self.webhook_url
+
+class AutoLottery(models.Model):
+    """
+    Represents an automatic lottery generator with a defined frequency.
+    """
+    INTERVAL_CHOICES = [
+        ('minutes', 'Minutes'),
+        ('hours', 'Hours'),
+        ('days', 'Days'),
+        ('weeks', 'Weeks'),
+    ]
+
+    name = models.CharField(max_length=100, unique=True)
+    frequency = models.PositiveIntegerField(default=1)
+    frequency_unit = models.CharField(max_length=10, choices=INTERVAL_CHOICES, default='days')
+    
+    # Parameters for the lottery to be created automatically
+    ticket_price = models.DecimalField(max_digits=20, decimal_places=2)
+    duration_hours = models.PositiveIntegerField(default=24)
+    payment_receiver = models.IntegerField()
+    winner_count = models.PositiveIntegerField(default=1)
+    winners_distribution_str = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="List of percentages for each winner, separated by commas. Example: '50,30,20' for 3 winners.",
+    )
+    max_tickets_per_user = models.PositiveIntegerField(null=True, blank=True)
+
+    is_active = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Automatic Lottery"
+        verbose_name_plural = "Automatic Lotteries"
+        permissions = [
+            ("add_autolottery", "Can add automatic lottery"),
+            ("change_autolottery", "Can change automatic lottery"),
+            ("delete_autolottery", "Can delete automatic lottery"),
+            ("view_autolottery", "Can view automatic lottery"),
+        ]
+    
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        # Override save to handle PeriodicTask creation/update
+        super().save(*args, **kwargs)
+        self.setup_periodic_task()
+    
+    def setup_periodic_task(self):
+        """
+        Sets up or updates the periodic task for generating lotteries.
+        """
+        if not self.is_active:
+            PeriodicTask.objects.filter(name=f"AutoLottery_{self.id}").delete()
+            return
+
+        # Get or create the IntervalSchedule
+        schedule, created = IntervalSchedule.objects.get_or_create(
+            every=self.frequency,
+            period=self.frequency_unit.upper(),
+        )
+
+        # Define the task name uniquely
+        task_name = f"AutoLottery_{self.id}"
+
+        # Define the task arguments
+        task_args = json.dumps([self.id])
+
+        # Create or update the PeriodicTask
+        PeriodicTask.objects.update_or_create(
+            name=task_name,
+            defaults={
+                "task": "fortunaisk.tasks.create_lottery_from_auto",
+                "interval": schedule,
+                "args": task_args,
+                "enabled": self.is_active,
+            },
+        )
+
+    def delete(self, *args, **kwargs):
+        # Delete the associated PeriodicTask when deleting AutoLottery
+        PeriodicTask.objects.filter(name=f"AutoLottery_{self.id}").delete()
+        super().delete(*args, **kwargs)

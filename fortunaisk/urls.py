@@ -23,5 +23,9 @@ urlpatterns = [
     ),
     path(
         "lottery_create/", views.create_lottery, name="lottery_create"
-    ),  # nouvelle URL
+    ),
+    path("auto_lotteries/", views.list_auto_lotteries, name="auto_lottery_list"),
+    path("auto_lotteries/create/", views.create_auto_lottery, name="auto_lottery_create"),
+    path("auto_lotteries/edit/<int:autolottery_id>/", views.edit_auto_lottery, name="auto_lottery_edit"),
+    path("auto_lotteries/delete/<int:autolottery_id>/", views.delete_auto_lottery, name="auto_lottery_delete"),# nouvelle URL
 ]
