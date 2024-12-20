@@ -10,27 +10,20 @@
     <h2 class="text-center mb-4">{% trans "Participants for Lottery:" %} {{ lottery.lottery_reference }}</h2>
 
     {% if participants %}
-    <div class="table-responsive">
-        <table class="table table-bordered table-hover">
-            <thead>
-                <tr>
-                    <th>{% trans "User" %}</th>
-                    <th>{% trans "Character" %}</th>
-                    <th>{% trans "Amount" %}</th>
-                    <th>{% trans "Purchase Date" %}</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for purchase in participants %}
-                <tr>
-                    <td>{{ purchase.user.username }}</td>
-                    <td>{{ purchase.character.character_name }}</td>
-                    <td>{{ purchase.amount }} ISK</td>
-                    <td>{{ purchase.purchase_date|date:"Y-m-d H:i" }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div class="d-flex flex-wrap justify-content-center gap-4">
+        {% for purchase in participants %}
+        <div class="card shadow" style="width: 20rem;">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">{% trans "Participant" %}</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>{% trans "User" %}:</strong> {{ purchase.user.username }}</p>
+                <p><strong>{% trans "Character" %}:</strong> {{ purchase.character.character_name }}</p>
+                <p><strong>{% trans "Amount" %}:</strong> {{ purchase.amount }} ISK</p>
+                <p><strong>{% trans "Purchase Date" %}:</strong> {{ purchase.purchase_date|date:"Y-m-d H:i" }}</p>
+            </div>
+        </div>
+        {% endfor %}
     </div>
     {% else %}
     <div class="alert alert-info text-center">

@@ -11,25 +11,20 @@
 <div class="mt-4">
     <h2 class="text-center mb-4">{% trans "Winners" %}</h2>
     {% if winners %}
-    <div class="table-responsive">
-        <table class="table table-striped table-hover">
-            <thead>
-                <tr>
-                    <th>{% trans "Character" %}</th>
-                    <th>{% trans "Lottery Reference" %}</th>
-                    <th>{% trans "Win Date" %}</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for winner in winners %}
-                <tr>
-                    <td>{{ winner.character.character_name }}</td>
-                    <td>{{ winner.ticket.lottery.lottery_reference }}</td>
-                    <td>{{ winner.won_at|date:"Y-m-d H:i" }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div class="d-flex flex-wrap justify-content-center gap-4">
+        {% for winner in winners %}
+        <div class="card shadow" style="width: 20rem;">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">{% trans "Winner" %}</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>{% trans "Character" %}:</strong> {{ winner.character.character_name }}</p>
+                <p><strong>{% trans "Lottery Reference" %}:</strong> {{ winner.ticket.lottery.lottery_reference }}</p>
+                <p><strong>{% trans "Win Date" %}:</strong> {{ winner.won_at|date:"Y-m-d H:i" }}</p>
+                <p><strong>{% trans "Prize" %}:</strong> {{ winner.prize_amount|intcomma }} ISK</p>
+            </div>
+        </div>
+        {% endfor %}
     </div>
     {% else %}
     <div class="alert alert-warning text-center">
