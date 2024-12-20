@@ -192,7 +192,7 @@
             <!-- Back Link -->
             <div class="mt-3 text-center">
                 <a href="{% if is_auto_lottery %}{% url 'fortunaisk:auto_lottery_list' %}{% else %}{% url 'fortunaisk:lottery' %}{% endif %}" class="btn btn-link">
-                    <i class="fas fa-arrow-left"></i> 
+                    <i class="fas fa-arrow-left"></i>
                     {% if is_auto_lottery %}
                         {% trans "Back to Automatic Lotteries" %}
                     {% else %}

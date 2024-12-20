@@ -8,43 +8,7 @@
 
 {% block head %}
     {{ block.super }}
-    <style>
-        body {
-            background-color: #f8f9fa;
-        }
-        .card {
-            margin-bottom: 20px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            background-color: #fff;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        .table {
-            width: 100%;
-            margin-bottom: 1rem;
-            border-collapse: collapse;
-            color: #212529;
-        }
-        .table th, .table td {
-            padding: 10px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-        .table th {
-            background-color: #343a40;
-            color: white;
-        }
-        .table tr:hover {
-            background-color: #f1f1f1;
-        }
-        .alert {
-            padding: 10px 20px;
-            border-radius: 5px;
-        }
-        .alert-icon {
-            margin-right: 8px;
-        }
-    </style>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 {% endblock head %}
 
 {% block header_nav_brand %}
@@ -70,11 +34,10 @@
             <a class="nav-link" href="{% url 'fortunaisk:admin_dashboard' %}">{% trans "Admin Dashboard" %}</a>
         </li>
         <li class="nav-item {% navactive request 'fortunaisk:lottery_create' %}">
-            <a class="nav-link" href="{% url 'fortunaisk:lottery_create' %}">{% trans "lottery create" %}</a>
+            <a class="nav-link" href="{% url 'fortunaisk:lottery_create' %}">{% trans "Create Lottery" %}</a>
         </li>
-
         <li class="nav-item {% navactive request 'fortunaisk:auto_lottery_list' %}">
-            <a class="nav-link" href="{% url 'fortunaisk:auto_lottery_list' %}">{% trans "auto lotteries creation" %}</a>
+            <a class="nav-link" href="{% url 'fortunaisk:auto_lottery_list' %}">{% trans "Auto Lotteries" %}</a>
         </li>
         {% endif %}
     </ul>
