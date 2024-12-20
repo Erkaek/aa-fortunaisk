@@ -19,7 +19,14 @@ from django.utils import timezone
 # Alliance Auth
 from allianceauth.eveonline.models import EveCharacter
 
-from .models import Lottery, LotterySettings, TicketAnomaly, TicketPurchase, Winner, AutoLottery
+from .models import (
+    AutoLottery,
+    Lottery,
+    LotterySettings,
+    TicketAnomaly,
+    TicketPurchase,
+    Winner,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -264,6 +271,7 @@ def setup_tasks(sender, **kwargs):
         },
     )
 
+
 def create_lottery_from_auto(autolottery_id):
     """
     Task to create a lottery based on an AutoLottery configuration.
@@ -271,7 +279,9 @@ def create_lottery_from_auto(autolottery_id):
     try:
         autolottery = AutoLottery.objects.get(id=autolottery_id, is_active=True)
     except AutoLottery.DoesNotExist:
-        logger.warning(f"AutoLottery with ID {autolottery_id} does not exist or is inactive.")
+        logger.warning(
+            f"AutoLottery with ID {autolottery_id} does not exist or is inactive."
+        )
         return
 
     # Créer une nouvelle loterie basée sur les paramètres de AutoLottery
@@ -287,6 +297,8 @@ def create_lottery_from_auto(autolottery_id):
     lottery.lottery_reference = lottery.generate_unique_reference()
     lottery.save()
 
-    logger.info(f"Automatic Lottery '{autolottery.name}' created with reference {lottery.lottery_reference}.")
+    logger.info(
+        f"Automatic Lottery '{autolottery.name}' created with reference {lottery.lottery_reference}."
+    )
 
     # Optionnel : Envoyer une notification ou effectuer d'autres actions

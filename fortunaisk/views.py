@@ -12,8 +12,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 # Alliance Auth
 from allianceauth.eveonline.models import EveCorporationInfo
 
-from .forms import LotteryCreateForm, AutoLotteryForm
-from .models import Lottery, TicketPurchase, Winner, AutoLottery
+from .forms import AutoLotteryForm, LotteryCreateForm
+from .models import AutoLottery, Lottery, TicketPurchase, Winner
 
 logger = logging.getLogger(__name__)
 
@@ -163,6 +163,7 @@ def create_lottery(request):
 
     return render(request, "fortunaisk/lottery_create.html", {"form": form})
 
+
 @login_required
 @permission_required("fortunaisk.add_autolottery", raise_exception=True)
 def create_auto_lottery(request):
@@ -178,6 +179,7 @@ def create_auto_lottery(request):
         form = AutoLotteryForm()
     return render(request, "fortunaisk/auto_lottery_create.html", {"form": form})
 
+
 @login_required
 @permission_required("fortunaisk.change_autolottery", raise_exception=True)
 def edit_auto_lottery(request, autolottery_id):
@@ -192,7 +194,12 @@ def edit_auto_lottery(request, autolottery_id):
             messages.error(request, "Please correct the errors below.")
     else:
         form = AutoLotteryForm(instance=autolottery)
-    return render(request, "fortunaisk/auto_lottery_edit.html", {"form": form, "autolottery": autolottery})
+    return render(
+        request,
+        "fortunaisk/auto_lottery_edit.html",
+        {"form": form, "autolottery": autolottery},
+    )
+
 
 @login_required
 @permission_required("fortunaisk.delete_autolottery", raise_exception=True)
@@ -202,10 +209,17 @@ def delete_auto_lottery(request, autolottery_id):
         autolottery.delete()
         messages.success(request, "Automatic lottery deleted successfully.")
         return redirect("fortunaisk:auto_lottery_list")
-    return render(request, "fortunaisk/auto_lottery_confirm_delete.html", {"autolottery": autolottery})
+    return render(
+        request,
+        "fortunaisk/auto_lottery_confirm_delete.html",
+        {"autolottery": autolottery},
+    )
+
 
 @login_required
 @permission_required("fortunaisk.view_autolottery", raise_exception=True)
 def list_auto_lotteries(request):
     autolotteries = AutoLottery.objects.all()
-    return render(request, "fortunaisk/auto_lottery_list.html", {"autolotteries": autolotteries})
+    return render(
+        request, "fortunaisk/auto_lottery_list.html", {"autolotteries": autolotteries}
+    )

@@ -224,21 +224,25 @@ class WebhookConfiguration(models.Model):
     def __str__(self):
         return self.webhook_url
 
+
 class AutoLottery(models.Model):
     """
     Represents an automatic lottery generator with a defined frequency.
     """
+
     INTERVAL_CHOICES = [
-        ('minutes', 'Minutes'),
-        ('hours', 'Hours'),
-        ('days', 'Days'),
-        ('weeks', 'Weeks'),
+        ("minutes", "Minutes"),
+        ("hours", "Hours"),
+        ("days", "Days"),
+        ("weeks", "Weeks"),
     ]
 
     name = models.CharField(max_length=100, unique=True)
     frequency = models.PositiveIntegerField(default=1)
-    frequency_unit = models.CharField(max_length=10, choices=INTERVAL_CHOICES, default='days')
-    
+    frequency_unit = models.CharField(
+        max_length=10, choices=INTERVAL_CHOICES, default="days"
+    )
+
     # Parameters for the lottery to be created automatically
     ticket_price = models.DecimalField(max_digits=20, decimal_places=2)
     duration_hours = models.PositiveIntegerField(default=24)
@@ -255,7 +259,7 @@ class AutoLottery(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         verbose_name = "Automatic Lottery"
         verbose_name_plural = "Automatic Lotteries"
@@ -265,7 +269,7 @@ class AutoLottery(models.Model):
             ("delete_autolottery", "Can delete automatic lottery"),
             ("view_autolottery", "Can view automatic lottery"),
         ]
-    
+
     def __str__(self):
         return self.name
 
@@ -273,7 +277,7 @@ class AutoLottery(models.Model):
         # Override save to handle PeriodicTask creation/update
         super().save(*args, **kwargs)
         self.setup_periodic_task()
-    
+
     def setup_periodic_task(self):
         """
         Sets up or updates the periodic task for generating lotteries.

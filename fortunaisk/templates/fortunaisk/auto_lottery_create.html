@@ -16,7 +16,7 @@
                 <div class="card-body">
                     <form method="post" novalidate>
                         {% csrf_token %}
-                        
+
                         <!-- Name -->
                         <div class="mb-4">
                             <label for="id_name" class="form-label">{% trans "Name" %}</label>
@@ -30,7 +30,7 @@
                                 </div>
                             {% endif %}
                         </div>
-                        
+
                         <!-- Frequency -->
                         <div class="mb-4">
                             <label for="id_frequency" class="form-label">{% trans "Frequency" %}</label>
@@ -45,7 +45,7 @@
                                 </div>
                             {% endif %}
                         </div>
-                        
+
                         <!-- Ticket Price -->
                         <div class="mb-4">
                             <label for="id_ticket_price" class="form-label">{% trans "Ticket Price" %}</label>
@@ -59,7 +59,7 @@
                                 </div>
                             {% endif %}
                         </div>
-                        
+
                         <!-- Duration Hours -->
                         <div class="mb-4">
                             <label for="id_duration_hours" class="form-label">{% trans "Duration (Hours)" %}</label>
@@ -73,7 +73,7 @@
                                 </div>
                             {% endif %}
                         </div>
-                        
+
                         <!-- Payment Receiver -->
                         <div class="mb-4">
                             <label for="id_payment_receiver" class="form-label">{% trans "Payment Receiver" %}</label>
@@ -87,7 +87,7 @@
                                 </div>
                             {% endif %}
                         </div>
-                        
+
                         <!-- Number of Winners -->
                         <div class="mb-4">
                             <label for="id_winner_count" class="form-label">{% trans "Number of Winners" %}</label>
@@ -101,7 +101,7 @@
                                 </div>
                             {% endif %}
                         </div>
-                        
+
                         <!-- Winners Distribution -->
                         <div class="mb-4">
                             <label for="id_winners_distribution_str" class="form-label">{% trans "Winners Distribution" %}</label>
@@ -116,7 +116,7 @@
                                 </div>
                             {% endif %}
                         </div>
-                        
+
                         <!-- Max Tickets/User -->
                         <div class="mb-4">
                             <label for="id_max_tickets_per_user" class="form-label">{% trans "Max Tickets/User" %}</label>
@@ -130,7 +130,7 @@
                                 </div>
                             {% endif %}
                         </div>
-                        
+
                         <!-- Is Active -->
                         <div class="mb-4 form-check">
                             {{ form.is_active }}
@@ -141,7 +141,7 @@
                                 </div>
                             {% endif %}
                         </div>
-                        
+
                         <!-- Submit Button -->
                         <div class="d-grid">
                             <button type="submit" class="btn btn-success btn-lg">
@@ -151,7 +151,7 @@
                     </form>
                 </div>
             </div>
-            
+
             <!-- Retour à la liste des loteries automatiques -->
             <div class="mt-3 text-center">
                 <a href="{% url 'fortunaisk:auto_lottery_list' %}" class="btn btn-link">
