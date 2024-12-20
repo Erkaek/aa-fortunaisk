@@ -25,6 +25,12 @@
                 <p><strong>{% trans "End Date" %}:</strong> {{ lottery.end_date|date:"Y-m-d H:i" }}</p>
                 <p><strong>{% trans "Participants" %}:</strong> {{ lottery.participant_count }}</p>
                 <p><strong>{% trans "Total Pot" %}:</strong> {{ lottery.total_pot|intcomma }} ISK</p>
+                <!-- Button to show participants count -->
+                <button class="btn btn-info mt-2" onclick="showParticipants('{{ lottery.lottery_reference }}')">{% trans "Show Participants" %}</button>
+                <!-- Container to display participants count -->
+                <div id="participants-{{ lottery.lottery_reference }}" style="display:none;">
+                    <p><strong>{% trans "Number of Participants" %}:</strong> {{ lottery.participant_count }}</p>
+                </div>
             </div>
         </div>
         {% endfor %}
@@ -118,5 +124,14 @@
         },
         options: { scales: { y: { beginAtZero: true } } }
     });
+
+function showParticipants(lotteryReference) {
+    var element = document.getElementById('participants-' + lotteryReference);
+    if (element.style.display === "none") {
+        element.style.display = "block";
+    } else {
+        element.style.display = "none";
+    }
+}
 </script>
 {% endblock details %}
