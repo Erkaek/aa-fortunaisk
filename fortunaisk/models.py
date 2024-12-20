@@ -263,12 +263,6 @@ class AutoLottery(models.Model):
     class Meta:
         verbose_name = "Automatic Lottery"
         verbose_name_plural = "Automatic Lotteries"
-        permissions = [
-            ("add_autolottery", "Can add automatic lottery"),
-            ("change_autolottery", "Can change automatic lottery"),
-            ("delete_autolottery", "Can delete automatic lottery"),
-            ("view_autolottery", "Can view automatic lottery"),
-        ]
 
     def __str__(self):
         return self.name
