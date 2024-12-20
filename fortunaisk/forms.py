@@ -42,17 +42,37 @@ class LotteryCreateForm(forms.ModelForm):
         ]
         widgets = {
             "ticket_price": forms.NumberInput(
-                attrs={"class": "form-control", "step": "0.01"}
+                attrs={
+                    "class": "form-control",
+                    "step": "0.01",
+                    "placeholder": "Enter ticket price in ISK",
+                }
             ),
             "end_date": forms.DateTimeInput(
-                attrs={"type": "datetime-local", "class": "form-control"}
+                attrs={
+                    "type": "datetime-local",
+                    "class": "form-control",
+                    "placeholder": "Select end date and time",
+                }
             ),
-            "payment_receiver": forms.NumberInput(attrs={"class": "form-control"}),
-            "winner_count": forms.NumberInput(attrs={"class": "form-control"}),
+            "payment_receiver": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Enter payment receiver ID",
+                }
+            ),
+            "winner_count": forms.NumberInput(
+                attrs={"class": "form-control", "placeholder": "Number of winners"}
+            ),
             "winners_distribution_str": forms.TextInput(
-                attrs={"class": "form-control"}
+                attrs={"class": "form-control", "placeholder": "e.g., 50,30,20"}
             ),
-            "max_tickets_per_user": forms.NumberInput(attrs={"class": "form-control"}),
+            "max_tickets_per_user": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Maximum tickets per user",
+                }
+            ),
         }
         help_texts = {
             "winners_distribution_str": "Ex: '50,30,20' pour 3 gagnants. La somme doit faire 100.",

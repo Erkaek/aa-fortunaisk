@@ -6,37 +6,126 @@
 {% endblock page_title %}
 
 {% block details %}
-<div class="container mt-4">
-    <h2 class="text-center mb-4">{% trans "Create a New Lottery" %}</h2>
-    <form method="post">
-        {% csrf_token %}
-        <div class="mb-3">
-            <label for="id_ticket_price">{% trans "Ticket Price" %}</label>
-            {{ form.ticket_price }}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">{% trans "Create a New Lottery" %}</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+
+                        <!-- Ticket Price -->
+                        <div class="mb-4">
+                            <label for="id_ticket_price" class="form-label">{% trans "Ticket Price" %}</label>
+                            {{ form.ticket_price }}
+                            {% if form.ticket_price.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.ticket_price.errors|striptags }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- End Date -->
+                        <div class="mb-4">
+                            <label for="id_end_date" class="form-label">{% trans "End Date" %}</label>
+                            {{ form.end_date }}
+                            <small class="form-text text-muted">{% trans "Format: YYYY-MM-DD HH:MM (selon le navigateur)" %}</small>
+                            {% if form.end_date.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.end_date.errors|striptags }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Payment Receiver -->
+                        <div class="mb-4">
+                            <label for="id_payment_receiver" class="form-label">{% trans "Payment Receiver" %}</label>
+                            {{ form.payment_receiver }}
+                            {% if form.payment_receiver.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.payment_receiver.errors|striptags }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Number of Winners -->
+                        <div class="mb-4">
+                            <label for="id_winner_count" class="form-label">{% trans "Number of Winners" %}</label>
+                            {{ form.winner_count }}
+                            {% if form.winner_count.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.winner_count.errors|striptags }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Winners Distribution -->
+                        <div class="mb-4">
+                            <label for="id_winners_distribution_str" class="form-label">{% trans "Winners Distribution" %}</label>
+                            {{ form.winners_distribution_str }}
+                            <small class="form-text text-muted">{{ form.winners_distribution_str.help_text }}</small>
+                            {% if form.winners_distribution_str.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.winners_distribution_str.errors|striptags }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Max Tickets/User -->
+                        <div class="mb-4">
+                            <label for="id_max_tickets_per_user" class="form-label">{% trans "Max Tickets/User" %}</label>
+                            {{ form.max_tickets_per_user }}
+                            {% if form.max_tickets_per_user.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.max_tickets_per_user.errors|striptags }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                {% trans "Create Lottery" %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Retour à la liste des loteries -->
+            <div class="mt-3 text-center">
+                <a href="{% url 'fortunaisk:lottery' %}" class="btn btn-link">
+                    <i class="fas fa-arrow-left"></i> {% trans "Back to Lotteries" %}
+                </a>
+            </div>
         </div>
-        <div class="mb-3">
-            <label for="id_end_date">{% trans "End Date" %}</label>
-            {{ form.end_date }}
-            <small class="form-text text-muted">{% trans "Format: YYYY-MM-DD HH:MM (selon le navigateur)" %}</small>
-        </div>
-        <div class="mb-3">
-            <label for="id_payment_receiver">{% trans "Payment Receiver" %}</label>
-            {{ form.payment_receiver }}
-        </div>
-        <div class="mb-3">
-            <label for="id_winner_count">{% trans "Number of Winners" %}</label>
-            {{ form.winner_count }}
-        </div>
-        <div class="mb-3">
-            <label for="id_winners_distribution_str">{% trans "Winners Distribution" %}</label>
-            {{ form.winners_distribution_str }}
-            <small class="form-text text-muted">{{ form.winners_distribution_str.help_text }}</small>
-        </div>
-        <div class="mb-3">
-            <label for="id_max_tickets_per_user">{% trans "Max Tickets/User" %}</label>
-            {{ form.max_tickets_per_user }}
-        </div>
-        <button type="submit" class="btn btn-primary">{% trans "Create Lottery" %}</button>
-    </form>
+    </div>
 </div>
+
+<!-- Optionnel : Ajout d'un script pour la validation côté client -->
+<script>
+    // Exemple de validation côté client avec Bootstrap
+    (function () {
+        'use strict'
+
+        // Récupère tous les formulaires que nous voulons valider
+        var forms = document.querySelectorAll('form')
+
+        // Boucle sur les formulaires et empêche la soumission si ce n'est pas valide
+        Array.prototype.slice.call(forms)
+            .forEach(function (form) {
+                form.addEventListener('submit', function (event) {
+                    if (!form.checkValidity()) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                    }
+
+                    form.classList.add('was-validated')
+                }, false)
+            })
+    })()
+</script>
 {% endblock details %}
