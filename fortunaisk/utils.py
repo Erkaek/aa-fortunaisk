@@ -9,7 +9,7 @@ import requests
 logger = logging.getLogger(__name__)
 
 
-def send_discord_notification(webhook_url, message):
+def send_discord_notification_custom(webhook_url, message):
     """
     Envoie une notification à Discord via le webhook spécifié.
     """

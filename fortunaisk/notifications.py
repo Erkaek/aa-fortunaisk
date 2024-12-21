@@ -6,7 +6,6 @@ import logging
 # Third Party
 import requests
 
-# Importer WebhookConfiguration depuis webhooks.py
 from .webhooks import WebhookConfiguration
 
 logger = logging.getLogger(__name__)

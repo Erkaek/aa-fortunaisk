@@ -2,7 +2,6 @@
 
 # Django
 from django import forms
-from django.utils import timezone
 
 from .models import AutoLottery, Lottery, LotterySettings
 
@@ -17,19 +16,24 @@ class LotterySettingsForm(forms.ModelForm):
         fields = [
             "default_payment_receiver",
             "discord_webhook",
-            "default_lottery_duration_hours",
+            "default_lottery_duration_value",
+            "default_lottery_duration_unit",
             "default_max_tickets_per_user",
         ]
         widgets = {
-            "default_payment_receiver": forms.TextInput(
+            "default_payment_receiver": forms.NumberInput(
                 attrs={"class": "form-control"}
             ),
             "discord_webhook": forms.URLInput(attrs={"class": "form-control"}),
-            "default_lottery_duration_hours": forms.NumberInput(
+            "default_lottery_duration_value": forms.NumberInput(
                 attrs={"class": "form-control"}
             ),
+            "default_lottery_duration_unit": forms.Select(
+                choices=AutoLottery.DURATION_UNITS,
+                attrs={"class": "form-select"},
+            ),
             "default_max_tickets_per_user": forms.NumberInput(
-                attrs={"class": "form-control"}
+                attrs={"class": "form-control", "readonly": "readonly"}
             ),
         }
 
@@ -44,10 +48,11 @@ class LotteryCreateForm(forms.ModelForm):
         fields = [
             "ticket_price",
             "end_date",
-            "payment_receiver",
             "winner_count",
             "winners_distribution_str",
             "max_tickets_per_user",
+            "duration_value",
+            "duration_unit",
         ]
         widgets = {
             "ticket_price": forms.NumberInput(
@@ -64,14 +69,12 @@ class LotteryCreateForm(forms.ModelForm):
                     "placeholder": "Select end date and time",
                 }
             ),
-            "payment_receiver": forms.NumberInput(
+            "winner_count": forms.NumberInput(
                 attrs={
                     "class": "form-control",
-                    "placeholder": "Enter payment receiver ID",
+                    "placeholder": "Number of winners",
+                    "min": "1",
                 }
-            ),
-            "winner_count": forms.NumberInput(
-                attrs={"class": "form-control", "placeholder": "Number of winners"}
             ),
             "winners_distribution_str": forms.TextInput(
                 attrs={"class": "form-control", "placeholder": "e.g., 50,30,20"}
@@ -80,7 +83,19 @@ class LotteryCreateForm(forms.ModelForm):
                 attrs={
                     "class": "form-control",
                     "placeholder": "Maximum tickets per user",
+                    "readonly": "readonly",
                 }
+            ),
+            "duration_value": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Enter duration value",
+                    "min": "1",
+                }
+            ),
+            "duration_unit": forms.Select(
+                choices=AutoLottery.DURATION_UNITS,
+                attrs={"class": "form-select"},
             ),
         }
         help_texts = {
@@ -103,8 +118,13 @@ class LotteryCreateForm(forms.ModelForm):
 
     def save(self, commit=True):
         instance = super().save(commit=False)
-        if not instance.start_date:
-            instance.start_date = timezone.now()
+        lottery_settings = LotterySettings.objects.first()
+        if lottery_settings:
+            instance.payment_receiver = lottery_settings.default_payment_receiver
+        if not instance.lottery_reference:
+            instance.lottery_reference = Lottery.generate_unique_reference()
+        # Max Tickets Per User is set to 1 automatically
+        instance.max_tickets_per_user = 1
         if commit:
             instance.save()
         return instance
@@ -123,11 +143,10 @@ class AutoLotteryForm(forms.ModelForm):
             "frequency",
             "frequency_unit",
             "ticket_price",
-            "duration_hours",
-            "payment_receiver",
+            "duration_value",
+            "duration_unit",
             "winner_count",
             "winners_distribution_str",
-            "max_tickets_per_user",
         ]
         widgets = {
             "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
@@ -138,22 +157,63 @@ class AutoLotteryForm(forms.ModelForm):
                 }
             ),
             "frequency": forms.NumberInput(
-                attrs={"class": "form-control", "placeholder": "Enter frequency number"}
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Enter frequency number",
+                    "min": "1",
+                }
             ),
             "frequency_unit": forms.Select(attrs={"class": "form-select"}),
             "ticket_price": forms.NumberInput(
                 attrs={"class": "form-control", "step": "0.01"}
             ),
-            "duration_hours": forms.NumberInput(
-                attrs={"class": "form-control", "placeholder": "Duration in hours"}
+            "duration_value": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Duration value",
+                    "min": "1",
+                }
             ),
-            "payment_receiver": forms.NumberInput(attrs={"class": "form-control"}),
-            "winner_count": forms.NumberInput(attrs={"class": "form-control"}),
+            "duration_unit": forms.Select(
+                choices=AutoLottery.DURATION_UNITS,
+                attrs={"class": "form-select"},
+            ),
+            "winner_count": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Number of winners",
+                    "min": "1",
+                }
+            ),
             "winners_distribution_str": forms.TextInput(
                 attrs={"class": "form-control"}
             ),
-            "max_tickets_per_user": forms.NumberInput(attrs={"class": "form-control"}),
         }
         help_texts = {
             "winners_distribution_str": "Ex: '50,30,20' pour 3 gagnants. La somme doit faire 100.",
         }
+
+    def clean_winners_distribution_str(self):
+        distribution = self.cleaned_data.get("winners_distribution_str", "")
+        try:
+            percentages = [int(p.strip()) for p in distribution.split(",")]
+            if sum(percentages) != 100:
+                raise forms.ValidationError(
+                    "La somme des pourcentages doit être égale à 100."
+                )
+        except ValueError:
+            raise forms.ValidationError(
+                "Veuillez entrer des pourcentages valides séparés par des virgules."
+            )
+        return distribution
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        lottery_settings = LotterySettings.objects.first()
+        if lottery_settings:
+            instance.payment_receiver = lottery_settings.default_payment_receiver
+        # Max Tickets Per User is set to 1 automatically
+        instance.max_tickets_per_user = 1
+        if commit:
+            instance.save()
+        return instance

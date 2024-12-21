@@ -1,3 +1,4 @@
+<!-- fortunaisk/templates/fortunaisk/lottery_form.html -->
 {% extends "fortunaisk/base.html" %}
 {% load i18n %}
 {% load static %}
@@ -113,16 +114,16 @@
                                 <!-- Date de fin ou Durée -->
                                 <div class="col-md-6">
                                     {% if is_auto_lottery %}
-                                    <label for="{{ form.duration_hours.id_for_label }}" class="form-label">
-                                        {% trans "Duration (Hours)" %}*
+                                    <label for="{{ form.duration_value.id_for_label }}" class="form-label">
+                                        {% trans "Duration" %}*
                                     </label>
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="fas fa-hourglass-half"></i></span>
-                                        {{ form.duration_hours }}
-                                        <span class="input-group-text">{% trans "Hours" %}</span>
+                                        {{ form.duration_value }}
+                                        {{ form.duration_unit }}
                                     </div>
-                                    {% if form.duration_hours.errors %}
-                                        <div class="text-danger mt-1">{{ form.duration_hours.errors|striptags }}</div>
+                                    {% if form.duration_value.errors %}
+                                        <div class="text-danger mt-1">{{ form.duration_value.errors|striptags }}</div>
                                     {% endif %}
                                     {% else %}
                                     <label for="{{ form.end_date.id_for_label }}" class="form-label">
@@ -149,18 +150,15 @@
                             </div>
 
                             <div class="row g-3">
-                                <!-- Récepteur des paiements -->
+                                <!-- Récepteur des paiements (défini par défaut) -->
                                 <div class="col-md-6">
-                                    <label for="{{ form.payment_receiver.id_for_label }}" class="form-label">
-                                        {% trans "Payment Receiver" %}*
+                                    <label class="form-label">
+                                        {% trans "Payment Receiver" %}
                                     </label>
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="fas fa-user"></i></span>
-                                        {{ form.payment_receiver }}
+                                        <input type="number" class="form-control" value="{{ form.initial.payment_receiver }}" readonly>
                                     </div>
-                                    {% if form.payment_receiver.errors %}
-                                        <div class="text-danger mt-1">{{ form.payment_receiver.errors|striptags }}</div>
-                                    {% endif %}
                                 </div>
 
                                 <!-- Nombre de gagnants -->
@@ -179,14 +177,12 @@
 
                                 <!-- Distribution des gains -->
                                 <div class="col-12">
-                                    <label for="{{ form.winners_distribution_str.id_for_label }}" class="form-label">
+                                    <label class="form-label">
                                         {% trans "Prize Distribution" %}
                                     </label>
-                                    <div class="input-group">
-                                        <span class="input-group-text"><i class="fas fa-percent"></i></span>
-                                        {{ form.winners_distribution_str }}
+                                    <div id="prize-distribution-container">
+                                        <!-- Les champs de distribution des prix seront ajoutés dynamiquement ici -->
                                     </div>
-                                    <div class="form-text">{{ form.winners_distribution_str.help_text }}</div>
                                     {% if form.winners_distribution_str.errors %}
                                         <div class="text-danger mt-1">{{ form.winners_distribution_str.errors|striptags }}</div>
                                     {% endif %}
@@ -202,22 +198,21 @@
                             </div>
 
                             <div class="row g-3">
-                                <!-- Limite de tickets par utilisateur -->
+                                <!-- Limite de tickets par utilisateur (défini automatiquement) -->
                                 <div class="col-md-6">
-                                    <label for="{{ form.max_tickets_per_user.id_for_label }}" class="form-label">
+                                    <label class="form-label">
                                         {% trans "Max Tickets Per User" %}
                                     </label>
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="fas fa-ticket-alt"></i></span>
-                                        {{ form.max_tickets_per_user }}
+                                        <input type="number" class="form-control" value="1" readonly>
                                     </div>
-                                    {% if form.max_tickets_per_user.errors %}
-                                        <div class="text-danger mt-1">{{ form.max_tickets_per_user.errors|striptags }}</div>
-                                    {% endif %}
                                 </div>
-
                             </div>
                         </div>
+
+                        <!-- Champ caché pour winners_distribution_str -->
+                        {{ form.winners_distribution_str }}
 
                         <!-- Boutons d'action -->
                         <div class="d-flex justify-content-between align-items-center mt-4">
@@ -241,22 +236,18 @@
     </div>
 </div>
 
-<!-- Script de validation côté client -->
+<!-- Script de gestion dynamique des gagnants et distribution des prix -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Constantes pour les éléments du formulaire
     const FORM_ELEMENTS = {
         form: document.querySelector('form'),
         winnerCount: document.getElementById('id_winner_count'),
-        distribution: document.getElementById('id_winners_distribution_str'),
-        price: document.getElementById('id_ticket_price'),
-        frequency: document.getElementById('id_frequency'),
-        frequencyUnit: document.getElementById('id_frequency_unit'),
-        isActive: document.getElementById('id_is_active'),
-        frequencySection: document.querySelector('.frequency-section')
+        distributionContainer: document.getElementById('prize-distribution-container'),
+        distributionInput: document.getElementById('id_winners_distribution_str'), // Champ caché
     };
 
-    // Configuration des messages d'erreur
+    // Messages d'erreur
     const ERROR_MESSAGES = {
         distribution: 'La somme des pourcentages doit être égale à 100',
         required: 'Ce champ est obligatoire'
@@ -264,14 +255,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Classe utilitaire pour la validation
     class FormValidator {
-        static validateDistribution(distribution) {
-            if (!distribution) return false;
+        static validateDistribution(distributions) {
+            if (!distributions || distributions.length === 0) return false;
 
-            const numbers = distribution.split(',')
-                .map(n => parseInt(n.trim()))
-                .filter(n => !isNaN(n));
+            const numbers = distributions.map(n => parseInt(n.value.trim())).filter(n => !isNaN(n));
 
-            return numbers.length > 0 && numbers.reduce((a, b) => a + b, 0) === 100;
+            const total = numbers.reduce((a, b) => a + b, 0);
+            return total === 100;
         }
 
         static showError(element, message) {
@@ -293,25 +283,60 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Gestionnaire d'événements pour la distribution des gagnants
-    class WinnersDistributionHandler {
-        static updateWinnerCount(value) {
-            if (!value) return;
-            const count = value.split(',').filter(v => v.trim()).length;
-            FORM_ELEMENTS.winnerCount.value = count;
+    // Gestionnaire pour les champs de distribution des prix
+    class PrizeDistributionHandler {
+        static createDistributionField(index, value=100) {
+            const div = document.createElement('div');
+            div.className = 'input-group mb-2';
+
+            const prepend = document.createElement('span');
+            prepend.className = 'input-group-text';
+            prepend.textContent = `Winner ${index + 1} %`;
+
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.min = '0';
+            input.max = '100';
+            input.className = 'form-control prize-distribution';
+            input.value = value;
+            input.required = true;
+
+            const append = document.createElement('span');
+            append.className = 'input-group-text';
+            append.textContent = '%';
+
+            div.appendChild(prepend);
+            div.appendChild(input);
+            div.appendChild(append);
+
+            return div;
         }
 
-        static validate() {
-            const value = FORM_ELEMENTS.distribution.value;
-            if (!value) return true;
+        static updateDistributionFields(count) {
+            const container = FORM_ELEMENTS.distributionContainer;
+            container.innerHTML = '';
 
-            const isValid = FormValidator.validateDistribution(value);
-            if (!isValid) {
-                FormValidator.showError(FORM_ELEMENTS.distribution, ERROR_MESSAGES.distribution);
-            } else {
-                FormValidator.removeError(FORM_ELEMENTS.distribution);
+            for(let i = 0; i < count; i++) {
+                let value = 100 / count;
+                if(i === count -1){
+                    // Le dernier gagnant prend le reste pour s'assurer que la somme fait 100
+                    value = 100 - (100 * (count -1)/ count);
+                }
+                const field = this.createDistributionField(i, value);
+                container.appendChild(field);
             }
-            return isValid;
+        }
+
+        static getDistributionValues() {
+            const inputs = container.querySelectorAll('.prize-distribution');
+            const values = [];
+            inputs.forEach(input => {
+                const val = parseInt(input.value.trim());
+                if(!isNaN(val)){
+                    values.push(val);
+                }
+            });
+            return values;
         }
     }
 
@@ -325,44 +350,25 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Gestionnaire pour les loteries automatiques
-    class AutoLotteryHandler {
-        static updateFrequencyLabels() {
-            const value = parseInt(FORM_ELEMENTS.frequency.value);
-            FORM_ELEMENTS.frequencyUnit.querySelectorAll('option').forEach(option => {
-                const base = option.textContent.replace(/s$/, '');
-                option.textContent = value === 1 ? base : `${base}s`;
-            });
-        }
-
-        static toggleFrequencySection() {
-            if (FORM_ELEMENTS.frequencySection) {
-                FORM_ELEMENTS.frequencySection.style.display =
-                    FORM_ELEMENTS.isActive.checked ? 'block' : 'none';
-            }
-        }
-    }
-
     // Initialisation des écouteurs d'événements
     function initializeEventListeners() {
-        // Écouteur pour la distribution des gagnants
-        FORM_ELEMENTS.distribution?.addEventListener('input', (e) => {
-            WinnersDistributionHandler.updateWinnerCount(e.target.value);
+        // Écouteur pour le changement du nombre de gagnants
+        FORM_ELEMENTS.winnerCount?.addEventListener('input', function(e) {
+            const count = parseInt(e.target.value);
+            if(!isNaN(count) && count > 0){
+                PrizeDistributionHandler.updateDistributionFields(count);
+            } else {
+                FORM_ELEMENTS.distributionContainer.innerHTML = '';
+            }
         });
 
+        // Initialiser les champs de distribution en fonction de la valeur initiale
+        const initialCount = parseInt(FORM_ELEMENTS.winnerCount?.value) || 1;
+        PrizeDistributionHandler.updateDistributionFields(initialCount);
+
         // Écouteur pour le formatage des prix
-        FORM_ELEMENTS.price?.addEventListener('blur', PriceFormatter.handleBlur);
-
-        // Écouteurs pour les loteries automatiques
-        if (FORM_ELEMENTS.frequency && FORM_ELEMENTS.frequencyUnit) {
-            FORM_ELEMENTS.frequency.addEventListener('input', AutoLotteryHandler.updateFrequencyLabels);
-        }
-
-        if (FORM_ELEMENTS.isActive) {
-            FORM_ELEMENTS.isActive.addEventListener('change', AutoLotteryHandler.toggleFrequencySection);
-            // Initialiser l'état de la section fréquence
-            AutoLotteryHandler.toggleFrequencySection();
-        }
+        const priceInput = document.getElementById('id_ticket_price');
+        priceInput?.addEventListener('blur', PriceFormatter.handleBlur);
 
         // Validation du formulaire à la soumission
         FORM_ELEMENTS.form?.addEventListener('submit', function(event) {
@@ -379,13 +385,38 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             // Validation de la distribution
-            if (!WinnersDistributionHandler.validate()) {
+            const distributions = FORM_ELEMENTS.distributionContainer.querySelectorAll('.prize-distribution');
+            let distributionValues = [];
+            distributions.forEach(input => {
+                const val = parseInt(input.value.trim());
+                if(isNaN(val) || val <0 || val >100){
+                    FormValidator.showError(input, 'Veuillez entrer une valeur valide entre 0 et 100.');
+                    isValid = false;
+                } else {
+                    FormValidator.removeError(input);
+                    distributionValues.push(val);
+                }
+            });
+
+            const total = distributionValues.reduce((a, b) => a + b, 0);
+            if(total !== 100){
+                alert(ERROR_MESSAGES.distribution);
                 isValid = false;
+                distributions.forEach(input => {
+                    FormValidator.showError(input, ERROR_MESSAGES.distribution);
+                });
             }
 
-            if (!isValid) {
+            if(!isValid){
                 event.preventDefault();
                 event.stopPropagation();
+            } else {
+                // Définir winners_distribution_str
+                const distributionStr = distributionValues.join(',');
+                const distributionInput = document.getElementById('id_winners_distribution_str');
+                if(distributionInput){
+                    distributionInput.value = distributionStr;
+                }
             }
         });
     }

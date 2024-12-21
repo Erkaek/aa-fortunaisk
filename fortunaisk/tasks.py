@@ -1,5 +1,4 @@
 # fortunaisk/tasks.py
-"""Tâches Celery pour l'application de loterie FortunaIsk avec plusieurs gagnants et notifications Discord."""
 
 # Standard Library
 import json
@@ -10,7 +9,7 @@ from random import shuffle
 # Third Party
 from celery import shared_task
 from corptools.models import CorporationWalletJournalEntry
-from django_celery_beat.models import CrontabSchedule, PeriodicTask
+from django_celery_beat.models import IntervalSchedule, PeriodicTask
 
 # Django
 from django.contrib.auth.models import User
@@ -21,7 +20,7 @@ from django.utils import timezone
 from allianceauth.eveonline.models import EveCharacter
 
 from .models import AutoLottery, Lottery, TicketAnomaly, TicketPurchase, Winner
-from .notifications import send_discord_notification  # Import depuis notifications.py
+from .notifications import send_discord_notification
 
 logger = logging.getLogger(__name__)
 
@@ -80,10 +79,10 @@ def select_winners_for_lottery(lottery):
     chosen_tickets = all_tickets[:winners_count]
 
     with transaction.atomic():
-        for i, ticket in enumerate(chosen_tickets):
+        for idx, ticket in enumerate(chosen_tickets):
             # Assurez-vous que la distribution est définie et correspond au nombre de gagnants
-            if i < len(distribution):
-                percent = distribution[i]
+            if idx < len(distribution):
+                percent = distribution[idx]
             else:
                 percent = (
                     100 / winners_count
@@ -109,16 +108,66 @@ def select_winners_for_lottery(lottery):
 
 
 @shared_task
+def create_lottery_from_auto(auto_lottery_id):
+    """
+    Crée une nouvelle loterie à partir d'une Auto Lottery.
+    """
+    try:
+        auto_lottery = AutoLottery.objects.get(id=auto_lottery_id)
+
+        # Créer la nouvelle loterie
+        start_date = timezone.now()
+
+        # Convertir la durée en timedelta basé sur l'unité
+        if auto_lottery.duration_unit == "hours":
+            delta = timedelta(hours=auto_lottery.duration_value)
+        elif auto_lottery.duration_unit == "days":
+            delta = timedelta(days=auto_lottery.duration_value)
+        elif auto_lottery.duration_unit == "months":
+            delta = timedelta(days=30 * auto_lottery.duration_value)  # Approximation
+        else:
+            logger.error(f"Unsupported duration_unit: {auto_lottery.duration_unit}")
+            delta = timedelta(hours=auto_lottery.duration_value)  # default
+
+        end_date = start_date + delta
+
+        lottery = Lottery.objects.create(
+            ticket_price=auto_lottery.ticket_price,
+            start_date=start_date,
+            end_date=end_date,
+            payment_receiver=auto_lottery.payment_receiver,
+            winner_count=auto_lottery.winner_count,
+            winners_distribution_str=auto_lottery.winners_distribution_str,
+            max_tickets_per_user=auto_lottery.max_tickets_per_user,
+            lottery_reference=Lottery.generate_unique_reference(),
+            duration_value=auto_lottery.duration_value,
+            duration_unit=auto_lottery.duration_unit,
+        )
+
+        logger.info(
+            f"Created new Lottery '{lottery.lottery_reference}' from AutoLottery '{auto_lottery.name}' (ID: {auto_lottery_id})"
+        )
+        return lottery.id
+
+    except AutoLottery.DoesNotExist:
+        logger.error(f"Auto Lottery with ID {auto_lottery_id} does not exist.")
+    except Exception as e:
+        logger.error(
+            f"Error creating Lottery from AutoLottery {auto_lottery_id}: {str(e)}"
+        )
+
+
+@shared_task
 def process_wallet_tickets():
     """
     Traite les entrées de portefeuille pour toutes les loteries actives.
     """
-    logger.info("Traitement des entrées de portefeuille pour les loteries actives.")
+    logger.info("Processing wallet entries for active lotteries.")
     active_lotteries = Lottery.objects.filter(status="active")
 
     if not active_lotteries.exists():
-        logger.info("Aucune loterie active trouvée.")
-        return "Aucune loterie active à traiter."
+        logger.info("No active lotteries found.")
+        return "No active lotteries to process."
 
     processed_entries = 0
     for lottery in active_lotteries:
@@ -133,7 +182,7 @@ def process_wallet_tickets():
         )
 
         if not payments.exists():
-            logger.info(f"Aucun paiement trouvé pour la loterie : {lottery.id}")
+            logger.info(f"No payments found for Lottery ID: {lottery.id}")
             continue
 
         for payment in payments:
@@ -146,14 +195,12 @@ def process_wallet_tickets():
                 lottery=lottery, payment_id=payment_id
             ).exists():
                 logger.info(
-                    f"Anomalie déjà enregistrée pour le paiement {payment_id}, passage."
+                    f"Anomaly already recorded for payment {payment_id}, skipping."
                 )
                 continue
 
             if not (lottery.start_date <= payment.date <= lottery.end_date):
-                anomaly_reason = (
-                    "Date de paiement en dehors de la période de la loterie."
-                )
+                anomaly_reason = "Payment date outside lottery period."
 
             try:
                 character = EveCharacter.objects.get(
@@ -162,21 +209,19 @@ def process_wallet_tickets():
                 ownership = character.character_ownership
                 if not ownership or not ownership.user:
                     if anomaly_reason is None:
-                        anomaly_reason = (
-                            "Aucun utilisateur principal pour le personnage."
-                        )
+                        anomaly_reason = "No primary user for the character."
                 else:
                     user = ownership.user
                     user_ticket_count = TicketPurchase.objects.filter(
                         user=user, lottery=lottery
                     ).count()
-                    if user_ticket_count > lottery.max_tickets_per_user:
+                    if user_ticket_count >= lottery.max_tickets_per_user:
                         if anomaly_reason is None:
-                            anomaly_reason = f"L'utilisateur '{user.username}' a dépassé le nombre maximum de tickets ({lottery.max_tickets_per_user})."
+                            anomaly_reason = f"User '{user.username}' has exceeded the maximum number of tickets ({lottery.max_tickets_per_user})."
             except EveCharacter.DoesNotExist:
                 if anomaly_reason is None:
                     anomaly_reason = (
-                        f"Personnage Eve {payment.first_party_name_id} non trouvé."
+                        f"Eve Character {payment.first_party_name_id} not found."
                     )
 
             if anomaly_reason:
@@ -189,10 +234,10 @@ def process_wallet_tickets():
                     amount=int(payment.amount),
                     payment_id=payment_id,
                 )
-                logger.info(f"Anomalie détectée : {anomaly_reason}")
+                logger.info(f"Anomaly detected: {anomaly_reason}")
                 continue
 
-            # Aucun anomalie, créer le ticket
+            # No anomaly, create the ticket
             try:
                 with transaction.atomic():
                     TicketPurchase.objects.create(
@@ -203,91 +248,71 @@ def process_wallet_tickets():
                         purchase_date=timezone.now(),
                         payment_id=payment.id,  # Enregistrer l'ID du paiement
                     )
-                    logger.info(
-                        f"Ticket enregistré pour l'utilisateur '{user.username}'."
-                    )
+                    logger.info(f"Ticket recorded for user '{user.username}'.")
                 processed_entries += 1
             except IntegrityError as e:
                 TicketAnomaly.objects.create(
                     lottery=lottery,
                     character=character,
                     user=user,
-                    reason=f"Erreur d'intégrité : {e}",
+                    reason=f"Integrity error: {e}",
                     payment_date=payment.date,
                     amount=int(payment.amount),
                     payment_id=payment_id,
                 )
                 logger.error(
-                    f"Erreur d'intégrité lors du traitement du paiement {payment.id} : {e}"
+                    f"Integrity error while processing payment {payment.id}: {e}"
                 )
             except Exception as e:
                 TicketAnomaly.objects.create(
                     lottery=lottery,
                     character=character,
                     user=user,
-                    reason=f"Erreur inattendue : {e}",
+                    reason=f"Unexpected error: {e}",
                     payment_date=payment.date,
                     amount=int(payment.amount),
                     payment_id=payment.id,
                 )
                 logger.exception(
-                    f"Erreur inattendue lors du traitement du paiement {payment.id} : {e}"
+                    f"Unexpected error while processing payment {payment.id}: {e}"
                 )
 
-    logger.info(
-        f"{processed_entries} tickets traités pour toutes les loteries actives."
-    )
-    return f"{processed_entries} tickets traités pour toutes les loteries actives."
+    logger.info(f"{processed_entries} tickets processed for all active lotteries.")
+    return f"{processed_entries} tickets processed for all active lotteries."
 
 
 def setup_tasks():
     try:
         # Schedule for check_lotteries task (every 15 minutes)
-        check_lotteries_schedule, created = CrontabSchedule.objects.get_or_create(
-            minute="*/15",
-            hour="*",
-            day_of_week="*",
-            day_of_month="*",
-            month_of_year="*",
-            timezone="UTC",
+        check_lotteries_schedule, created = IntervalSchedule.objects.get_or_create(
+            every=15,
+            period=IntervalSchedule.MINUTES,
         )
-    except CrontabSchedule.MultipleObjectsReturned:
-        check_lotteries_schedule = CrontabSchedule.objects.filter(
-            minute="*/15",
-            hour="*",
-            day_of_week="*",
-            day_of_month="*",
-            month_of_year="*",
-            timezone="UTC",
+    except IntervalSchedule.MultipleObjectsReturned:
+        check_lotteries_schedule = IntervalSchedule.objects.filter(
+            every=15,
+            period=IntervalSchedule.MINUTES,
         ).first()
 
     try:
         # Schedule for process_wallet_tickets task (every 5 minutes)
         process_wallet_tickets_schedule, created = (
-            CrontabSchedule.objects.get_or_create(
-                minute="*/5",
-                hour="*",
-                day_of_week="*",
-                day_of_month="*",
-                month_of_year="*",
-                timezone="UTC",
+            IntervalSchedule.objects.get_or_create(
+                every=5,
+                period=IntervalSchedule.MINUTES,
             )
         )
-    except CrontabSchedule.MultipleObjectsReturned:
-        process_wallet_tickets_schedule = CrontabSchedule.objects.filter(
-            minute="*/5",
-            hour="*",
-            day_of_week="*",
-            day_of_month="*",
-            month_of_year="*",
-            timezone="UTC",
+    except IntervalSchedule.MultipleObjectsReturned:
+        process_wallet_tickets_schedule = IntervalSchedule.objects.filter(
+            every=5,
+            period=IntervalSchedule.MINUTES,
         ).first()
 
     PeriodicTask.objects.update_or_create(
         name="check_lotteries",
         defaults={
             "task": "fortunaisk.tasks.check_lotteries",
-            "crontab": check_lotteries_schedule,
+            "interval": check_lotteries_schedule,
             "args": json.dumps([]),
         },
     )
@@ -296,45 +321,14 @@ def setup_tasks():
         name="process_wallet_tickets",
         defaults={
             "task": "fortunaisk.tasks.process_wallet_tickets",
-            "crontab": process_wallet_tickets_schedule,
+            "interval": process_wallet_tickets_schedule,
             "args": json.dumps([]),
         },
     )
 
-
-@shared_task
-def create_lottery_from_auto(auto_lottery_id):
-    """
-    Crée une nouvelle loterie à partir d'une Auto Lottery.
-    """
-    try:
-        auto_lottery = AutoLottery.objects.get(id=auto_lottery_id)
-
-        # Créer la nouvelle loterie
-        start_date = timezone.now()
-        end_date = start_date + timedelta(hours=auto_lottery.duration_hours)
-
-        lottery = Lottery.objects.create(
-            ticket_price=auto_lottery.ticket_price,
-            start_date=start_date,
-            end_date=end_date,
-            payment_receiver=auto_lottery.payment_receiver,
-            winner_count=auto_lottery.winner_count,
-            winners_distribution_str=auto_lottery.winners_distribution_str,
-            max_tickets_per_user=auto_lottery.max_tickets_per_user,
-        )
-
-        logger.info(
-            f"Créée nouvelle loterie à partir de l'auto loterie '{auto_lottery.name}' (ID: {auto_lottery_id})"
-        )
-        return lottery.id
-
-    except AutoLottery.DoesNotExist:
-        logger.error(f"Auto Lottery avec ID {auto_lottery_id} non trouvée")
-    except Exception as e:
-        logger.error(
-            f"Erreur lors de la création de la loterie à partir de l'auto loterie {auto_lottery_id} : {str(e)}"
-        )
+    logger.info(
+        "Periodic tasks for checking lotteries and processing wallet tickets have been set up."
+    )
 
 
 # Appeler la fonction setup_tasks pour configurer les tâches

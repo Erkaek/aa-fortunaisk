@@ -1,5 +1,4 @@
 # fortunaisk/views.py
-"""Vues Django pour l'application de loterie FortunaIsk."""
 
 # Standard Library
 import logging
@@ -11,8 +10,8 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Count, Sum
-from django.db.models.signals import post_save  # Ajouté
-from django.dispatch import receiver  # Ajouté
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext as _
 
@@ -28,7 +27,7 @@ from .models import (
     UserProfile,
     Winner,
 )
-from .notifications import send_discord_notification  # Import depuis notifications.py
+from .notifications import send_discord_notification
 
 logger = logging.getLogger(__name__)
 

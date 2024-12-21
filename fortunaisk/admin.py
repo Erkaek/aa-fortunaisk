@@ -1,5 +1,4 @@
 # fortunaisk/admin.py
-"""Configuration de l'administration Django pour l'application FortunaIsk."""
 
 # Standard Library
 import csv
@@ -9,7 +8,9 @@ import logging
 from django.contrib import admin
 from django.http import HttpResponse
 
-from .models import Lottery, Reward, TicketAnomaly, UserProfile
+# Importations internes
+from .models import AutoLottery, Lottery, Reward, TicketAnomaly, UserProfile
+from .notifications import send_discord_notification  # Import interne déplacé en haut
 from .webhooks import WebhookConfiguration  # Import depuis webhooks.py
 
 logger = logging.getLogger(__name__)
@@ -31,6 +32,7 @@ class LotteryAdmin(admin.ModelAdmin):
         "lottery_reference",
         "status",
         "start_date",
+        "end_date",
         "participant_count",
         "total_pot",
     )
@@ -46,6 +48,8 @@ class LotteryAdmin(admin.ModelAdmin):
         "max_tickets_per_user",
         "participant_count",
         "total_pot",
+        "duration_value",
+        "duration_unit",
     )
 
     def has_add_permission(self, request):
@@ -54,7 +58,7 @@ class LotteryAdmin(admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         """
-        Override save_model pour envoyer une notification Discord lorsque une loterie est mise à jour.
+        Override save_model to send a Discord notification when a lottery is updated.
         """
         if change:
             try:
@@ -72,7 +76,6 @@ class LotteryAdmin(admin.ModelAdmin):
                     message = f"Loterie {obj.lottery_reference} annulée."
                 else:
                     message = f"Loterie {obj.lottery_reference} mise à jour."
-                from .notifications import send_discord_notification  # Import interne
 
                 send_discord_notification(message=message)
 
@@ -84,25 +87,21 @@ class LotteryAdmin(admin.ModelAdmin):
             self.message_user(
                 request, f"{lottery.lottery_reference} marked as completed."
             )
-            # Notifications Discord
+            # Discord Notifications
             message = (
                 f"Loterie {lottery.lottery_reference} a été marquée comme terminée."
             )
-            from .notifications import send_discord_notification  # Import interne
-
             send_discord_notification(message=message)
 
     @admin.action(description="Mark selected lotteries as cancelled")
     def mark_cancelled(self, request, queryset):
         queryset.update(status="cancelled")
         self.message_user(request, "Selected lotteries marked as cancelled.")
-        # Notifications Discord
+        # Discord Notifications
         message = "Les loteries sélectionnées ont été annulées."
-        from .notifications import send_discord_notification  # Import interne
-
         send_discord_notification(message=message)
 
-    @admin.action(description="Terminer prématurément les loteries sélectionnées")
+    @admin.action(description="Terminate selected lotteries prematurely")
     def terminate_lottery(self, request, queryset):
         for lottery in queryset.filter(status="active"):
             lottery.status = "completed"
@@ -110,13 +109,11 @@ class LotteryAdmin(admin.ModelAdmin):
             self.message_user(
                 request, f"Loterie {lottery.lottery_reference} terminée prématurément."
             )
-            # Notifications Discord
+            # Discord Notifications
             message = f"Loterie {lottery.lottery_reference} a été terminée prématurément par {request.user.username}."
-            from .notifications import send_discord_notification  # Import interne
-
             send_discord_notification(message=message)
 
-    @admin.action(description="Exporter les loteries sélectionnées en CSV")
+    @admin.action(description="Export selected lotteries as CSV")
     def export_as_csv(self, request, queryset):
         meta = self.model._meta
         field_names = [field.name for field in meta.fields]
@@ -168,7 +165,7 @@ class TicketAnomalyAdmin(admin.ModelAdmin):
     )
     actions = ["export_anomalies_as_csv"]
 
-    @admin.action(description="Exporter les anomalies sélectionnées en CSV")
+    @admin.action(description="Export selected anomalies as CSV")
     def export_anomalies_as_csv(self, request, queryset):
         meta = self.model._meta
         field_names = [field.name for field in meta.fields]
@@ -207,3 +204,69 @@ class UserProfileAdmin(admin.ModelAdmin):
     list_display = ("user", "points")
     search_fields = ("user__username",)
     fields = ("user", "points", "rewards")
+
+
+@admin.register(AutoLottery)
+class AutoLotteryAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "name",
+        "is_active",
+        "frequency",
+        "frequency_unit",
+        "ticket_price",
+        "duration_value",
+        "duration_unit",
+        "winner_count",
+        "max_tickets_per_user",
+    )
+    search_fields = ("name",)
+    actions = ["export_as_csv"]
+    readonly_fields = ("max_tickets_per_user",)
+    fields = (
+        "is_active",
+        "name",
+        "frequency",
+        "frequency_unit",
+        "ticket_price",
+        "duration_value",
+        "duration_unit",
+        "winner_count",
+        "winners_distribution_str",
+        "max_tickets_per_user",
+    )
+
+    def save_model(self, request, obj, form, change):
+        """
+        Override save_model to send a Discord notification when an AutoLottery is updated.
+        """
+        if change:
+            try:
+                old_obj = AutoLottery.objects.get(pk=obj.pk)
+            except AutoLottery.DoesNotExist:
+                old_obj = None
+
+        super().save_model(request, obj, form, change)
+
+        if change and old_obj:
+            if old_obj.status != obj.status:
+                if obj.status == "active":
+                    message = f"AutoLottery {obj.name} is now active."
+                else:
+                    message = f"AutoLottery {obj.name} has been deactivated."
+                send_discord_notification(message=message)
+
+    @admin.action(description="Export selected AutoLotteries as CSV")
+    def export_as_csv(self, request, queryset):
+        meta = self.model._meta
+        field_names = [field.name for field in meta.fields]
+
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = "attachment; filename=autolotteries.csv"
+        writer = csv.writer(response)
+
+        writer.writerow(field_names)
+        for obj in queryset:
+            writer.writerow([getattr(obj, field) for field in field_names])
+
+        return response

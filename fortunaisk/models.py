@@ -5,9 +5,10 @@ import json
 import logging
 import random
 import string
+from datetime import timedelta
 
 # Third Party
-from django_celery_beat.models import CrontabSchedule, PeriodicTask
+from django_celery_beat.models import CrontabSchedule, IntervalSchedule, PeriodicTask
 from solo.models import SingletonModel
 
 # Django
@@ -70,11 +71,21 @@ class LotterySettings(SingletonModel):
     Paramètres globaux pour l'application de loterie.
     """
 
-    default_payment_receiver = models.CharField(
-        max_length=100, default="Default Receiver"
+    default_payment_receiver = models.IntegerField(
+        default=0, help_text="ID du récepteur des paiements par défaut."
     )
     discord_webhook = models.URLField(null=True, blank=True)
-    default_lottery_duration_hours = models.PositiveIntegerField(default=24)
+    default_lottery_duration_value = models.PositiveIntegerField(default=24)
+    default_lottery_duration_unit = models.CharField(
+        max_length=10,
+        choices=[
+            ("hours", "Hours"),
+            ("days", "Days"),
+            ("months", "Months"),
+        ],
+        default="hours",
+        help_text="Unité de durée par défaut pour les loteries.",
+    )
     default_max_tickets_per_user = models.PositiveIntegerField(default=1)
 
     def __str__(self):
@@ -93,6 +104,13 @@ class AutoLottery(models.Model):
         ("minutes", "Minutes"),
         ("hours", "Heures"),
         ("days", "Jours"),
+        ("months", "Mois"),
+    ]
+
+    DURATION_UNITS = [
+        ("hours", "Hours"),
+        ("days", "Days"),
+        ("months", "Months"),
     ]
 
     is_active = models.BooleanField(
@@ -113,10 +131,16 @@ class AutoLottery(models.Model):
     ticket_price = models.DecimalField(
         max_digits=20, decimal_places=2, help_text="Prix du ticket en ISK."
     )
-    duration_hours = models.PositiveIntegerField(
-        help_text="Durée de la loterie en heures."
+    duration_value = models.PositiveIntegerField(help_text="Durée de la loterie.")
+    duration_unit = models.CharField(
+        max_length=10,
+        choices=DURATION_UNITS,
+        default="hours",
+        help_text="Unité de durée pour la loterie.",
     )
-    payment_receiver = models.IntegerField(help_text="ID du récepteur des paiements.")
+    payment_receiver = models.IntegerField(
+        help_text="ID du récepteur des paiements par défaut."
+    )
     winner_count = models.PositiveIntegerField(
         default=1, help_text="Nombre de gagnants par loterie."
     )
@@ -125,11 +149,117 @@ class AutoLottery(models.Model):
         help_text="Liste des pourcentages pour chaque gagnant, séparés par des virgules. Exemple : '50,30,20' pour 3 gagnants.",
     )
     max_tickets_per_user = models.PositiveIntegerField(
-        null=True, blank=True, help_text="Nombre maximum de tickets par utilisateur."
+        default=1, help_text="Nombre maximum de tickets par utilisateur."
     )
 
     def __str__(self):
         return self.name
+
+    def get_duration_timedelta(self):
+        """
+        Convertit la durée en timedelta basé sur l'unité.
+        """
+        if self.duration_unit == "hours":
+            return timedelta(hours=self.duration_value)
+        elif self.duration_unit == "days":
+            return timedelta(days=self.duration_value)
+        elif self.duration_unit == "months":
+            return timedelta(days=30 * self.duration_value)  # Approximation
+        else:
+            return timedelta(hours=self.duration_value)  # Default
+
+    def schedule_periodic_task(self):
+        """
+        Schedule a periodic task for this AutoLottery to create Lotteries based on its frequency and unit.
+        """
+        # Determine interval based on frequency_unit
+        if self.frequency_unit == "minutes":
+            interval, created = IntervalSchedule.objects.get_or_create(
+                every=self.frequency,
+                period=IntervalSchedule.MINUTES,
+            )
+        elif self.frequency_unit == "hours":
+            interval, created = IntervalSchedule.objects.get_or_create(
+                every=self.frequency,
+                period=IntervalSchedule.HOURS,
+            )
+        elif self.frequency_unit == "days":
+            interval, created = IntervalSchedule.objects.get_or_create(
+                every=self.frequency,
+                period=IntervalSchedule.DAYS,
+            )
+        elif self.frequency_unit == "months":
+            # Approximate months as 30 days
+            interval, created = IntervalSchedule.objects.get_or_create(
+                every=30 * self.frequency,
+                period=IntervalSchedule.DAYS,
+            )
+        else:
+            logger.error(f"Unsupported frequency_unit: {self.frequency_unit}")
+            return
+
+        # Create or update PeriodicTask
+        task_name = f"create_lottery_auto_{self.id}"
+        task, created = PeriodicTask.objects.get_or_create(
+            name=task_name,
+            task="fortunaisk.tasks.create_lottery_from_auto",
+            defaults={
+                "interval": interval,
+                "args": json.dumps([self.id]),
+            },
+        )
+        if not created:
+            # Update the interval and args
+            task.interval = interval
+            task.args = json.dumps([self.id])
+            task.save()
+
+        logger.info(f"Periodic task '{task_name}' scheduled.")
+
+    def unschedule_periodic_task(self):
+        """
+        Remove the periodic task associated with this AutoLottery.
+        """
+        task_name = f"create_lottery_auto_{self.id}"
+        PeriodicTask.objects.filter(name=task_name).delete()
+        logger.info(f"Periodic task '{task_name}' unscheduled.")
+
+    def create_first_lottery(self):
+        """
+        Create the first Lottery immediately upon creation of AutoLottery.
+        """
+        start_date = timezone.now()
+        end_date = start_date + self.get_duration_timedelta()
+
+        lottery = Lottery.objects.create(
+            ticket_price=self.ticket_price,
+            start_date=start_date,
+            end_date=end_date,
+            payment_receiver=self.payment_receiver,
+            winner_count=self.winner_count,
+            winners_distribution_str=self.winners_distribution_str,
+            max_tickets_per_user=self.max_tickets_per_user,
+            lottery_reference=Lottery.generate_unique_reference(),
+            duration_value=self.duration_value,
+            duration_unit=self.duration_unit,
+        )
+
+        logger.info(
+            f"Created first Lottery '{lottery.lottery_reference}' from AutoLottery '{self.name}'."
+        )
+
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+        if is_new:
+            self.create_first_lottery()
+            self.schedule_periodic_task()
+        else:
+            self.schedule_periodic_task()
+
+    def delete(self, *args, **kwargs):
+        self.unschedule_periodic_task()
+        super().delete(*args, **kwargs)
 
 
 class Lottery(models.Model):
