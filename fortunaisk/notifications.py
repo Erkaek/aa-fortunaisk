@@ -7,6 +7,8 @@ import logging
 # Third Party
 import requests
 
+from .models import WebhookConfiguration
+
 logger = logging.getLogger(__name__)
 
 
