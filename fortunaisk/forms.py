@@ -103,6 +103,7 @@ class AutoLotteryForm(forms.ModelForm):
             "max_tickets_per_user",
         ]
         widgets = {
+            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
             "name": forms.TextInput(
                 attrs={
                     "class": "form-control",
@@ -125,7 +126,6 @@ class AutoLotteryForm(forms.ModelForm):
                 attrs={"class": "form-control"}
             ),
             "max_tickets_per_user": forms.NumberInput(attrs={"class": "form-control"}),
-            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
         help_texts = {
             "winners_distribution_str": "Ex: '50,30,20' pour 3 gagnants. La somme doit faire 100.",

@@ -1,4 +1,3 @@
-# fortunaisk/tasks.py
 """Celery tasks for the FortunaIsk lottery application with multiple winners and Discord notifications."""
 
 # Standard Library
@@ -9,7 +8,6 @@ from random import shuffle
 
 # Third Party
 from celery import shared_task
-from corptools.models import CorporationWalletJournalEntry
 
 # Django
 from django.contrib.auth.models import User
@@ -17,7 +15,7 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 # Alliance Auth
-from allianceauth.eveonline.models import EveCharacter
+from allianceauth.eveonline.models import CorporationWalletJournalEntry, EveCharacter
 
 from .models import AutoLottery, Lottery, TicketAnomaly, TicketPurchase, Winner
 from .notifications import send_discord_webhook  # Import depuis notifications.py
