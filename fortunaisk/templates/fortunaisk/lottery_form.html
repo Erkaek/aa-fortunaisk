@@ -44,6 +44,20 @@
                     <form method="post" class="needs-validation" novalidate>
                         {% csrf_token %}
 
+                        {% if is_auto_lottery %}
+                        <!-- Enable Automatic Lottery Switch -->
+                        <div class="mb-4 p-3 bg-light rounded">
+                            <div class="d-flex align-items-center">
+                                <div class="form-check form-switch">
+                                    {{ form.is_active }}
+                                    <label class="form-check-label fs-5" for="{{ form.is_active.id_for_label }}">
+                                        <i class="fas fa-power-off me-2 text-success"></i>
+                                        {% trans "Enable Automatic Lottery" %}
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
                         <!-- Section 1: Informations de Base -->
                         <div class="mb-4">
                             <div class="d-flex align-items-center mb-3">
@@ -202,17 +216,6 @@
                                     {% endif %}
                                 </div>
 
-                                {% if is_auto_lottery %}
-                                <!-- Statut actif (Auto Lottery uniquement) -->
-                                <div class="col-md-6 d-flex align-items-center">
-                                    <div class="form-check form-switch">
-                                        {{ form.is_active }}
-                                        <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
-                                            {% trans "Enable Automatic Lottery" %}
-                                        </label>
-                                    </div>
-                                </div>
-                                {% endif %}
                             </div>
                         </div>
 

@@ -91,6 +91,7 @@ class AutoLotteryForm(forms.ModelForm):
     class Meta:
         model = AutoLottery
         fields = [
+            "is_active",
             "name",
             "frequency",
             "frequency_unit",
@@ -100,7 +101,6 @@ class AutoLotteryForm(forms.ModelForm):
             "winner_count",
             "winners_distribution_str",
             "max_tickets_per_user",
-            "is_active",
         ]
         widgets = {
             "name": forms.TextInput(
