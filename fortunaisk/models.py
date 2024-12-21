@@ -89,6 +89,8 @@ class Lottery(models.Model):
     def save(self, *args, **kwargs):
         if self.status == "completed" and self.pk:
             self.complete_lottery()
+        if not self.lottery_reference:
+            self.lottery_reference = self.generate_unique_reference()
         super().save(*args, **kwargs)
 
     @staticmethod
