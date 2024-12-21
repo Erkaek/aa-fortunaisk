@@ -260,7 +260,7 @@ class AutoLottery(models.Model):
         ("hour", "Hours"),
         ("day", "Days"),
         ("week", "Weeks"),
-]
+    ]
 
     name = models.CharField(max_length=100, unique=True)
     frequency = models.PositiveIntegerField(default=1)
@@ -298,24 +298,27 @@ class AutoLottery(models.Model):
         self.setup_periodic_task()
 
     def setup_periodic_task(self):
-    if not self.is_active:
-        PeriodicTask.objects.filter(name=f"AutoLottery_{self.id}").delete()
-        return
+        """
+        Sets up or updates a periodic task for the automatic lottery.
+        """
+        if not self.is_active:
+            PeriodicTask.objects.filter(name=f"AutoLottery_{self.id}").delete()
+            return
 
-    # Get or create the IntervalSchedule
-    schedule, created = IntervalSchedule.objects.get_or_create(
-        every=self.frequency,
-        period=self.frequency_unit.lower(),  # Utilisez lower() au lieu de upper()
-    )
+        # Get or create the IntervalSchedule
+        schedule, created = IntervalSchedule.objects.get_or_create(
+            every=self.frequency,
+            period=self.frequency_unit.lower(),
+        )
 
-    task_name = f"AutoLottery_{self.id}"
+        task_name = f"AutoLottery_{self.id}"
 
-    PeriodicTask.objects.update_or_create(
-        name=task_name,
-        defaults={
-            "task": "fortunaisk.tasks.create_lottery_from_auto",
-            "interval": schedule,
-            "args": json.dumps([self.id]),
-        },
-    )
-    logger.info(f"Periodic task '{task_name}' set for AutoLottery '{self.name}'.")
+        PeriodicTask.objects.update_or_create(
+            name=task_name,
+            defaults={
+                "task": "fortunaisk.tasks.create_lottery_from_auto",
+                "interval": schedule,
+                "args": json.dumps([self.id]),
+            },
+        )
+        logger.info(f"Periodic task '{task_name}' set for AutoLottery '{self.name}'.")
