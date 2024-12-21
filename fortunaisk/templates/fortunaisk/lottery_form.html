@@ -219,8 +219,8 @@
                         <!-- Boutons d'action -->
                         <div class="d-flex justify-content-between align-items-center mt-4">
                             <a href="{% if is_auto_lottery %}{% url 'fortunaisk:auto_lottery_list' %}{% else %}{% url 'fortunaisk:lottery' %}{% endif %}"
-                               class="btn btn-outline-secondary">
-                                <i class="fas fa-arrow-left me-2"></i>{% trans "Back" %}
+                                class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>{% trans "Back" %}
                             </a>
                             <button type="submit" class="btn btn-lg {% if is_auto_lottery %}btn-success{% else %}btn-primary{% endif %}">
                                 <i class="fas {% if is_auto_lottery %}fa-sync{% else %}fa-plus{% endif %} me-2"></i>
