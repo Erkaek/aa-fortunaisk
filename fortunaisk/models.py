@@ -1,5 +1,4 @@
 # fortunaisk/models.py
-"""Models for the FortunaIsk lottery application with requested enhancements."""
 
 # Standard Library
 import json
@@ -14,7 +13,7 @@ from solo.models import SingletonModel
 # Django
 from django.contrib.auth.models import User
 from django.db import models
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_delete
 from django.dispatch import receiver
 from django.utils import timezone
 
@@ -65,7 +64,6 @@ class Lottery(models.Model):
         max_length=20, unique=True, blank=True, null=True
     )
     status = models.CharField(max_length=20, default="active")
-
     winner_count = models.PositiveIntegerField(default=1)
     winners_distribution = models.JSONField(default=list, blank=True)
     winners_distribution_str = models.CharField(
@@ -74,7 +72,6 @@ class Lottery(models.Model):
         help_text="List of percentages for each winner, separated by commas. Example: '50,30,20' for 3 winners.",
     )
     max_tickets_per_user = models.PositiveIntegerField(null=True, blank=True)
-
     participant_count = models.PositiveIntegerField(default=0)
     total_pot = models.BigIntegerField(default=0)
 
@@ -90,11 +87,11 @@ class Lottery(models.Model):
         return self.end_date
 
     def save(self, *args, **kwargs):
-        # Générer la référence de la loterie si elle n'est pas définie
+        # Generate the lottery reference if not defined
         if not self.lottery_reference:
             self.lottery_reference = self.generate_unique_reference()
 
-        # Convertir winners_distribution_str en winners_distribution
+        # Convert winners_distribution_str to winners_distribution
         if self.winners_distribution_str:
             parts = self.winners_distribution_str.split(",")
             distribution_list = []
@@ -103,16 +100,13 @@ class Lottery(models.Model):
                 if part.isdigit():
                     distribution_list.append(int(part))
                 else:
-                    # Si une des parties n'est pas un nombre, lever une exception
                     raise ValueError("All percentages must be integer values.")
 
             total = sum(distribution_list)
             if total != 100:
                 if total == 0:
-                    # Si la somme est 0, un seul gagnant à 100%
                     distribution_list = [100]
                 else:
-                    # Normaliser la distribution
                     normalized = [
                         int(round((p / total) * 100)) for p in distribution_list
                     ]
@@ -125,7 +119,6 @@ class Lottery(models.Model):
             self.winners_distribution = distribution_list
             self.winner_count = len(distribution_list)
         else:
-            # Si pas de distribution fournie, un seul gagnant à 100%
             self.winners_distribution = [100]
             self.winner_count = 1
 
@@ -166,26 +159,22 @@ class Lottery(models.Model):
         PeriodicTask.objects.filter(name=task_name).delete()
         super().delete(*args, **kwargs)
 
+    def notify_discord(self, message):
+        settings = LotterySettings.objects.get_or_create()[0]
+        if settings.discord_webhook:
+            send_discord_webhook(settings.discord_webhook, message)
+            logger.info(f"Notification Discord envoyée: {message}")
+
 
 @receiver(post_save, sender=Lottery)
 def notify_discord_on_lottery_creation(sender, instance, created, **kwargs):
-    """
-    Send a notification to Discord when a new Lottery is created.
-    """
-    if created:  # Only for new Lottery instances
-        settings = LotterySettings.objects.get_or_create()[0]
-        if not settings.discord_webhook:
-            return  # No webhook configured
+    if created:
+        instance.notify_discord(f"Nouvelle loterie créée: {instance.name}")
 
-        message = (
-            f":tada: Une nouvelle loterie a été créée !\n"
-            f"**Référence :** {instance.lottery_reference}\n"
-            f"**Prix du ticket :** {instance.ticket_price} ISK\n"
-            f"**Date de fin :** {instance.end_date.strftime('%Y-%m-%d %H:%M:%S')}\n"
-            f"**Récepteur des paiements :** {instance.payment_receiver}"
-        )
 
-        send_discord_webhook(message)
+@receiver(pre_delete, sender=Lottery)
+def notify_discord_on_lottery_deletion(sender, instance, **kwargs):
+    instance.notify_discord(f"La loterie {instance.name} est maintenant terminée.")
 
 
 class TicketPurchase(models.Model):
@@ -340,3 +329,9 @@ class AutoLottery(models.Model):
         task_name = f"AutoLottery_{self.id}"
         PeriodicTask.objects.filter(name=task_name).delete()
         super().delete(*args, **kwargs)
+
+
+@receiver(pre_delete, sender=AutoLottery)
+def delete_periodic_task(sender, instance, **kwargs):
+    task_name = f"AutoLottery_{instance.id}"
+    PeriodicTask.objects.filter(name=task_name).delete()
