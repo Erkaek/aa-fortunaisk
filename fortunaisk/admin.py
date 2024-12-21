@@ -8,7 +8,7 @@ import logging
 from django.contrib import admin
 
 from .models import Lottery, LotterySettings, TicketAnomaly, WebhookConfiguration
-from .utils import send_discord_webhook
+from .notifications import send_discord_webhook  # Import depuis notifications.py
 
 logger = logging.getLogger(__name__)
 

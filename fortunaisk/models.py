@@ -21,7 +21,7 @@ from django.utils import timezone
 # Alliance Auth
 from allianceauth.eveonline.models import EveCharacter
 
-from .utils import send_discord_webhook
+from .notifications import send_discord_webhook  # Import depuis notifications.py
 
 logger = logging.getLogger(__name__)
 

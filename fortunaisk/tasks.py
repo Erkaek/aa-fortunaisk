@@ -19,7 +19,7 @@ from django.utils import timezone
 from allianceauth.eveonline.models import EveCharacter
 
 from .models import AutoLottery, Lottery, TicketAnomaly, TicketPurchase, Winner
-from .utils import send_discord_webhook
+from .notifications import send_discord_webhook  # Import depuis notifications.py
 
 logger = logging.getLogger(__name__)
 
