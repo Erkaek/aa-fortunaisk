@@ -1,5 +1,4 @@
 # fortunaisk/notifications.py
-"""Module pour les fonctions de notification de FortunaIsk."""
 
 # Standard Library
 import logging
@@ -12,9 +11,7 @@ logger = logging.getLogger(__name__)
 
 def send_discord_webhook(embed):
     try:
-        from .models import (
-            WebhookConfiguration,  # Local import to avoid circular dependency
-        )
+        from .models import WebhookConfiguration
 
         webhook_config = WebhookConfiguration.objects.first()
         if not webhook_config:
@@ -31,3 +28,12 @@ def send_discord_webhook(embed):
             )
     except Exception as e:
         logger.exception("Erreur lors de l'envoi d'une notification Discord: %s", e)
+
+
+def send_discord_notification(webhook_url, message):
+    payload = {"content": message}
+    try:
+        response = requests.post(webhook_url, json=payload)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Failed to send Discord notification: {e}")
