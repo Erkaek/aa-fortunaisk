@@ -7,13 +7,15 @@ import logging
 # Third Party
 import requests
 
-from .models import WebhookConfiguration
-
 logger = logging.getLogger(__name__)
 
 
 def send_discord_webhook(message):
     try:
+        from .models import (
+            WebhookConfiguration,  # Local import to avoid circular dependency
+        )
+
         webhook_config = WebhookConfiguration.objects.first()
         if not webhook_config:
             logger.warning("Aucun webhook configuré.")
