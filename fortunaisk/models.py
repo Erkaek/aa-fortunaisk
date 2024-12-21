@@ -160,21 +160,21 @@ class Lottery(models.Model):
         super().delete(*args, **kwargs)
 
     def notify_discord(self, message):
-        settings = LotterySettings.objects.get_or_create()[0]
-        if settings.discord_webhook:
-            send_discord_webhook(settings.discord_webhook, message)
-            logger.info(f"Notification Discord envoyée: {message}")
+        send_discord_webhook(message)
+        logger.info(f"Notification Discord envoyée: {message}")
 
 
 @receiver(post_save, sender=Lottery)
 def notify_discord_on_lottery_creation(sender, instance, created, **kwargs):
     if created:
-        instance.notify_discord(f"Nouvelle loterie créée: {instance.name}")
+        instance.notify_discord(f"Nouvelle loterie créée: {instance.lottery_reference}")
 
 
 @receiver(pre_delete, sender=Lottery)
 def notify_discord_on_lottery_deletion(sender, instance, **kwargs):
-    instance.notify_discord(f"La loterie {instance.name} est maintenant terminée.")
+    instance.notify_discord(
+        f"La loterie {instance.lottery_reference} est maintenant terminée."
+    )
 
 
 class TicketPurchase(models.Model):

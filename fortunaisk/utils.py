@@ -1,17 +1,19 @@
 # fortunaisk/utils.py
 
-import requests
+# Standard Library
 import logging
 
+# Third Party
+import requests
+
 logger = logging.getLogger(__name__)
+
 
 def send_discord_notification(webhook_url, message):
     """
     Envoie une notification à Discord via le webhook spécifié.
     """
-    payload = {
-        "content": message
-    }
+    payload = {"content": message}
     try:
         response = requests.post(webhook_url, json=payload)
         response.raise_for_status()
