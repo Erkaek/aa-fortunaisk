@@ -87,41 +87,8 @@ class Lottery(models.Model):
         return self.end_date
 
     def save(self, *args, **kwargs):
-        # Generate the lottery reference if not defined
-        if not self.lottery_reference:
-            self.lottery_reference = self.generate_unique_reference()
-
-        # Convert winners_distribution_str to winners_distribution
-        if self.winners_distribution_str:
-            parts = self.winners_distribution_str.split(",")
-            distribution_list = []
-            for part in parts:
-                part = part.strip()
-                if part.isdigit():
-                    distribution_list.append(int(part))
-                else:
-                    raise ValueError("All percentages must be integer values.")
-
-            total = sum(distribution_list)
-            if total != 100:
-                if total == 0:
-                    distribution_list = [100]
-                else:
-                    normalized = [
-                        int(round((p / total) * 100)) for p in distribution_list
-                    ]
-                    diff = 100 - sum(normalized)
-                    if diff != 0 and normalized:
-                        for i in range(abs(diff)):
-                            normalized[i % len(normalized)] += 1 if diff > 0 else -1
-                    distribution_list = normalized
-
-            self.winners_distribution = distribution_list
-            self.winner_count = len(distribution_list)
-        else:
-            self.winners_distribution = [100]
-            self.winner_count = 1
-
+        if self.status == "completed" and self.pk:
+            self.complete_lottery()
         super().save(*args, **kwargs)
 
     @staticmethod
