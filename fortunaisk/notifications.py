@@ -10,7 +10,7 @@ import requests
 logger = logging.getLogger(__name__)
 
 
-def send_discord_webhook(message):
+def send_discord_webhook(embed):
     try:
         from .models import (
             WebhookConfiguration,  # Local import to avoid circular dependency
@@ -22,7 +22,7 @@ def send_discord_webhook(message):
             return
 
         webhook_url = webhook_config.webhook_url
-        data = {"content": message}
+        data = {"embeds": [embed]}
 
         response = requests.post(webhook_url, json=data)
         if response.status_code != 204:

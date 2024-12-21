@@ -63,7 +63,7 @@ class Lottery(models.Model):
     lottery_reference = models.CharField(
         max_length=20, unique=True, blank=True, null=True
     )
-    status = models.CharField(max_length=20, default="active")
+    status = models.CharField(maxlength=20, default="active")
     winner_count = models.PositiveIntegerField(default=1)
     winners_distribution = models.JSONField(default=list, blank=True)
     winners_distribution_str = models.CharField(
@@ -159,22 +159,54 @@ class Lottery(models.Model):
         PeriodicTask.objects.filter(name=task_name).delete()
         super().delete(*args, **kwargs)
 
-    def notify_discord(self, message):
-        send_discord_webhook(message)
-        logger.info(f"Notification Discord envoyée: {message}")
+    def notify_discord(self, embed):
+        send_discord_webhook(embed)
+        logger.info(f"Notification Discord envoyée: {embed}")
 
 
 @receiver(post_save, sender=Lottery)
 def notify_discord_on_lottery_creation(sender, instance, created, **kwargs):
     if created:
-        instance.notify_discord(f"Nouvelle loterie créée: {instance.lottery_reference}")
+        embed = {
+            "title": "Nouvelle loterie créée !",
+            "color": 3066993,  # Green color
+            "fields": [
+                {
+                    "name": "Référence",
+                    "value": instance.lottery_reference,
+                    "inline": False,
+                },
+                {
+                    "name": "Prix du ticket",
+                    "value": f"{instance.ticket_price} ISK",
+                    "inline": False,
+                },
+                {
+                    "name": "Date de fin",
+                    "value": instance.end_date.strftime("%Y-%m-%d %H:%M:%S"),
+                    "inline": False,
+                },
+                {
+                    "name": "Récepteur des paiements",
+                    "value": str(instance.payment_receiver),
+                    "inline": False,
+                },
+            ],
+        }
+        instance.notify_discord(embed)
 
 
 @receiver(pre_delete, sender=Lottery)
 def notify_discord_on_lottery_deletion(sender, instance, **kwargs):
-    instance.notify_discord(
-        f"La loterie {instance.lottery_reference} est maintenant terminée."
-    )
+    embed = {
+        "title": "Loterie terminée !",
+        "color": 15158332,  # Red color
+        "fields": [
+            {"name": "Référence", "value": instance.lottery_reference, "inline": False},
+            {"name": "Statut", "value": "Terminé", "inline": False},
+        ],
+    }
+    instance.notify_discord(embed)
 
 
 class TicketPurchase(models.Model):
