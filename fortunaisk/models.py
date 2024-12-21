@@ -84,6 +84,54 @@ class LotterySettings(SingletonModel):
         verbose_name = "Lottery Settings"
 
 
+class AutoLottery(models.Model):
+    """
+    Représente une loterie automatique qui est créée selon une fréquence définie.
+    """
+
+    FREQUENCY_UNITS = [
+        ("minutes", "Minutes"),
+        ("hours", "Heures"),
+        ("days", "Jours"),
+    ]
+
+    is_active = models.BooleanField(
+        default=True, help_text="Active ou désactive la loterie automatique."
+    )
+    name = models.CharField(
+        max_length=100, unique=True, help_text="Nom unique pour la loterie automatique."
+    )
+    frequency = models.PositiveIntegerField(
+        help_text="Nombre de {unit} entre chaque création de loterie."
+    )
+    frequency_unit = models.CharField(
+        max_length=10,
+        choices=FREQUENCY_UNITS,
+        default="days",
+        help_text="Unité de fréquence pour la création de loterie.",
+    )
+    ticket_price = models.DecimalField(
+        max_digits=20, decimal_places=2, help_text="Prix du ticket en ISK."
+    )
+    duration_hours = models.PositiveIntegerField(
+        help_text="Durée de la loterie en heures."
+    )
+    payment_receiver = models.IntegerField(help_text="ID du récepteur des paiements.")
+    winner_count = models.PositiveIntegerField(
+        default=1, help_text="Nombre de gagnants par loterie."
+    )
+    winners_distribution_str = models.CharField(
+        max_length=255,
+        help_text="Liste des pourcentages pour chaque gagnant, séparés par des virgules. Exemple : '50,30,20' pour 3 gagnants.",
+    )
+    max_tickets_per_user = models.PositiveIntegerField(
+        null=True, blank=True, help_text="Nombre maximum de tickets par utilisateur."
+    )
+
+    def __str__(self):
+        return self.name
+
+
 class Lottery(models.Model):
     """
     Représente une loterie unique.
