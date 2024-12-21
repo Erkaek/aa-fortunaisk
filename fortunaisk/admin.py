@@ -1,5 +1,7 @@
-# fortunaisk/admin.py
 """Django admin configuration for the FortunaIsk lottery application."""
+
+# Third Party
+import requests
 
 # Django
 from django.contrib import admin
@@ -14,6 +16,25 @@ from .models import (
     TicketPurchase,
     WebhookConfiguration,
 )
+
+
+def send_discord_webhook_notification(message):
+    """
+    Send a notification to the configured Discord webhook.
+    """
+    webhook = (
+        WebhookConfiguration.objects.first()
+    )  # Get the first webhook configuration
+    if not webhook:
+        return  # No webhook configured, do nothing
+
+    payload = {"content": message}
+    try:
+        response = requests.post(webhook.webhook_url, json=payload, timeout=5)
+        if response.status_code != 204:
+            print(f"Failed to send webhook: {response.status_code} {response.text}")
+    except Exception as e:
+        print(f"Error sending webhook notification: {e}")
 
 
 @admin.register(Lottery)
@@ -54,12 +75,21 @@ class LotteryAdmin(admin.ModelAdmin):
         return {"payment_receiver": settings.default_payment_receiver}
 
     def save_model(self, request, obj, form, change):
-        if not change:
-            if not obj.start_date:
-                obj.start_date = timezone.now()
-        if not obj.lottery_reference:
-            obj.lottery_reference = obj.generate_unique_reference()
+        """
+        Override save_model to send a Discord notification when a lottery is created.
+        """
+        is_new = not change  # Check if this is a new object
         super().save_model(request, obj, form, change)
+
+        if is_new:  # Only send notification for new lotteries
+            message = (
+                f":tada: Une nouvelle loterie a été créée !\n"
+                f"**Référence :** {obj.lottery_reference}\n"
+                f"**Prix du ticket :** {obj.ticket_price} ISK\n"
+                f"**Date de fin :** {obj.end_date.strftime('%Y-%m-%d %H:%M:%S')}\n"
+                f"**Récepteur des paiements :** {obj.payment_receiver}"
+            )
+            send_discord_webhook_notification(message)
 
     @admin.action(description="Mark selected lotteries as completed")
     def mark_completed(self, request, queryset):
