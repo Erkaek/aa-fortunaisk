@@ -63,7 +63,7 @@ class Lottery(models.Model):
     lottery_reference = models.CharField(
         max_length=20, unique=True, blank=True, null=True
     )
-    status = models.CharField(max_length=20, default="active")  # Correction ici
+    status = models.CharField(max_length=20, default="active")
     winner_count = models.PositiveIntegerField(default=1)
     winners_distribution = models.JSONField(default=list, blank=True)
     winners_distribution_str = models.CharField(
@@ -162,6 +162,71 @@ class Lottery(models.Model):
     def notify_discord(self, embed):
         send_discord_webhook(embed)
         logger.info(f"Notification Discord envoyée: {embed}")
+
+    def complete_lottery(self):
+        """
+        Completes the lottery, selects winners, and sends a notification to Discord.
+        """
+        if self.status != "active":
+            return
+
+        self.status = "completed"
+        winners = self.select_winners()
+
+        if winners:
+            embed = {
+                "title": "Loterie terminée !",
+                "color": 15158332,  # Red color
+                "fields": [
+                    {
+                        "name": "Référence",
+                        "value": self.lottery_reference,
+                        "inline": False,
+                    },
+                    {"name": "Statut", "value": "Terminé", "inline": False},
+                    {
+                        "name": "Gagnants",
+                        "value": "\n".join(
+                            [str(winner.character.character_name) for winner in winners]
+                        ),
+                        "inline": False,
+                    },
+                ],
+            }
+        else:
+            embed = {
+                "title": "Loterie terminée !",
+                "color": 15158332,  # Red color
+                "fields": [
+                    {
+                        "name": "Référence",
+                        "value": self.lottery_reference,
+                        "inline": False,
+                    },
+                    {"name": "Statut", "value": "Terminé", "inline": False},
+                    {"name": "Gagnants", "value": "Aucun gagnant", "inline": False},
+                ],
+            }
+
+        self.notify_discord(embed)
+        self.save()
+
+    def select_winners(self):
+        """
+        Selects winners for the lottery based on the number of winners and distribution.
+        """
+        tickets = TicketPurchase.objects.filter(lottery=self)
+        if not tickets.exists():
+            return []
+
+        winners = random.sample(list(tickets), min(self.winner_count, tickets.count()))
+        for idx, winner in enumerate(winners):
+            prize_amount = self.total_pot * (self.winners_distribution[idx] / 100)
+            Winner.objects.create(
+                character=winner.character, ticket=winner, prize_amount=prize_amount
+            )
+
+        return winners
 
 
 @receiver(post_save, sender=Lottery)
