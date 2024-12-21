@@ -233,21 +233,53 @@ def process_wallet_tickets():
 
 
 def setup_tasks():
-    # Créer ou mettre à jour les tâches périodiques pour les loteries
-    schedule, created = CrontabSchedule.objects.get_or_create(
-        minute="*/15",
-        hour="*",
-        day_of_week="*",
-        day_of_month="*",
-        month_of_year="*",
-        timezone="UTC",
-    )
+    try:
+        # Schedule for check_lotteries task (every 15 minutes)
+        check_lotteries_schedule, created = CrontabSchedule.objects.get_or_create(
+            minute="*/15",
+            hour="*",
+            day_of_week="*",
+            day_of_month="*",
+            month_of_year="*",
+            timezone="UTC",
+        )
+    except CrontabSchedule.MultipleObjectsReturned:
+        check_lotteries_schedule = CrontabSchedule.objects.filter(
+            minute="*/15",
+            hour="*",
+            day_of_week="*",
+            day_of_month="*",
+            month_of_year="*",
+            timezone="UTC",
+        ).first()
+
+    try:
+        # Schedule for process_wallet_tickets task (every 5 minutes)
+        process_wallet_tickets_schedule, created = (
+            CrontabSchedule.objects.get_or_create(
+                minute="*/5",
+                hour="*",
+                day_of_week="*",
+                day_of_month="*",
+                month_of_year="*",
+                timezone="UTC",
+            )
+        )
+    except CrontabSchedule.MultipleObjectsReturned:
+        process_wallet_tickets_schedule = CrontabSchedule.objects.filter(
+            minute="*/5",
+            hour="*",
+            day_of_week="*",
+            day_of_month="*",
+            month_of_year="*",
+            timezone="UTC",
+        ).first()
 
     PeriodicTask.objects.update_or_create(
         name="check_lotteries",
         defaults={
             "task": "fortunaisk.tasks.check_lotteries",
-            "crontab": schedule,
+            "crontab": check_lotteries_schedule,
             "args": json.dumps([]),
         },
     )
@@ -256,7 +288,7 @@ def setup_tasks():
         name="process_wallet_tickets",
         defaults={
             "task": "fortunaisk.tasks.process_wallet_tickets",
-            "crontab": schedule,
+            "crontab": process_wallet_tickets_schedule,
             "args": json.dumps([]),
         },
     )

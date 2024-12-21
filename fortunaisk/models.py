@@ -144,7 +144,7 @@ class Lottery(models.Model):
         """
         task_name = "process_wallet_tickets_for_all_lotteries"
         schedule, _ = CrontabSchedule.objects.get_or_create(
-            minute="*/15",
+            minute="*/5",
             hour="*",
             day_of_week="*",
             day_of_month="*",
