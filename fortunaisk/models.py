@@ -63,7 +63,7 @@ class Lottery(models.Model):
     lottery_reference = models.CharField(
         max_length=20, unique=True, blank=True, null=True
     )
-    status = models.CharField(maxlength=20, default="active")
+    status = models.CharField(max_length=20, default="active")  # Correction ici
     winner_count = models.PositiveIntegerField(default=1)
     winners_distribution = models.JSONField(default=list, blank=True)
     winners_distribution_str = models.CharField(
