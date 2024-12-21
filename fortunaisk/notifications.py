@@ -1,16 +1,22 @@
 # fortunaisk/notifications.py
 """Module pour les fonctions de notification de FortunaIsk."""
 
+# Standard Library
 import logging
+
+# Third Party
 import requests
 
 logger = logging.getLogger(__name__)
+
 
 def send_discord_webhook(message):
     """
     Envoie un message au webhook Discord configuré via le modèle WebhookConfiguration.
     """
-    from .models import WebhookConfiguration  # Import local pour éviter les imports circulaires
+    from .models import (
+        WebhookConfiguration,  # Import local pour éviter les imports circulaires
+    )
 
     webhook = WebhookConfiguration.objects.first()
     if not webhook or not webhook.webhook_url:

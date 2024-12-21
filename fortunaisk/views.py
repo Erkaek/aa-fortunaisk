@@ -14,7 +14,7 @@ from django.utils.translation import gettext as _
 from allianceauth.eveonline.models import EveCorporationInfo
 
 from .forms import AutoLotteryForm, LotteryCreateForm
-from .models import AutoLottery, Lottery, TicketPurchase, Winner
+from .models import AutoLottery, Lottery, TicketAnomaly, TicketPurchase, Winner
 
 logger = logging.getLogger(__name__)
 
@@ -94,11 +94,24 @@ def winner_list(request):
 
 
 @login_required
-@permission_required("fortunaisk.admin", raise_exception=True)
+@permission_required("fortunaisk.admin_dashboard", raise_exception=True)
 def admin_dashboard(request):
-    from .admin import admin_dashboard as admin_dash
+    """
+    Vue personnalisée pour le tableau de bord administrateur de FortunaIsk.
+    """
+    lotteries = Lottery.objects.all()
+    ticket_purchases = TicketPurchase.objects.all()
+    winners = Winner.objects.all()
+    anomalies = TicketAnomaly.objects.all()
 
-    return admin_dash(request)
+    context = {
+        "lotteries": lotteries,
+        "ticket_purchases": ticket_purchases,
+        "winners": winners,
+        "anomalies": anomalies,
+    }
+
+    return render(request, "fortunaisk/admin_dashboard.html", context)
 
 
 @login_required
