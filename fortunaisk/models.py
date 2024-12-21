@@ -256,11 +256,11 @@ class AutoLottery(models.Model):
     """
 
     INTERVAL_CHOICES = [
-        ("minutes", "Minutes"),
-        ("hours", "Hours"),
-        ("days", "Days"),
-        ("weeks", "Weeks"),
-    ]
+        ("minute", "Minutes"),
+        ("hour", "Hours"),
+        ("day", "Days"),
+        ("week", "Weeks"),
+]
 
     name = models.CharField(max_length=100, unique=True)
     frequency = models.PositiveIntegerField(default=1)
@@ -298,29 +298,24 @@ class AutoLottery(models.Model):
         self.setup_periodic_task()
 
     def setup_periodic_task(self):
-        """
-        Sets up or updates the periodic task for generating lotteries.
-        """
-        if not self.is_active:
-            PeriodicTask.objects.filter(name=f"AutoLottery_{self.id}").delete()
-            return
+    if not self.is_active:
+        PeriodicTask.objects.filter(name=f"AutoLottery_{self.id}").delete()
+        return
 
-        # Get or create the IntervalSchedule
-        schedule, created = IntervalSchedule.objects.get_or_create(
-            every=self.frequency,
-            period=self.frequency_unit.upper(),
-        )
+    # Get or create the IntervalSchedule
+    schedule, created = IntervalSchedule.objects.get_or_create(
+        every=self.frequency,
+        period=self.frequency_unit.lower(),  # Utilisez lower() au lieu de upper()
+    )
 
-        # Define the task name uniquely
-        task_name = f"AutoLottery_{self.id}"
+    task_name = f"AutoLottery_{self.id}"
 
-        # Define or update the PeriodicTask
-        PeriodicTask.objects.update_or_create(
-            name=task_name,
-            defaults={
-                "task": "fortunaisk.tasks.create_lottery_from_auto",
-                "interval": schedule,
-                "args": json.dumps([self.id]),
-            },
-        )
-        logger.info(f"Periodic task '{task_name}' set for AutoLottery '{self.name}'.")
+    PeriodicTask.objects.update_or_create(
+        name=task_name,
+        defaults={
+            "task": "fortunaisk.tasks.create_lottery_from_auto",
+            "interval": schedule,
+            "args": json.dumps([self.id]),
+        },
+    )
+    logger.info(f"Periodic task '{task_name}' set for AutoLottery '{self.name}'.")

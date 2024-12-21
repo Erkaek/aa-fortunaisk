@@ -9,9 +9,7 @@ from . import urls
 
 
 class FortunaiskMenu(MenuItemHook):
-    """
-    Adds a menu item for FortunaIsk in the Alliance Auth navigation, visible to users with the appropriate permissions.
-    """
+    """Adds a menu item for FortunaIsk in the Alliance Auth navigation, visible to users with the appropriate permissions."""
 
     def __init__(self):
         super().__init__(
