@@ -270,7 +270,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 .map(n => parseInt(n.trim()))
                 .filter(n => !isNaN(n));
 
-            return numbers.length > 0 && numbers.reduce((a, b) => a + b, 0) === 100;
+            return numbers.length > 0 && numbers reduce((a, b) => a + b, 0) === 100;
         }
 
         static showError(element, message) {
@@ -316,21 +316,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Gestionnaire pour le formatage des prix
     class PriceFormatter {
-        static format(value) {
-            const numericValue = value.replace(/[^\d.]/g, '');
-            if (!numericValue) return '';
-            return parseFloat(numericValue).toFixed(2);
-        }
-
-        static handleInput(event) {
-            const input = event.target;
-            // Conserver la position du curseur
-            const cursorPosition = input.selectionStart;
-            input.value = input.value.replace(/[^\d.]/g, '');
-            // Restaurer la position du curseur
-            input.setSelectionRange(cursorPosition, cursorPosition);
-        }
-
         static handleBlur(event) {
             const input = event.target;
             if (input.value) {
@@ -365,7 +350,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         // Écouteur pour le formatage des prix
-        FORM_ELEMENTS.price?.addEventListener('input', PriceFormatter.handleInput);
         FORM_ELEMENTS.price?.addEventListener('blur', PriceFormatter.handleBlur);
 
         // Écouteurs pour les loteries automatiques
