@@ -20,7 +20,7 @@ from django.utils import timezone
 from allianceauth.eveonline.models import EveCharacter
 
 from .models import AutoLottery, Lottery, TicketAnomaly, TicketPurchase, Winner
-from .notifications import send_discord_webhook  # Import depuis notifications.py
+from .notifications import send_discord_notification  # Import depuis notifications.py
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +57,7 @@ def select_winners_for_lottery(lottery):
         lottery.participant_count = 0
         lottery.total_pot = 0
         lottery.save()
-        send_discord_webhook(
+        send_discord_notification(
             f"Aucune participation pour la loterie {lottery.lottery_reference}. La loterie s'est terminée sans gagnants."
         )
         return
@@ -95,7 +95,7 @@ def select_winners_for_lottery(lottery):
 
     lottery.status = "completed"
     lottery.save()
-    send_discord_webhook(
+    send_discord_notification(
         f"La loterie {lottery.lottery_reference} s'est terminée ! {winners_count} gagnants ont été sélectionnés. Pot total : {pot} ISK."
     )
 
@@ -162,7 +162,7 @@ def process_wallet_tickets():
                     user_ticket_count = TicketPurchase.objects.filter(
                         user=user, lottery=lottery
                     ).count()
-                    if user_ticket_count >= lottery.max_tickets_per_user:
+                    if user_ticket_count > lottery.max_tickets_per_user:
                         if anomaly_reason is None:
                             anomaly_reason = f"L'utilisateur '{user.username}' a dépassé le nombre maximum de tickets ({lottery.max_tickets_per_user})."
             except EveCharacter.DoesNotExist:

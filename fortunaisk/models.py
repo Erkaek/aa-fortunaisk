@@ -20,9 +20,49 @@ from django.utils import timezone
 # Alliance Auth
 from allianceauth.eveonline.models import EveCharacter
 
-from .notifications import send_discord_webhook  # Import depuis notifications.py
+from .notifications import send_discord_notification  # Import depuis notifications.py
 
 logger = logging.getLogger(__name__)
+
+
+class Reward(models.Model):
+    """
+    Represents a reward that users can earn based on their points.
+    """
+
+    name = models.CharField(max_length=100)
+    description = models.TextField()
+    points_required = models.PositiveIntegerField()
+
+    def __str__(self):
+        return self.name
+
+
+class UserProfile(models.Model):
+    """
+    Extends the User model to include points and rewards.
+    """
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    points = models.PositiveIntegerField(default=0)
+    rewards = models.ManyToManyField(Reward, blank=True)
+
+    def __str__(self):
+        return f"{self.user.username} Profile"
+
+    def check_rewards(self):
+        """
+        Checks and assigns eligible rewards to the user based on their points.
+        """
+        eligible_rewards = Reward.objects.filter(
+            points_required__lte=self.points
+        ).exclude(id__in=self.rewards.all())
+        for reward in eligible_rewards:
+            self.rewards.add(reward)
+            # Notifier l'utilisateur via Discord de la nouvelle récompense
+            send_discord_notification(
+                message=f"{self.user.username} a gagné la récompense {reward.name}!"
+            )
 
 
 class LotterySettings(SingletonModel):
@@ -129,7 +169,7 @@ class Lottery(models.Model):
         super().delete(*args, **kwargs)
 
     def notify_discord(self, embed):
-        send_discord_webhook(embed)
+        send_discord_notification(embed=embed)
         logger.info(f"Notification Discord envoyée: {embed}")
 
     def complete_lottery(self):
@@ -190,10 +230,23 @@ class Lottery(models.Model):
 
         winners = random.sample(list(tickets), min(self.winner_count, tickets.count()))
         for idx, winner in enumerate(winners):
-            prize_amount = self.total_pot * (self.winners_distribution[idx] / 100)
+            # Assurez-vous que la distribution est définie et correspond au nombre de gagnants
+            if idx < len(self.winners_distribution):
+                prize_percentage = self.winners_distribution[idx]
+            else:
+                prize_percentage = (
+                    100 / self.winner_count
+                )  # Répartir équitablement si distribution manquante
+
+            prize_amount = self.total_pot * (prize_percentage / 100)
             Winner.objects.create(
                 character=winner.character, ticket=winner, prize_amount=prize_amount
             )
+            # Ajouter des points au gagnant
+            profile, _ = UserProfile.objects.get_or_create(user=winner.user)
+            profile.points += int(prize_amount / 1000)  # Exemple: 1 point par 1000 ISK
+            profile.save()
+            profile.check_rewards()
 
         return winners
 
@@ -283,6 +336,10 @@ class Winner(models.Model):
 
 
 class TicketAnomaly(models.Model):
+    """
+    Represents anomalies detected in ticket purchases.
+    """
+
     lottery = models.ForeignKey("Lottery", on_delete=models.CASCADE)
     character = models.ForeignKey(
         EveCharacter, on_delete=models.SET_NULL, null=True, blank=True
@@ -304,6 +361,10 @@ class TicketAnomaly(models.Model):
 
 
 class WebhookConfiguration(models.Model):
+    """
+    Configuration for Discord webhook.
+    """
+
     webhook_url = models.URLField("URL du Webhook")
 
     class Meta:
@@ -314,6 +375,10 @@ class WebhookConfiguration(models.Model):
 
 
 class AutoLottery(models.Model):
+    """
+    Represents an automatic lottery that runs at specified intervals.
+    """
+
     name = models.CharField(max_length=100, unique=True)
     frequency = models.PositiveIntegerField(default=1)
     frequency_unit = models.CharField(
@@ -323,6 +388,7 @@ class AutoLottery(models.Model):
             ("hour", "Hours"),
             ("day", "Days"),
             ("week", "Weeks"),
+            ("month", "Months"),
         ],
         default="day",
     )

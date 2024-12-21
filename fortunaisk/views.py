@@ -3,10 +3,16 @@
 
 # Standard Library
 import logging
+import random
 
 # Django
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
+from django.core.paginator import Paginator
+from django.db import transaction
+from django.db.models import Count, Sum
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext as _
 
@@ -14,7 +20,15 @@ from django.utils.translation import gettext as _
 from allianceauth.eveonline.models import EveCorporationInfo
 
 from .forms import AutoLotteryForm, LotteryCreateForm
-from .models import AutoLottery, Lottery, TicketAnomaly, TicketPurchase, Winner
+from .models import (
+    AutoLottery,
+    Lottery,
+    TicketAnomaly,
+    TicketPurchase,
+    UserProfile,
+    Winner,
+)
+from .notifications import send_discord_notification  # Import depuis notifications.py
 
 logger = logging.getLogger(__name__)
 
@@ -72,10 +86,18 @@ def lottery(request):
 @permission_required("fortunaisk.view_ticketpurchase", raise_exception=True)
 def ticket_purchases(request):
     current_lotteries = Lottery.objects.filter(status="active")
-    purchases = TicketPurchase.objects.filter(
-        lottery__in=current_lotteries
-    ).select_related("user", "character", "lottery")
-    return render(request, "fortunaisk/ticket_purchases.html", {"purchases": purchases})
+    purchases = (
+        TicketPurchase.objects.filter(lottery__in=current_lotteries)
+        .select_related("user", "character", "lottery")
+        .order_by("-purchase_date")
+    )
+
+    # Pagination
+    paginator = Paginator(purchases, 25)  # 25 achats par page
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, "fortunaisk/ticket_purchases.html", {"page_obj": page_obj})
 
 
 @permission_required("fortunaisk.admin", raise_exception=True)
@@ -84,13 +106,22 @@ def select_winner(request, lottery_id):
         request,
         "Use the automated tasks to select winners. Manual selection not recommended now.",
     )
-    return render(request, "fortunaisk/lottery.html", {})
+    return redirect("fortunaisk:admin_dashboard")
 
 
 @login_required
+@permission_required("fortunaisk.view_ticketpurchase", raise_exception=True)
 def winner_list(request):
-    winners = Winner.objects.select_related("character", "ticket__lottery")
-    return render(request, "fortunaisk/winner_list.html", {"winners": winners})
+    winners = Winner.objects.select_related("character", "ticket__lottery").order_by(
+        "-won_at"
+    )
+
+    # Pagination
+    paginator = Paginator(winners, 25)  # 25 gagnants par page
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, "fortunaisk/winner_list.html", {"page_obj": page_obj})
 
 
 @login_required
@@ -100,15 +131,68 @@ def admin_dashboard(request):
     Vue personnalisée pour le tableau de bord administrateur de FortunaIsk.
     """
     lotteries = Lottery.objects.all()
+    active_lotteries = lotteries.filter(status="active")
     ticket_purchases = TicketPurchase.objects.all()
     winners = Winner.objects.all()
     anomalies = TicketAnomaly.objects.all()
 
+    # Statistiques
+    stats = {
+        "total_lotteries": lotteries.count(),
+        "total_tickets": ticket_purchases.aggregate(total=Sum("amount"))["total"] or 0,
+        "total_anomalies": anomalies.count(),
+        "avg_participation": lotteries.filter(status="active").aggregate(
+            avg=Count("participant_count")
+        )["avg"]
+        or 0,
+    }
+
+    # Graphiques supplémentaires
+    # Anomalies par Loterie
+    anomaly_data = (
+        anomalies.values("lottery__lottery_reference")
+        .annotate(count=Count("id"))
+        .order_by("-count")
+    )
+    anomaly_lottery_names = [
+        item["lottery__lottery_reference"] for item in anomaly_data
+    ]
+    anomalies_per_lottery = [item["count"] for item in anomaly_data]
+
+    # Top Active Users
+    top_users = (
+        TicketPurchase.objects.values("user__username")
+        .annotate(ticket_count=Count("id"))
+        .order_by("-ticket_count")[:10]
+    )
+    top_users_names = [item["user__username"] for item in top_users]
+    top_users_tickets = [item["ticket_count"] for item in top_users]
+
+    # Limiter les labels pour éviter trop de segments dans les graphiques
+    if len(anomaly_lottery_names) > 10:
+        anomaly_lottery_names = anomaly_lottery_names[:10]
+        anomalies_per_lottery = anomalies_per_lottery[:10]
+
     context = {
         "lotteries": lotteries,
+        "active_lotteries": active_lotteries,  # Ajout de cette ligne
         "ticket_purchases": ticket_purchases,
         "winners": winners,
         "anomalies": anomalies,
+        "stats": stats,
+        "lottery_names": list(
+            active_lotteries.values_list("lottery_reference", flat=True)
+        ),  # Utilisation des loteries actives
+        "tickets_per_lottery": list(
+            active_lotteries.annotate(tickets=Count("ticketpurchase")).values_list(
+                "tickets", flat=True
+            )
+        ),
+        "total_pots": list(active_lotteries.values_list("total_pot", flat=True)),
+        "anomaly_lottery_names": anomaly_lottery_names,
+        "anomalies_per_lottery": anomalies_per_lottery,
+        "top_users_names": top_users_names,
+        "top_users_tickets": top_users_tickets,
     }
 
     return render(request, "fortunaisk/admin.html", context)
@@ -127,33 +211,6 @@ def user_dashboard(request):
         request,
         "fortunaisk/user_dashboard.html",
         {"ticket_purchases": ticket_purchases, "winnings": winnings},
-    )
-
-
-@login_required
-def lottery_history(request):
-    past_lotteries = Lottery.objects.filter(status="completed").order_by("-end_date")
-    winners = Winner.objects.filter(ticket__lottery__in=past_lotteries).select_related(
-        "character", "ticket__lottery"
-    )
-    return render(
-        request,
-        "fortunaisk/lottery_history.html",
-        {"past_lotteries": past_lotteries, "winners": winners},
-    )
-
-
-@login_required
-@permission_required("fortunaisk.view_ticketpurchase", raise_exception=True)
-def lottery_participants(request, lottery_id):
-    lottery_obj = get_object_or_404(Lottery, id=lottery_id)
-    participants = TicketPurchase.objects.filter(lottery=lottery_obj).select_related(
-        "user", "character"
-    )
-    return render(
-        request,
-        "fortunaisk/lottery_participants.html",
-        {"lottery": lottery_obj, "participants": participants},
     )
 
 
@@ -235,3 +292,70 @@ def list_auto_lotteries(request):
     return render(
         request, "fortunaisk/auto_lottery_list.html", {"autolotteries": autolotteries}
     )
+
+
+@login_required
+def create_ticket_purchase(request, lottery_id):
+    """
+    Vue pour gérer la création d'un ticket d'achat par un utilisateur.
+    """
+    lottery = get_object_or_404(Lottery, id=lottery_id, status="active")
+    if request.method == "POST":
+        # Logique de création de ticket ici
+        # Par exemple, création du ticket d'achat
+        try:
+            with transaction.atomic():
+                ticket = TicketPurchase.objects.create(
+                    user=request.user,
+                    character=request.user.evecharacter,  # Assurez-vous que l'utilisateur a un personnage associé
+                    lottery=lottery,
+                    amount=lottery.ticket_price,
+                    payment_id=random.randint(
+                        100000, 999999
+                    ),  # Exemple de génération d'ID
+                )
+                # Utilisation de la variable 'ticket' pour éviter l'erreur F841
+                logger.debug(f"Ticket créé avec l'ID: {ticket.id}")
+
+                # Mise à jour des statistiques de la loterie
+                lottery.participant_count += 1
+                lottery.total_pot += int(lottery.ticket_price)
+                lottery.save()
+
+                # Ajouter des points
+                profile, _ = UserProfile.objects.get_or_create(user=request.user)
+                profile.points += 10  # Par exemple, 10 points par ticket acheté
+                profile.save()
+
+                messages.success(
+                    request, _("Ticket acheté avec succès. Vous avez gagné 10 points!")
+                )
+                return redirect("fortunaisk:lottery")
+        except Exception as e:
+            logger.error(f"Erreur lors de l'achat de ticket: {e}")
+            messages.error(
+                request, _("Erreur lors de l'achat du ticket. Veuillez réessayer.")
+            )
+            return redirect("fortunaisk:lottery")
+    else:
+        # Afficher le formulaire ou les instructions
+        instructions = _(
+            "Pour acheter un ticket, veuillez effectuer le paiement via votre méthode préférée."
+        )
+        return render(
+            request,
+            "fortunaisk/create_ticket_purchase.html",
+            {"lottery": lottery, "instructions": instructions},
+        )
+
+
+@receiver(post_save, sender=Winner)
+def award_points_to_winners(sender, instance, created, **kwargs):
+    if created:
+        profile, created = UserProfile.objects.get_or_create(user=instance.ticket.user)
+        profile.points += 100  # Par exemple, 100 points par gain
+        profile.save()
+        profile.check_rewards()
+        send_discord_notification(
+            message=f"Félicitations {instance.ticket.user.username}, vous avez gagné 100 points!"
+        )

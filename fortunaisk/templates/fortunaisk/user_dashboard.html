@@ -12,6 +12,17 @@
 <div class="container mt-4">
     <h2 class="text-center mb-4">{% trans "My Dashboard" %}</h2>
 
+    <!-- Affichage des Points -->
+    <div class="card text-white bg-info mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">{% trans "Your Points" %}</h5>
+        </div>
+        <div class="card-body">
+            <h3 class="card-title">{{ user.userprofile.points }} Points</h3>
+            <p class="card-text">{% trans "Earn points by purchasing tickets and winning lotteries." %}</p>
+        </div>
+    </div>
+
     <h3 class="mb-3">{% trans "My Ticket Purchases" %}</h3>
     {% if ticket_purchases %}
     <div class="d-flex flex-wrap justify-content-center gap-4 mb-4">
@@ -53,11 +64,24 @@
         </div>
         {% endfor %}
     </div>
+    <h3 class="mb-3">{% trans "My Rewards" %}</h3>
+    {% if user.userprofile.rewards.all %}
+    <div class="d-flex flex-wrap justify-content-center gap-4">
+        {% for reward in user.userprofile.rewards.all %}
+        <div class="card shadow" style="width: 20rem;">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">{{ reward.name }}</h5>
+            </div>
+            <div class="card-body">
+                <p>{{ reward.description }}</p>
+                <p><strong>{% trans "Points Required" %}:</strong> {{ reward.points_required }}</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
     {% else %}
     <div class="alert alert-info text-center">
         <i class="fas fa-info-circle"></i>
-        {% trans "You have not won any prizes." %}
+        {% trans "You have not earned any rewards yet." %}
     </div>
-    {% endif %}
-</div>
-{% endblock details %}
+{% endif %}

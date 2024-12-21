@@ -12,6 +12,42 @@
 <div class="container mt-4">
     <h2 class="text-center mb-4">{% trans "Admin Dashboard" %}</h2>
 
+    <!-- Résumé des Statistiques -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-primary mb-3">
+                <div class="card-header">{% trans "Total Lotteries" %}</div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ stats.total_lotteries }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-success mb-3">
+                <div class="card-header">{% trans "Total Tickets Sold" %}</div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ stats.total_tickets|space_separated }} ISK</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-warning mb-3">
+                <div class="card-header">{% trans "Total Anomalies" %}</div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ stats.total_anomalies }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-info mb-3">
+                <div class="card-header">{% trans "Average Participation" %}</div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ stats.avg_participation|floatformat:2 }}</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+
     {% if active_lotteries %}
     <h3>{% trans "Current Lotteries" %}</h3>
     <div class="d-flex flex-wrap justify-content-center gap-4 mb-4">
@@ -19,16 +55,23 @@
         <div class="card shadow" style="width: 20rem;">
             <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">{{ lottery.lottery_reference }}</h5>
+                <!-- Bouton pour terminer prématurément la loterie -->
+                <form method="post" action="{% url 'fortunaisk:terminate_lottery' lottery.id %}" onsubmit="return confirm('{% trans "Êtes-vous sûr de vouloir terminer cette loterie prématurément ?" %}');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-danger" title="{% trans "Terminate Lottery" %}">
+                        <i class="fas fa-stop-circle"></i>
+                    </button>
+                </form>
             </div>
             <div class="card-body">
                 <p><strong>{% trans "Status" %}:</strong> {{ lottery.get_status_display }}</p>
                 <p><strong>{% trans "Ticket Price" %}:</strong> {{ lottery.ticket_price }} ISK</p>
-                <p><strong>{% trans "End Date" %}:</strong> {{ lottery.end_date|date:"Y-m-d H:i" }}</p>
+                <p><strong>{% trans "End Date" %}:</strong> {{ lottery.end_date|date:"Y-m-d H:i:s" }}</p>
                 <p><strong>{% trans "Participants" %}:</strong> {{ lottery.participant_count }}</p>
                 <p><strong>{% trans "Total Pot" %}:</strong> {{ lottery.total_pot|intcomma }} ISK</p>
-                <!-- Button to show participants count -->
+                <!-- Bouton pour afficher le nombre de participants -->
                 <button class="btn btn-info mt-2" onclick="showParticipants('{{ lottery.lottery_reference }}')">{% trans "Show Participants" %}</button>
-                <!-- Container to display participants count -->
+                <!-- Container pour afficher le nombre de participants -->
                 <div id="participants-{{ lottery.lottery_reference }}" style="display:none;">
                     <p><strong>{% trans "Number of Participants" %}:</strong> {{ lottery.participant_count }}</p>
                 </div>
@@ -73,20 +116,49 @@
     <p>{% trans "To view past lotteries and their winners, visit the lottery history page:" %} <a href="{% url 'fortunaisk:lottery_history' %}">{% trans "Lottery History" %}</a></p>
 
     <h3 class="mt-4">{% trans "Statistics and Reports" %}</h3>
+    <div class="row">
+        <!-- Graphique des Tickets Vendus par Loterie -->
+        <div class="col-md-6">
+            <div class="card shadow mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">{% trans "Tickets Purchased per Lottery" %}</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="ticketsChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Graphique de l'Évolution du Pot Total -->
+        <div class="col-md-6">
+            <div class="card shadow mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">{% trans "Total Pot Evolution" %}</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="potsChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Graphique des Anomalies par Loterie -->
     <div class="card shadow mb-4">
-        <div class="card-header bg-success text-white">
-            <h5 class="mb-0">{% trans "Lottery Statistics" %}</h5>
+        <div class="card-header bg-secondary text-white">
+            <h5 class="mb-0">{% trans "Anomalies per Lottery" %}</h5>
         </div>
         <div class="card-body">
-            <p>{% trans "Total Tickets Sold" %}: {{ stats.total_tickets }}</p>
-            <p>{% trans "Total Lotteries" %}: {{ stats.total_lotteries }}</p>
-            <p>{% trans "Total Anomalies" %}: {{ stats.total_anomalies }}</p>
-            <p>{% trans "Average Participation" %}: {{ stats.avg_participation|floatformat:2 }}</p>
+            <canvas id="anomaliesChart"></canvas>
+        </div>
+    </div>
 
-            <!-- Ticket Purchases per Lottery Chart -->
-            <canvas id="ticketsChart"></canvas>
-            <!-- Total Pot Evolution Chart -->
-            <canvas id="potsChart" class="mt-4"></canvas>
+    <!-- Graphique des Utilisateurs les Plus Actifs -->
+    <div class="card shadow mb-4">
+        <div class="card-header bg-secondary text-white">
+            <h5 class="mb-0">{% trans "Top Active Users" %}</h5>
+        </div>
+        <div class="card-body">
+            <canvas id="topUsersChart"></canvas>
         </div>
     </div>
 </div>
@@ -94,6 +166,7 @@
 <!-- Include Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+    // Graphique des Tickets Vendus par Loterie
     const ticketsCtx = document.getElementById('ticketsChart').getContext('2d');
     const ticketsChart = new Chart(ticketsCtx, {
         type: 'bar',
@@ -102,7 +175,7 @@
             datasets: [{
                 label: '{% trans "Tickets Purchased" %}',
                 data: {{ tickets_per_lottery|safe }},
-                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                backgroundColor: 'rgba(54, 162, 235, 0.6)',
                 borderColor: 'rgba(54, 162, 235, 1)',
                 borderWidth: 1
             }]
@@ -110,6 +183,7 @@
         options: { scales: { y: { beginAtZero: true } } }
     });
 
+    // Graphique de l'Évolution du Pot Total
     const potsCtx = document.getElementById('potsChart').getContext('2d');
     const potsChart = new Chart(potsCtx, {
         type: 'line',
@@ -118,21 +192,70 @@
             datasets: [{
                 label: '{% trans "Total Pot Amount" %}',
                 data: {{ total_pots|safe }},
-                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                backgroundColor: 'rgba(75, 192, 192, 0.6)',
                 borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1,
+                fill: true
+            }]
+        },
+        options: { scales: { y: { beginAtZero: true } } }
+    });
+
+    // Graphique des Anomalies par Loterie
+    const anomaliesCtx = document.getElementById('anomaliesChart').getContext('2d');
+    const anomaliesChart = new Chart(anomaliesCtx, {
+        type: 'pie',
+        data: {
+            labels: {{ anomaly_lottery_names|safe }},
+            datasets: [{
+                label: '{% trans "Anomalies" %}',
+                data: {{ anomalies_per_lottery|safe }},
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.6)',
+                    'rgba(54, 162, 235, 0.6)',
+                    'rgba(255, 206, 86, 0.6)',
+                    'rgba(75, 192, 192, 0.6)',
+                    'rgba(153, 102, 255, 0.6)',
+                    'rgba(255, 159, 64, 0.6)'
+                ],
+                borderColor: [
+                    'rgba(255,99,132,1)',
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 206, 86, 1)',
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(153, 102, 255, 1)',
+                    'rgba(255, 159, 64, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: { responsive: true }
+    });
+
+    // Graphique des Utilisateurs les Plus Actifs
+    const topUsersCtx = document.getElementById('topUsersChart').getContext('2d');
+    const topUsersChart = new Chart(topUsersCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ top_users_names|safe }},
+            datasets: [{
+                label: '{% trans "Number of Tickets Purchased" %}',
+                data: {{ top_users_tickets|safe }},
+                backgroundColor: 'rgba(255, 206, 86, 0.6)',
+                borderColor: 'rgba(255, 206, 86, 1)',
                 borderWidth: 1
             }]
         },
         options: { scales: { y: { beginAtZero: true } } }
     });
 
-function showParticipants(lotteryReference) {
-    var element = document.getElementById('participants-' + lotteryReference);
-    if (element.style.display === "none") {
-        element.style.display = "block";
-    } else {
-        element.style.display = "none";
+    function showParticipants(lotteryReference) {
+        var element = document.getElementById('participants-' + lotteryReference);
+        if (element.style.display === "none") {
+            element.style.display = "block";
+        } else {
+            element.style.display = "none";
+        }
     }
-}
 </script>
 {% endblock details %}
