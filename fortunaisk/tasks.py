@@ -262,31 +262,35 @@ def setup_tasks(sender, **kwargs):
 
 
 @shared_task
-def create_lottery_from_auto(autolottery_id):
+def create_lottery_from_auto(auto_lottery_id):
     """
-    Task to create a lottery based on an AutoLottery configuration.
+    Crée une nouvelle loterie à partir d'une Auto Lottery.
     """
     try:
-        autolottery = AutoLottery.objects.get(id=autolottery_id, is_active=True)
-    except AutoLottery.DoesNotExist:
-        logger.warning(
-            f"AutoLottery avec l'ID {autolottery_id} n'existe pas ou est inactive."
+        auto_lottery = AutoLottery.objects.get(id=auto_lottery_id)
+
+        # Créer la nouvelle loterie
+        start_date = timezone.now()
+        end_date = start_date + timedelta(hours=auto_lottery.duration_hours)
+
+        lottery = Lottery.objects.create(
+            ticket_price=auto_lottery.ticket_price,
+            start_date=start_date,
+            end_date=end_date,
+            payment_receiver=auto_lottery.payment_receiver,
+            winner_count=auto_lottery.winner_count,
+            winners_distribution_str=auto_lottery.winners_distribution_str,
+            max_tickets_per_user=auto_lottery.max_tickets_per_user,
         )
-        return
 
-    # Créer une nouvelle loterie basée sur les paramètres de AutoLottery
-    lottery = Lottery(
-        ticket_price=autolottery.ticket_price,
-        start_date=timezone.now(),
-        end_date=timezone.now() + timezone.timedelta(hours=autolottery.duration_hours),
-        payment_receiver=autolottery.payment_receiver,
-        winner_count=autolottery.winner_count,
-        winners_distribution_str=autolottery.winners_distribution_str,
-        max_tickets_per_user=autolottery.max_tickets_per_user,
-    )
-    lottery.lottery_reference = lottery.generate_unique_reference()
-    lottery.save()
+        logger.info(
+            f"Created new lottery from auto lottery '{auto_lottery.name}' (ID: {auto_lottery_id})"
+        )
+        return lottery.id
 
-    logger.info(
-        f"Loterie automatique '{autolottery.name}' créée avec la référence {lottery.lottery_reference}."
-    )
+    except AutoLottery.DoesNotExist:
+        logger.error(f"Auto Lottery with ID {auto_lottery_id} not found")
+    except Exception as e:
+        logger.error(
+            f"Error creating lottery from auto lottery {auto_lottery_id}: {str(e)}"
+        )

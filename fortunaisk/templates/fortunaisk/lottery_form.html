@@ -68,7 +68,7 @@
                                 </div>
 
                                 <!-- Fréquence -->
-                                <div class="col-md-6">
+                                <div class="col-md-6 frequency-section">  <!-- Ajout de la classe frequency-section -->
                                     <label class="form-label">{% trans "Frequency" %}*</label>
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="fas fa-clock"></i></span>
@@ -241,97 +241,155 @@
 <!-- Script de validation côté client -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Validation du formulaire
-    const form = document.querySelector('form');
-    const winnerCountInput = document.getElementById('id_winner_count');
-    const distributionInput = document.getElementById('id_winners_distribution_str');
+    // Constantes pour les éléments du formulaire
+    const FORM_ELEMENTS = {
+        form: document.querySelector('form'),
+        winnerCount: document.getElementById('id_winner_count'),
+        distribution: document.getElementById('id_winners_distribution_str'),
+        price: document.getElementById('id_ticket_price'),
+        frequency: document.getElementById('id_frequency'),
+        frequencyUnit: document.getElementById('id_frequency_unit'),
+        isActive: document.getElementById('id_is_active'),
+        frequencySection: document.querySelector('.frequency-section')
+    };
 
-    // Fonction de validation de la distribution des gagnants
-    function validateDistribution(distribution) {
-        if (!distribution) return false;
+    // Configuration des messages d'erreur
+    const ERROR_MESSAGES = {
+        distribution: 'La somme des pourcentages doit être égale à 100',
+        required: 'Ce champ est obligatoire'
+    };
 
-        const numbers = distribution.split(',').map(n => parseInt(n.trim()));
-        if (numbers.some(isNaN)) return false;
+    // Classe utilitaire pour la validation
+    class FormValidator {
+        static validateDistribution(distribution) {
+            if (!distribution) return false;
 
-        const sum = numbers.reduce((a, b) => a + b, 0);
-        return sum === 100;
-    }
+            const numbers = distribution.split(',')
+                .map(n => parseInt(n.trim()))
+                .filter(n => !isNaN(n));
 
-    // Mise à jour automatique du nombre de gagnants
-    distributionInput.addEventListener('input', function() {
-        if (this.value) {
-            const count = this.value.split(',').length;
-            winnerCountInput.value = count;
+            return numbers.length > 0 && numbers.reduce((a, b) => a + b, 0) === 100;
         }
-    });
 
-    // Validation avant soumission
-    form.addEventListener('submit', function(event) {
-        let isValid = true;
-
-        // Vérification des champs requis
-        form.querySelectorAll('input[required]').forEach(input => {
-            if (!input.value) {
-                input.classList.add('is-invalid');
-                isValid = false;
-            } else {
-                input.classList.remove('is-invalid');
-            }
-        });
-
-        // Validation de la distribution des gagnants
-        if (distributionInput.value && !validateDistribution(distributionInput.value)) {
-            distributionInput.classList.add('is-invalid');
-            if (!distributionInput.nextElementSibling?.classList.contains('invalid-feedback')) {
+        static showError(element, message) {
+            element.classList.add('is-invalid');
+            if (!element.nextElementSibling?.classList.contains('invalid-feedback')) {
                 const feedback = document.createElement('div');
                 feedback.className = 'invalid-feedback';
-                feedback.textContent = 'La somme des pourcentages doit être égale à 100';
-                distributionInput.parentNode.appendChild(feedback);
+                feedback.textContent = message;
+                element.parentNode.appendChild(feedback);
             }
-            isValid = false;
-        } else {
-            distributionInput.classList.remove('is-invalid');
         }
 
-        // Empêcher la soumission si le formulaire n'est pas valide
-        if (!isValid) {
-            event.preventDefault();
-            event.stopPropagation();
-        }
-    });
-
-    // Formatage des nombres pour les champs de prix
-    const priceInput = document.getElementById('id_ticket_price');
-    if (priceInput) {
-        priceInput.addEventListener('input', function() {
-            let value = this.value.replace(/[^\d.]/g, '');
-            if (value) {
-                value = parseFloat(value).toFixed(2);
-                this.value = value;
+        static removeError(element) {
+            element.classList.remove('is-invalid');
+            const feedback = element.nextElementSibling;
+            if (feedback?.classList.contains('invalid-feedback')) {
+                feedback.remove();
             }
-        });
+        }
     }
 
-    // Pour les loteries automatiques uniquement
-    const frequencyInput = document.getElementById('id_frequency');
-    const frequencyUnitSelect = document.getElementById('id_frequency_unit');
-    if (frequencyInput && frequencyUnitSelect) {
-        // Mise à jour de l'unité selon la fréquence
-        frequencyInput.addEventListener('input', function() {
-            const value = parseInt(this.value);
-            if (value === 1) {
-                frequencyUnitSelect.querySelectorAll('option').forEach(option => {
-                    option.textContent = option.textContent.replace(/s$/, '');
-                });
+    // Gestionnaire d'événements pour la distribution des gagnants
+    class WinnersDistributionHandler {
+        static updateWinnerCount(value) {
+            if (!value) return;
+            const count = value.split(',').filter(v => v.trim()).length;
+            FORM_ELEMENTS.winnerCount.value = count;
+        }
+
+        static validate() {
+            const value = FORM_ELEMENTS.distribution.value;
+            if (!value) return true;
+
+            const isValid = FormValidator.validateDistribution(value);
+            if (!isValid) {
+                FormValidator.showError(FORM_ELEMENTS.distribution, ERROR_MESSAGES.distribution);
             } else {
-                frequencyUnitSelect.querySelectorAll('option').forEach(option => {
-                    if (!option.textContent.endsWith('s')) {
-                        option.textContent += 's';
-                    }
-                });
+                FormValidator.removeError(FORM_ELEMENTS.distribution);
+            }
+            return isValid;
+        }
+    }
+
+    // Gestionnaire pour le formatage des prix
+    class PriceFormatter {
+        static format(value) {
+            const numericValue = value.replace(/[^\d.]/g, '');
+            if (!numericValue) return '';
+            return parseFloat(numericValue).toFixed(2);
+        }
+    }
+
+    // Gestionnaire pour les loteries automatiques
+    class AutoLotteryHandler {
+        static updateFrequencyLabels() {
+            const value = parseInt(FORM_ELEMENTS.frequency.value);
+            FORM_ELEMENTS.frequencyUnit.querySelectorAll('option').forEach(option => {
+                const base = option.textContent.replace(/s$/, '');
+                option.textContent = value === 1 ? base : `${base}s`;
+            });
+        }
+
+        static toggleFrequencySection() {
+            if (FORM_ELEMENTS.frequencySection) {
+                FORM_ELEMENTS.frequencySection.style.display =
+                    FORM_ELEMENTS.isActive.checked ? 'block' : 'none';
+            }
+        }
+    }
+
+    // Initialisation des écouteurs d'événements
+    function initializeEventListeners() {
+        // Écouteur pour la distribution des gagnants
+        FORM_ELEMENTS.distribution?.addEventListener('input', (e) => {
+            WinnersDistributionHandler.updateWinnerCount(e.target.value);
+        });
+
+        // Écouteur pour le formatage des prix
+        FORM_ELEMENTS.price?.addEventListener('input', function() {
+            this.value = PriceFormatter.format(this.value);
+        });
+
+        // Écouteurs pour les loteries automatiques
+        if (FORM_ELEMENTS.frequency && FORM_ELEMENTS.frequencyUnit) {
+            FORM_ELEMENTS.frequency.addEventListener('input', AutoLotteryHandler.updateFrequencyLabels);
+        }
+
+        if (FORM_ELEMENTS.isActive) {
+            FORM_ELEMENTS.isActive.addEventListener('change', AutoLotteryHandler.toggleFrequencySection);
+            // Initialiser l'état de la section fréquence
+            AutoLotteryHandler.toggleFrequencySection();
+        }
+
+        // Validation du formulaire à la soumission
+        FORM_ELEMENTS.form?.addEventListener('submit', function(event) {
+            let isValid = true;
+
+            // Validation des champs requis
+            this.querySelectorAll('input[required]').forEach(input => {
+                if (!input.value) {
+                    FormValidator.showError(input, ERROR_MESSAGES.required);
+                    isValid = false;
+                } else {
+                    FormValidator.removeError(input);
+                }
+            });
+
+            // Validation de la distribution
+            if (!WinnersDistributionHandler.validate()) {
+                isValid = false;
+            }
+
+            if (!isValid) {
+                event.preventDefault();
+                event.stopPropagation();
             }
         });
     }
+
+    // Initialisation
+    initializeEventListeners();
 });
 </script>
 {% endblock details %}

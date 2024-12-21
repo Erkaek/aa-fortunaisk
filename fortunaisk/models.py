@@ -293,8 +293,18 @@ class AutoLottery(models.Model):
         return self.name
 
     def save(self, *args, **kwargs):
-        # Override save to handle PeriodicTask creation/update
+        is_new = self.pk is None  # Vérifie si c'est une nouvelle instance
         super().save(*args, **kwargs)
+
+        if is_new:
+            # Créer la première loterie immédiatement
+            from .tasks import (
+                create_lottery_from_auto,  # Import local pour éviter les imports circulaires
+            )
+
+            create_lottery_from_auto(self.id)
+
+        # Configurer la tâche périodique pour les futures loteries
         self.setup_periodic_task()
 
     def setup_periodic_task(self):
