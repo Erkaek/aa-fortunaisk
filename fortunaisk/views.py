@@ -388,3 +388,29 @@ def lottery_history(request):
     }
 
     return render(request, "fortunaisk/lottery_history.html", context)
+
+
+@login_required
+@permission_required("fortunaisk.view_ticketpurchase", raise_exception=True)
+def lottery_participants(request, lottery_id):
+    """
+    Vue pour afficher la liste des participants d'une loterie spécifique.
+    """
+    lottery = get_object_or_404(Lottery, id=lottery_id)
+    participants = (
+        TicketPurchase.objects.filter(lottery=lottery)
+        .select_related("user", "character")
+        .order_by("-purchase_date")
+    )
+
+    # Pagination (25 participants par page)
+    paginator = Paginator(participants, 25)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        "lottery": lottery,
+        "page_obj": page_obj,
+    }
+
+    return render(request, "fortunaisk/lottery_participants.html", context)
