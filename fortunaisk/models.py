@@ -167,6 +167,7 @@ class Lottery(models.Model):
         ordering = ["-start_date"]
         permissions = [
             ("view_lotteryhistory", "Can view lottery history"),
+            ("terminate_lottery", "Can terminate lottery"),
         ]
 
     @property

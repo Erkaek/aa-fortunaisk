@@ -414,3 +414,38 @@ def lottery_participants(request, lottery_id):
     }
 
     return render(request, "fortunaisk/lottery_participants.html", context)
+
+
+@login_required
+@permission_required("fortunaisk.admin_dashboard", raise_exception=True)
+def terminate_lottery(request, lottery_id):
+    """
+    Vue pour terminer prématurément une loterie active.
+    """
+    lottery = get_object_or_404(Lottery, id=lottery_id, status="active")
+
+    if request.method == "POST":
+        try:
+            with transaction.atomic():
+                lottery.status = "completed"
+                lottery.save()
+
+                # Optionnel: Vous pouvez appeler ici des méthodes supplémentaires comme l'envoi de notifications
+
+                messages.success(
+                    request, _("La loterie a été terminée prématurément avec succès.")
+                )
+        except Exception as e:
+            logger.error(
+                f"Erreur lors de la terminaison de la loterie {lottery_id}: {e}"
+            )
+            messages.error(
+                request,
+                _("Erreur lors de la terminaison de la loterie. Veuillez réessayer."),
+            )
+
+        return redirect("fortunaisk:admin_dashboard")
+
+    # Si la méthode n'est pas POST, rediriger ou afficher une erreur
+    messages.error(request, _("Méthode de requête invalide."))
+    return redirect("fortunaisk:admin_dashboard")

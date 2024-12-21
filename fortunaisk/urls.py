@@ -36,4 +36,9 @@ urlpatterns = [
         views.delete_auto_lottery,
         name="auto_lottery_delete",
     ),  # nouvelle URL
+    path(
+        "terminate_lottery/<int:lottery_id>/",
+        views.terminate_lottery,
+        name="terminate_lottery",
+    ),
 ]
