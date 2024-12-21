@@ -355,8 +355,8 @@ class AutoLottery(models.Model):
         if not self.is_active:
             PeriodicTask.objects.filter(name=f"AutoLottery_{self.id}").delete()
             return
-        cron_minute = "0"
-        cron_hour = "0"
+        cron_minute = "*"
+        cron_hour = "*"
         cron_day_of_week = "*"
         cron_day_of_month = "*"
         cron_month_of_year = "*"
