@@ -111,7 +111,7 @@ def admin_dashboard(request):
         "anomalies": anomalies,
     }
 
-    return render(request, "fortunaisk/admin_dashboard.html", context)
+    return render(request, "fortunaisk/admin.html", context)
 
 
 @login_required
