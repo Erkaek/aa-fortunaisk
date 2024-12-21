@@ -371,13 +371,20 @@ def lottery_history(request):
         status__in=["completed", "cancelled"]
     ).order_by("-start_date")
 
+    # Récupérer les gagnants pour ces loteries
+    winners = Winner.objects.filter(ticket__lottery__in=past_lotteries).select_related(
+        "character", "ticket__lottery"
+    )
+
     # Pagination (25 loteries par page)
     paginator = Paginator(past_lotteries, 25)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
     context = {
-        "page_obj": page_obj,
+        "past_lotteries": page_obj.object_list,  # Fournir les loteries actuelles
+        "page_obj": page_obj,  # Fournir l'objet de pagination
+        "winners": winners,
     }
 
     return render(request, "fortunaisk/lottery_history.html", context)
