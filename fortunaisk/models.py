@@ -8,7 +8,7 @@ import random
 import string
 
 # Third Party
-from django_celery_beat.models import IntervalSchedule, PeriodicTask
+from django_celery_beat.models import CrontabSchedule, PeriodicTask
 from solo.models import SingletonModel
 
 # Django
@@ -143,14 +143,19 @@ class Lottery(models.Model):
         Sets up or updates a periodic task to process wallet tickets for all active lotteries.
         """
         task_name = "process_wallet_tickets_for_all_lotteries"
-        schedule, _ = IntervalSchedule.objects.get_or_create(
-            every=5, period=IntervalSchedule.MINUTES
+        schedule, _ = CrontabSchedule.objects.get_or_create(
+            minute="*/15",
+            hour="*",
+            day_of_week="*",
+            day_of_month="*",
+            month_of_year="*",
+            timezone="UTC",
         )
         PeriodicTask.objects.update_or_create(
             name=task_name,
             defaults={
                 "task": "fortunaisk.tasks.process_wallet_tickets",
-                "interval": schedule,
+                "crontab": schedule,
                 "args": json.dumps([]),
             },
         )
@@ -315,10 +320,32 @@ class AutoLottery(models.Model):
             PeriodicTask.objects.filter(name=f"AutoLottery_{self.id}").delete()
             return
 
-        # Get or create the IntervalSchedule
-        schedule, created = IntervalSchedule.objects.get_or_create(
-            every=self.frequency,
-            period=self.frequency_unit.lower(),
+        # Convert frequency and frequency_unit to crontab schedule
+        cron_minute = "0"
+        cron_hour = "0"
+        cron_day_of_week = "*"
+        cron_day_of_month = "*"
+        cron_month_of_year = "*"
+
+        if self.frequency_unit == "minute":
+            cron_minute = f"*/{self.frequency}"
+        elif self.frequency_unit == "hour":
+            cron_hour = f"*/{self.frequency}"
+        elif self.frequency_unit == "day":
+            cron_day_of_month = f"*/{self.frequency}"
+        elif self.frequency_unit == "week":
+            cron_day_of_week = f"*/{self.frequency}"
+        elif self.frequency_unit == "month":
+            cron_month_of_year = f"*/{self.frequency}"
+
+        # Get or create the CrontabSchedule
+        schedule, created = CrontabSchedule.objects.get_or_create(
+            minute=cron_minute,
+            hour=cron_hour,
+            day_of_week=cron_day_of_week,
+            day_of_month=cron_day_of_month,
+            month_of_year=cron_month_of_year,
+            timezone="UTC",
         )
 
         task_name = f"AutoLottery_{self.id}"
@@ -327,7 +354,7 @@ class AutoLottery(models.Model):
             name=task_name,
             defaults={
                 "task": "fortunaisk.tasks.create_lottery_from_auto",
-                "interval": schedule,
+                "crontab": schedule,
                 "args": json.dumps([self.id]),
             },
         )

@@ -9,6 +9,7 @@ from random import shuffle
 # Third Party
 from celery import shared_task
 from corptools.models import CorporationWalletJournalEntry
+from django_celery_beat.models import CrontabSchedule, PeriodicTask
 
 # Django
 from django.contrib.auth.models import User
@@ -19,7 +20,7 @@ from django.utils import timezone
 from allianceauth.eveonline.models import EveCharacter
 
 from .models import AutoLottery, Lottery, TicketAnomaly, TicketPurchase, Winner
-from .notifications import send_discord_webhook  # Import from notifications.py
+from .notifications import send_discord_webhook  # Import depuis notifications.py
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +62,7 @@ def select_winners_for_lottery(lottery):
         )
         return
 
-    # Get all ticket amounts
+    # Récupérer tous les montants de tickets
     sum_amount = TicketPurchase.objects.filter(lottery=lottery).values_list(
         "amount", flat=True
     )
@@ -183,7 +184,7 @@ def process_wallet_tickets():
                 logger.info(f"Anomalie détectée : {anomaly_reason}")
                 continue
 
-            # No anomaly, create ticket
+            # Aucun anomalie, créer le ticket
             try:
                 with transaction.atomic():
                     TicketPurchase.objects.create(
@@ -231,32 +232,31 @@ def process_wallet_tickets():
     return f"{processed_entries} tickets traités pour toutes les loteries actives."
 
 
-def setup_tasks(sender, **kwargs):
-    # Third Party
-    from django_celery_beat.models import IntervalSchedule, PeriodicTask
-
-    task_name_check_lotteries = "FortunaIsk_check_lotteries_status"
-    task_name_process_wallet_tickets = "FortunaIsk_process_wallet_tickets"
-
-    schedule, created = IntervalSchedule.objects.get_or_create(
-        every=1,
-        period=IntervalSchedule.HOURS,
+def setup_tasks():
+    # Créer ou mettre à jour les tâches périodiques pour les loteries
+    schedule, created = CrontabSchedule.objects.get_or_create(
+        minute="*/15",
+        hour="*",
+        day_of_week="*",
+        day_of_month="*",
+        month_of_year="*",
+        timezone="UTC",
     )
 
     PeriodicTask.objects.update_or_create(
-        name=task_name_check_lotteries,
+        name="check_lotteries",
         defaults={
             "task": "fortunaisk.tasks.check_lotteries",
-            "interval": schedule,
+            "crontab": schedule,
             "args": json.dumps([]),
         },
     )
 
     PeriodicTask.objects.update_or_create(
-        name=task_name_process_wallet_tickets,
+        name="process_wallet_tickets",
         defaults={
             "task": "fortunaisk.tasks.process_wallet_tickets",
-            "interval": schedule,
+            "crontab": schedule,
             "args": json.dumps([]),
         },
     )
@@ -295,3 +295,7 @@ def create_lottery_from_auto(auto_lottery_id):
         logger.error(
             f"Error creating lottery from auto lottery {auto_lottery_id}: {str(e)}"
         )
+
+
+# Appeler la fonction setup_tasks pour configurer les tâches
+setup_tasks()
