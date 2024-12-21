@@ -170,7 +170,7 @@ def process_wallet_tickets():
                     user_ticket_count = TicketPurchase.objects.filter(
                         user=user, lottery=lottery
                     ).count()
-                    if user_ticket_count >= lottery.max_tickets_per_user:
+                    if user_ticket_count > lottery.max_tickets_per_user:
                         if anomaly_reason is None:
                             anomaly_reason = f"L'utilisateur '{user.username}' a dépassé le nombre maximum de tickets ({lottery.max_tickets_per_user})."
             except EveCharacter.DoesNotExist:
