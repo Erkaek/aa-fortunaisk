@@ -256,24 +256,18 @@ class WebhookConfiguration(models.Model):
 
 
 class AutoLottery(models.Model):
-    """
-    Represents an automatic lottery generator with a defined frequency.
-    """
-
-    INTERVAL_CHOICES = [
-        ("minute", "Minutes"),
-        ("hour", "Hours"),
-        ("day", "Days"),
-        ("week", "Weeks"),
-    ]
-
     name = models.CharField(max_length=100, unique=True)
     frequency = models.PositiveIntegerField(default=1)
     frequency_unit = models.CharField(
-        max_length=10, choices=INTERVAL_CHOICES, default="days"
+        max_length=10,
+        choices=[
+            ("minute", "Minutes"),
+            ("hour", "Hours"),
+            ("day", "Days"),
+            ("week", "Weeks"),
+        ],
+        default="day",
     )
-
-    # Parameters for the lottery to be created automatically
     ticket_price = models.DecimalField(max_digits=20, decimal_places=2)
     duration_hours = models.PositiveIntegerField(default=24)
     payment_receiver = models.IntegerField()
@@ -284,9 +278,7 @@ class AutoLottery(models.Model):
         help_text="List of percentages for each winner, separated by commas. Example: '50,30,20' for 3 winners.",
     )
     max_tickets_per_user = models.PositiveIntegerField(null=True, blank=True)
-
     is_active = models.BooleanField(default=True)
-
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -298,35 +290,23 @@ class AutoLottery(models.Model):
         return self.name
 
     def save(self, *args, **kwargs):
-        is_new = self.pk is None  # Vérifie si c'est une nouvelle instance
+        is_new = self.pk is None
         super().save(*args, **kwargs)
-
         if is_new:
-            # Créer la première loterie immédiatement
-            from .tasks import (
-                create_lottery_from_auto,  # Import local pour éviter les imports circulaires
-            )
+            from .tasks import create_lottery_from_auto
 
             create_lottery_from_auto(self.id)
-
-        # Configurer la tâche périodique pour les futures loteries
         self.setup_periodic_task()
 
     def setup_periodic_task(self):
-        """
-        Sets up or updates a periodic task for the automatic lottery.
-        """
         if not self.is_active:
             PeriodicTask.objects.filter(name=f"AutoLottery_{self.id}").delete()
             return
-
-        # Convert frequency and frequency_unit to crontab schedule
         cron_minute = "0"
         cron_hour = "0"
         cron_day_of_week = "*"
         cron_day_of_month = "*"
         cron_month_of_year = "*"
-
         if self.frequency_unit == "minute":
             cron_minute = f"*/{self.frequency}"
         elif self.frequency_unit == "hour":
@@ -337,8 +317,6 @@ class AutoLottery(models.Model):
             cron_day_of_week = f"*/{self.frequency}"
         elif self.frequency_unit == "month":
             cron_month_of_year = f"*/{self.frequency}"
-
-        # Get or create the CrontabSchedule
         schedule, created = CrontabSchedule.objects.get_or_create(
             minute=cron_minute,
             hour=cron_hour,
@@ -347,9 +325,7 @@ class AutoLottery(models.Model):
             month_of_year=cron_month_of_year,
             timezone="UTC",
         )
-
         task_name = f"AutoLottery_{self.id}"
-
         PeriodicTask.objects.update_or_create(
             name=task_name,
             defaults={
@@ -359,3 +335,8 @@ class AutoLottery(models.Model):
             },
         )
         logger.info(f"Periodic task '{task_name}' set for AutoLottery '{self.name}'.")
+
+    def delete(self, *args, **kwargs):
+        task_name = f"AutoLottery_{self.id}"
+        PeriodicTask.objects.filter(name=task_name).delete()
+        super().delete(*args, **kwargs)
