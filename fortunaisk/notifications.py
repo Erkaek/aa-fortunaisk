@@ -11,7 +11,12 @@ logger = logging.getLogger(__name__)
 
 
 def send_discord_webhook(message):
-    from .models import LotterySettings
+    """
+    Envoie un message au webhook Discord configuré via le modèle LotterySettings.
+    """
+    from .models import (
+        LotterySettings,  # Import local pour éviter les imports circulaires
+    )
 
     settings = LotterySettings.objects.get_or_create()[0]
     if not settings.discord_webhook:
