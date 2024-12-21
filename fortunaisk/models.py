@@ -165,6 +165,9 @@ class Lottery(models.Model):
 
     class Meta:
         ordering = ["-start_date"]
+        permissions = [
+            ("view_lotteryhistory", "Can view lottery history"),
+        ]
 
     @property
     def is_active(self):

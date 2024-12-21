@@ -359,3 +359,25 @@ def award_points_to_winners(sender, instance, created, **kwargs):
         send_discord_notification(
             message=f"Félicitations {instance.ticket.user.username}, vous avez gagné 100 points!"
         )
+
+
+@login_required
+@permission_required("fortunaisk.view_lotteryhistory", raise_exception=True)
+def lottery_history(request):
+    """
+    Vue pour afficher l'historique des loteries terminées.
+    """
+    past_lotteries = Lottery.objects.filter(
+        status__in=["completed", "cancelled"]
+    ).order_by("-start_date")
+
+    # Pagination (25 loteries par page)
+    paginator = Paginator(past_lotteries, 25)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        "page_obj": page_obj,
+    }
+
+    return render(request, "fortunaisk/lottery_history.html", context)
