@@ -253,6 +253,7 @@ class TicketPurchase(models.Model):
     lottery = models.ForeignKey(Lottery, on_delete=models.CASCADE)
     purchase_date = models.DateTimeField(default=timezone.now)
     amount = models.PositiveBigIntegerField()
+    payment_id = models.CharField(max_length=255, unique=True)
 
     class Meta:
         ordering = ["-purchase_date"]
