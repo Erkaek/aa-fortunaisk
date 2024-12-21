@@ -19,7 +19,7 @@ from django.utils import timezone
 from allianceauth.eveonline.models import EveCharacter
 
 from .models import AutoLottery, Lottery, TicketAnomaly, TicketPurchase, Winner
-from .notifications import send_discord_webhook  # Import depuis notifications.py
+from .notifications import send_discord_webhook  # Import from notifications.py
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +61,7 @@ def select_winners_for_lottery(lottery):
         )
         return
 
-    # Récupérer tous les montants de tickets
+    # Get all ticket amounts
     sum_amount = TicketPurchase.objects.filter(lottery=lottery).values_list(
         "amount", flat=True
     )
@@ -183,7 +183,7 @@ def process_wallet_tickets():
                 logger.info(f"Anomalie détectée : {anomaly_reason}")
                 continue
 
-            # Aucun anomalie, créer le ticket
+            # No anomaly, create ticket
             try:
                 with transaction.atomic():
                     TicketPurchase.objects.create(
