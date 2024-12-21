@@ -123,6 +123,7 @@
                                     </div>
                                     {% if form.duration_hours.errors %}
                                         <div class="text-danger mt-1">{{ form.duration_hours.errors|striptags }}</div>
+                                    {% endif %}
                                     {% else %}
                                     <label for="{{ form.end_date.id_for_label }}" class="form-label">
                                         {% trans "End Date" %}*
@@ -270,7 +271,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 .map(n => parseInt(n.trim()))
                 .filter(n => !isNaN(n));
 
-            return numbers.length > 0 && numbers reduce((a, b) => a + b, 0) === 100;
+            return numbers.length > 0 && numbers.reduce((a, b) => a + b, 0) === 100;
         }
 
         static showError(element, message) {
