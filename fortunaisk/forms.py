@@ -87,6 +87,20 @@ class LotteryCreateForm(forms.ModelForm):
             "winners_distribution_str": "Ex: '50,30,20' pour 3 gagnants. La somme doit faire 100.",
         }
 
+    def clean_winners_distribution_str(self):
+        distribution = self.cleaned_data.get("winners_distribution_str", "")
+        try:
+            percentages = [int(p.strip()) for p in distribution.split(",")]
+            if sum(percentages) != 100:
+                raise forms.ValidationError(
+                    "La somme des pourcentages doit être égale à 100."
+                )
+        except ValueError:
+            raise forms.ValidationError(
+                "Veuillez entrer des pourcentages valides séparés par des virgules."
+            )
+        return distribution
+
     def save(self, commit=True):
         instance = super().save(commit=False)
         if not instance.start_date:
