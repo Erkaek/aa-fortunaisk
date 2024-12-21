@@ -1,4 +1,5 @@
-"""Celery tasks for the FortunaIsk lottery application with multiple winners and Discord notifications."""
+# fortunaisk/tasks.py
+"""Tâches Celery pour l'application de loterie FortunaIsk avec plusieurs gagnants et notifications Discord."""
 
 # Standard Library
 import json
@@ -27,17 +28,17 @@ logger = logging.getLogger(__name__)
 
 def send_discord_dm(user, message):
     """
-    Send a DM to the given user on Discord.
-    TODO: Implement actual DM sending logic if user Discord ID is known.
+    Envoie un DM au utilisateur sur Discord.
+    TODO: Implémenter la logique réelle d'envoi de DM si l'ID Discord de l'utilisateur est connu.
     """
-    # Placeholder for actual implementation.
+    # Placeholder pour l'implémentation réelle.
     pass
 
 
 @shared_task
 def check_lotteries():
     """
-    Check all active lotteries that have passed their end date and select winners.
+    Vérifie toutes les loteries actives qui ont dépassé leur date de fin et sélectionne les gagnants.
     """
     now = timezone.now()
     active_lotteries = Lottery.objects.filter(status="active", end_date__lte=now)
@@ -47,7 +48,7 @@ def check_lotteries():
 
 def select_winners_for_lottery(lottery):
     """
-    Select multiple winners for the given lottery, distribute pot.
+    Sélectionne plusieurs gagnants pour la loterie donnée et distribue le pot.
     """
     participants = User.objects.filter(ticketpurchase__lottery=lottery).distinct()
     participant_count = participants.count()
@@ -58,7 +59,7 @@ def select_winners_for_lottery(lottery):
         lottery.total_pot = 0
         lottery.save()
         send_discord_notification(
-            f"Aucune participation pour la loterie {lottery.lottery_reference}. La loterie s'est terminée sans gagnants."
+            message=f"Aucune participation pour la loterie {lottery.lottery_reference}. La loterie s'est terminée sans gagnants."
         )
         return
 
@@ -80,7 +81,14 @@ def select_winners_for_lottery(lottery):
 
     with transaction.atomic():
         for i, ticket in enumerate(chosen_tickets):
-            percent = distribution[i]
+            # Assurez-vous que la distribution est définie et correspond au nombre de gagnants
+            if i < len(distribution):
+                percent = distribution[i]
+            else:
+                percent = (
+                    100 / winners_count
+                )  # Répartir équitablement si distribution manquante
+
             prize = (pot * percent) / 100.0
             Winner.objects.create(
                 character=ticket.character,
@@ -96,14 +104,14 @@ def select_winners_for_lottery(lottery):
     lottery.status = "completed"
     lottery.save()
     send_discord_notification(
-        f"La loterie {lottery.lottery_reference} s'est terminée ! {winners_count} gagnants ont été sélectionnés. Pot total : {pot} ISK."
+        message=f"La loterie {lottery.lottery_reference} s'est terminée ! {winners_count} gagnants ont été sélectionnés. Pot total : {pot} ISK."
     )
 
 
 @shared_task
 def process_wallet_tickets():
     """
-    Process wallet entries for all active lotteries.
+    Traite les entrées de portefeuille pour toutes les loteries actives.
     """
     logger.info("Traitement des entrées de portefeuille pour les loteries actives.")
     active_lotteries = Lottery.objects.filter(status="active")
@@ -162,7 +170,7 @@ def process_wallet_tickets():
                     user_ticket_count = TicketPurchase.objects.filter(
                         user=user, lottery=lottery
                     ).count()
-                    if user_ticket_count > lottery.max_tickets_per_user:
+                    if user_ticket_count >= lottery.max_tickets_per_user:
                         if anomaly_reason is None:
                             anomaly_reason = f"L'utilisateur '{user.username}' a dépassé le nombre maximum de tickets ({lottery.max_tickets_per_user})."
             except EveCharacter.DoesNotExist:
@@ -317,15 +325,15 @@ def create_lottery_from_auto(auto_lottery_id):
         )
 
         logger.info(
-            f"Created new lottery from auto lottery '{auto_lottery.name}' (ID: {auto_lottery_id})"
+            f"Créée nouvelle loterie à partir de l'auto loterie '{auto_lottery.name}' (ID: {auto_lottery_id})"
         )
         return lottery.id
 
     except AutoLottery.DoesNotExist:
-        logger.error(f"Auto Lottery with ID {auto_lottery_id} not found")
+        logger.error(f"Auto Lottery avec ID {auto_lottery_id} non trouvée")
     except Exception as e:
         logger.error(
-            f"Error creating lottery from auto lottery {auto_lottery_id}: {str(e)}"
+            f"Erreur lors de la création de la loterie à partir de l'auto loterie {auto_lottery_id} : {str(e)}"
         )
 
 

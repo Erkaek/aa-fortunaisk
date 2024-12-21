@@ -1,5 +1,5 @@
 # fortunaisk/urls.py
-"""URL routing for the FortunaIsk lottery application."""
+"""Routage des URL pour l'application de loterie FortunaIsk."""
 
 # Django
 from django.urls import path
@@ -11,7 +11,7 @@ app_name = "fortunaisk"
 urlpatterns = [
     path("lottery/", views.lottery, name="lottery"),
     path("winners/", views.winner_list, name="winner_list"),
-    path("admin/", views.admin_dashboard, name="admin_dashboard"),
+    path("admin_dashboard/", views.admin_dashboard, name="admin_dashboard"),
     path("ticket_purchases/", views.ticket_purchases, name="ticket_purchases"),
     path("select_winner/<int:lottery_id>/", views.select_winner, name="select_winner"),
     path("history/", views.lottery_history, name="lottery_history"),

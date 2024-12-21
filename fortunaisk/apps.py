@@ -9,7 +9,7 @@ class FortunaiskConfig(AppConfig):
     name = "fortunaisk"
 
     def ready(self):
-        # Import here to ensure it is only executed after Django is fully loaded
+        # Importer les tâches périodiques pour s'assurer qu'elles sont configurées au démarrage
         from .tasks import setup_tasks
 
         setup_tasks()

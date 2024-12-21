@@ -6,12 +6,19 @@ import logging
 # Third Party
 import requests
 
-from .models import WebhookConfiguration
+# Importer WebhookConfiguration depuis webhooks.py
+from .webhooks import WebhookConfiguration
 
 logger = logging.getLogger(__name__)
 
 
 def send_discord_notification(embed=None, message=None):
+    """
+    Envoie une notification à Discord via le webhook configuré.
+
+    :param embed: Un dictionnaire représentant l'embed Discord.
+    :param message: Un message texte simple.
+    """
     try:
         webhook_config = WebhookConfiguration.objects.first()
         if not webhook_config:

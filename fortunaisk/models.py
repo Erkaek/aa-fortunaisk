@@ -20,14 +20,12 @@ from django.utils import timezone
 # Alliance Auth
 from allianceauth.eveonline.models import EveCharacter
 
-from .notifications import send_discord_notification  # Import depuis notifications.py
-
 logger = logging.getLogger(__name__)
 
 
 class Reward(models.Model):
     """
-    Represents a reward that users can earn based on their points.
+    Représente une récompense que les utilisateurs peuvent obtenir en fonction de leurs points.
     """
 
     name = models.CharField(max_length=100)
@@ -40,7 +38,7 @@ class Reward(models.Model):
 
 class UserProfile(models.Model):
     """
-    Extends the User model to include points and rewards.
+    Étend le modèle User pour inclure des points et des récompenses.
     """
 
     user = models.OneToOneField(User, on_delete=models.CASCADE)
@@ -52,8 +50,10 @@ class UserProfile(models.Model):
 
     def check_rewards(self):
         """
-        Checks and assigns eligible rewards to the user based on their points.
+        Vérifie et assigne les récompenses éligibles à l'utilisateur en fonction de ses points.
         """
+        from .notifications import send_discord_notification  # Import interne
+
         eligible_rewards = Reward.objects.filter(
             points_required__lte=self.points
         ).exclude(id__in=self.rewards.all())
@@ -67,7 +67,7 @@ class UserProfile(models.Model):
 
 class LotterySettings(SingletonModel):
     """
-    Global settings for the lottery application.
+    Paramètres globaux pour l'application de loterie.
     """
 
     default_payment_receiver = models.CharField(
@@ -86,8 +86,8 @@ class LotterySettings(SingletonModel):
 
 class Lottery(models.Model):
     """
-    Represents a single lottery.
-    Supports multiple winners with a given distribution.
+    Représente une loterie unique.
+    Supporte plusieurs gagnants avec une distribution donnée.
     """
 
     STATUS_CHOICES = [
@@ -109,7 +109,7 @@ class Lottery(models.Model):
     winners_distribution_str = models.CharField(
         max_length=255,
         blank=True,
-        help_text="List of percentages for each winner, separated by commas. Example: '50,30,20' for 3 winners.",
+        help_text="Liste des pourcentages pour chaque gagnant, séparés par des virgules. Exemple : '50,30,20' pour 3 gagnants.",
     )
     max_tickets_per_user = models.PositiveIntegerField(null=True, blank=True)
     participant_count = models.PositiveIntegerField(default=0)
@@ -142,7 +142,7 @@ class Lottery(models.Model):
 
     def setup_periodic_task(self):
         """
-        Sets up or updates a periodic task to process wallet tickets for all active lotteries.
+        Configure ou met à jour une tâche périodique pour traiter les tickets de portefeuille pour toutes les loteries actives.
         """
         task_name = "process_wallet_tickets_for_all_lotteries"
         schedule, _ = CrontabSchedule.objects.get_or_create(
@@ -161,7 +161,7 @@ class Lottery(models.Model):
                 "args": json.dumps([]),
             },
         )
-        logger.info("Periodic task set for all active lotteries.")
+        logger.info("Tâche périodique configurée pour toutes les loteries actives.")
 
     def delete(self, *args, **kwargs):
         task_name = "process_wallet_tickets_for_all_lotteries"
@@ -169,12 +169,14 @@ class Lottery(models.Model):
         super().delete(*args, **kwargs)
 
     def notify_discord(self, embed):
+        from .notifications import send_discord_notification  # Import interne
+
         send_discord_notification(embed=embed)
         logger.info(f"Notification Discord envoyée: {embed}")
 
     def complete_lottery(self):
         """
-        Completes the lottery, selects winners, and sends a notification to Discord.
+        Termine la loterie, sélectionne les gagnants et envoie une notification à Discord.
         """
         if self.status != "active":
             return
@@ -185,7 +187,7 @@ class Lottery(models.Model):
         if winners:
             embed = {
                 "title": "Loterie terminée !",
-                "color": 15158332,  # Red color
+                "color": 15158332,  # Couleur rouge
                 "fields": [
                     {
                         "name": "Référence",
@@ -205,7 +207,7 @@ class Lottery(models.Model):
         else:
             embed = {
                 "title": "Loterie terminée !",
-                "color": 15158332,  # Red color
+                "color": 15158332,  # Couleur rouge
                 "fields": [
                     {
                         "name": "Référence",
@@ -222,7 +224,7 @@ class Lottery(models.Model):
 
     def select_winners(self):
         """
-        Selects winners for the lottery based on the number of winners and distribution.
+        Sélectionne les gagnants de la loterie en fonction du nombre de gagnants et de la distribution.
         """
         tickets = TicketPurchase.objects.filter(lottery=self)
         if not tickets.exists():
@@ -238,13 +240,13 @@ class Lottery(models.Model):
                     100 / self.winner_count
                 )  # Répartir équitablement si distribution manquante
 
-            prize_amount = self.total_pot * (prize_percentage / 100)
+            prize_amount = self.total_pot * (prize_percentage / 100.0)
             Winner.objects.create(
                 character=winner.character, ticket=winner, prize_amount=prize_amount
             )
             # Ajouter des points au gagnant
             profile, _ = UserProfile.objects.get_or_create(user=winner.user)
-            profile.points += int(prize_amount / 1000)  # Exemple: 1 point par 1000 ISK
+            profile.points += int(prize_amount / 1000)  # Exemple : 1 point par 1000 ISK
             profile.save()
             profile.check_rewards()
 
@@ -256,7 +258,7 @@ def notify_discord_on_lottery_creation(sender, instance, created, **kwargs):
     if created:
         embed = {
             "title": "Nouvelle loterie créée !",
-            "color": 3066993,  # Green color
+            "color": 3066993,  # Couleur verte
             "fields": [
                 {
                     "name": "Référence",
@@ -287,7 +289,7 @@ def notify_discord_on_lottery_creation(sender, instance, created, **kwargs):
 def notify_discord_on_lottery_deletion(sender, instance, **kwargs):
     embed = {
         "title": "Loterie terminée !",
-        "color": 15158332,  # Red color
+        "color": 15158332,  # Couleur rouge
         "fields": [
             {"name": "Référence", "value": instance.lottery_reference, "inline": False},
             {"name": "Statut", "value": "Terminé", "inline": False},
@@ -298,7 +300,7 @@ def notify_discord_on_lottery_deletion(sender, instance, **kwargs):
 
 class TicketPurchase(models.Model):
     """
-    Represents a ticket purchased by a user for a specific lottery.
+    Représente un ticket acheté par un utilisateur pour une loterie spécifique.
     """
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -320,7 +322,7 @@ class TicketPurchase(models.Model):
 
 class Winner(models.Model):
     """
-    Represents a winner of a lottery.
+    Représente un gagnant d'une loterie.
     """
 
     character = models.ForeignKey(EveCharacter, on_delete=models.CASCADE)
@@ -337,7 +339,7 @@ class Winner(models.Model):
 
 class TicketAnomaly(models.Model):
     """
-    Represents anomalies detected in ticket purchases.
+    Représente des anomalies détectées dans les achats de tickets.
     """
 
     lottery = models.ForeignKey("Lottery", on_delete=models.CASCADE)
@@ -358,115 +360,3 @@ class TicketAnomaly(models.Model):
                 fields=["lottery", "payment_id"], name="unique_anomaly_for_payment"
             )
         ]
-
-
-class WebhookConfiguration(models.Model):
-    """
-    Configuration for Discord webhook.
-    """
-
-    webhook_url = models.URLField("URL du Webhook")
-
-    class Meta:
-        verbose_name = "Configuration du Webhook"
-
-    def __str__(self):
-        return self.webhook_url
-
-
-class AutoLottery(models.Model):
-    """
-    Represents an automatic lottery that runs at specified intervals.
-    """
-
-    name = models.CharField(max_length=100, unique=True)
-    frequency = models.PositiveIntegerField(default=1)
-    frequency_unit = models.CharField(
-        max_length=10,
-        choices=[
-            ("minute", "Minutes"),
-            ("hour", "Hours"),
-            ("day", "Days"),
-            ("week", "Weeks"),
-            ("month", "Months"),
-        ],
-        default="day",
-    )
-    ticket_price = models.DecimalField(max_digits=20, decimal_places=2)
-    duration_hours = models.PositiveIntegerField(default=24)
-    payment_receiver = models.IntegerField()
-    winner_count = models.PositiveIntegerField(default=1)
-    winners_distribution_str = models.CharField(
-        max_length=255,
-        blank=True,
-        help_text="List of percentages for each winner, separated by commas. Example: '50,30,20' for 3 winners.",
-    )
-    max_tickets_per_user = models.PositiveIntegerField(null=True, blank=True)
-    is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name = "Automatic Lottery"
-        verbose_name_plural = "Automatic Lotteries"
-
-    def __str__(self):
-        return self.name
-
-    def save(self, *args, **kwargs):
-        is_new = self.pk is None
-        super().save(*args, **kwargs)
-        if is_new:
-            from .tasks import create_lottery_from_auto
-
-            create_lottery_from_auto(self.id)
-        self.setup_periodic_task()
-
-    def setup_periodic_task(self):
-        if not self.is_active:
-            PeriodicTask.objects.filter(name=f"AutoLottery_{self.id}").delete()
-            return
-        cron_minute = "*"
-        cron_hour = "*"
-        cron_day_of_week = "*"
-        cron_day_of_month = "*"
-        cron_month_of_year = "*"
-        if self.frequency_unit == "minute":
-            cron_minute = f"*/{self.frequency}"
-        elif self.frequency_unit == "hour":
-            cron_hour = f"*/{self.frequency}"
-        elif self.frequency_unit == "day":
-            cron_day_of_month = f"*/{self.frequency}"
-        elif self.frequency_unit == "week":
-            cron_day_of_week = f"*/{self.frequency}"
-        elif self.frequency_unit == "month":
-            cron_month_of_year = f"*/{self.frequency}"
-        schedule, created = CrontabSchedule.objects.get_or_create(
-            minute=cron_minute,
-            hour=cron_hour,
-            day_of_week=cron_day_of_week,
-            day_of_month=cron_day_of_month,
-            month_of_year=cron_month_of_year,
-            timezone="UTC",
-        )
-        task_name = f"AutoLottery_{self.id}"
-        PeriodicTask.objects.update_or_create(
-            name=task_name,
-            defaults={
-                "task": "fortunaisk.tasks.create_lottery_from_auto",
-                "crontab": schedule,
-                "args": json.dumps([self.id]),
-            },
-        )
-        logger.info(f"Periodic task '{task_name}' set for AutoLottery '{self.name}'.")
-
-    def delete(self, *args, **kwargs):
-        task_name = f"AutoLottery_{self.id}"
-        PeriodicTask.objects.filter(name=task_name).delete()
-        super().delete(*args, **kwargs)
-
-
-@receiver(pre_delete, sender=AutoLottery)
-def delete_periodic_task(sender, instance, **kwargs):
-    task_name = f"AutoLottery_{instance.id}"
-    PeriodicTask.objects.filter(name=task_name).delete()

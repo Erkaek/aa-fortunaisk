@@ -18,4 +18,4 @@ def send_discord_notification(webhook_url, message):
         response = requests.post(webhook_url, json=payload)
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
-        logger.error(f"Failed to send Discord notification: {e}")
+        logger.error(f"Échec de l'envoi de la notification Discord : {e}")

@@ -9,7 +9,7 @@ from .models import AutoLottery, Lottery, LotterySettings
 
 class LotterySettingsForm(forms.ModelForm):
     """
-    Form for managing global lottery settings.
+    Formulaire pour gérer les paramètres globaux de la loterie.
     """
 
     class Meta:
@@ -36,7 +36,7 @@ class LotterySettingsForm(forms.ModelForm):
 
 class LotteryCreateForm(forms.ModelForm):
     """
-    Form for creating a new lottery.
+    Formulaire pour créer une nouvelle loterie.
     """
 
     class Meta:
@@ -98,7 +98,7 @@ class LotteryCreateForm(forms.ModelForm):
 
 class AutoLotteryForm(forms.ModelForm):
     """
-    Form for creating or editing an automatic lottery.
+    Formulaire pour créer ou éditer une loterie automatique.
     """
 
     class Meta:

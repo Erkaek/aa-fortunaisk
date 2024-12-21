@@ -1,5 +1,5 @@
 # fortunaisk/auth_hooks.py
-"""Alliance Auth hooks for adding FortunaIsk to the navigation menu."""
+"""Alliance Auth hooks pour ajouter FortunaIsk au menu de navigation."""
 
 # Alliance Auth
 from allianceauth import hooks
@@ -9,7 +9,7 @@ from . import urls
 
 
 class FortunaiskMenu(MenuItemHook):
-    """Adds a menu item for FortunaIsk in the Alliance Auth navigation, visible to users with the appropriate permissions."""
+    """Ajoute un élément de menu pour FortunaIsk dans la navigation d'Alliance Auth, visible pour les utilisateurs avec les permissions appropriées."""
 
     def __init__(self):
         super().__init__(

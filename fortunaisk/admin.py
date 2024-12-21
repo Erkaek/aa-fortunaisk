@@ -9,8 +9,8 @@ import logging
 from django.contrib import admin
 from django.http import HttpResponse
 
-from .models import Lottery, Reward, TicketAnomaly, UserProfile, WebhookConfiguration
-from .notifications import send_discord_notification  # Import depuis notifications.py
+from .models import Lottery, Reward, TicketAnomaly, UserProfile
+from .webhooks import WebhookConfiguration  # Import depuis webhooks.py
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +54,7 @@ class LotteryAdmin(admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         """
-        Override save_model to send une notification Discord lorsque une loterie est mise à jour.
+        Override save_model pour envoyer une notification Discord lorsque une loterie est mise à jour.
         """
         if change:
             try:
@@ -72,6 +72,8 @@ class LotteryAdmin(admin.ModelAdmin):
                     message = f"Loterie {obj.lottery_reference} annulée."
                 else:
                     message = f"Loterie {obj.lottery_reference} mise à jour."
+                from .notifications import send_discord_notification  # Import interne
+
                 send_discord_notification(message=message)
 
     @admin.action(description="Mark selected lotteries as completed")
@@ -86,6 +88,8 @@ class LotteryAdmin(admin.ModelAdmin):
             message = (
                 f"Loterie {lottery.lottery_reference} a été marquée comme terminée."
             )
+            from .notifications import send_discord_notification  # Import interne
+
             send_discord_notification(message=message)
 
     @admin.action(description="Mark selected lotteries as cancelled")
@@ -94,6 +98,8 @@ class LotteryAdmin(admin.ModelAdmin):
         self.message_user(request, "Selected lotteries marked as cancelled.")
         # Notifications Discord
         message = "Les loteries sélectionnées ont été annulées."
+        from .notifications import send_discord_notification  # Import interne
+
         send_discord_notification(message=message)
 
     @admin.action(description="Terminer prématurément les loteries sélectionnées")
@@ -106,6 +112,8 @@ class LotteryAdmin(admin.ModelAdmin):
             )
             # Notifications Discord
             message = f"Loterie {lottery.lottery_reference} a été terminée prématurément par {request.user.username}."
+            from .notifications import send_discord_notification  # Import interne
+
             send_discord_notification(message=message)
 
     @admin.action(description="Exporter les loteries sélectionnées en CSV")
