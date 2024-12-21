@@ -15,7 +15,8 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 # Alliance Auth
-from allianceauth.eveonline.models import CorporationWalletJournalEntry, EveCharacter
+from allianceauth.corptools.models import CorporationWalletJournalEntry
+from allianceauth.eveonline.models import EveCharacter
 
 from .models import AutoLottery, Lottery, TicketAnomaly, TicketPurchase, Winner
 from .notifications import send_discord_webhook  # Import depuis notifications.py
