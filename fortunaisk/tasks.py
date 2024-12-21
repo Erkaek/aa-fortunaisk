@@ -7,7 +7,6 @@ import logging
 from random import shuffle
 
 # Third Party
-import requests
 from celery import shared_task
 from corptools.models import CorporationWalletJournalEntry
 
@@ -19,30 +18,10 @@ from django.utils import timezone
 # Alliance Auth
 from allianceauth.eveonline.models import EveCharacter
 
-from .models import (
-    AutoLottery,
-    Lottery,
-    LotterySettings,
-    TicketAnomaly,
-    TicketPurchase,
-    Winner,
-)
+from .models import AutoLottery, Lottery, TicketAnomaly, TicketPurchase, Winner
+from .utils import send_discord_webhook
 
 logger = logging.getLogger(__name__)
-
-
-def send_discord_webhook(message):
-    """
-    Send a message to the configured Discord webhook.
-    """
-    settings = LotterySettings.objects.get_or_create()[0]
-    if not settings.discord_webhook:
-        return
-    payload = {"content": message}
-    try:
-        requests.post(settings.discord_webhook, json=payload, timeout=5)
-    except Exception as e:
-        logger.warning(f"Failed to send Discord webhook: {e}")
 
 
 def send_discord_dm(user, message):
@@ -78,7 +57,7 @@ def select_winners_for_lottery(lottery):
         lottery.total_pot = 0
         lottery.save()
         send_discord_webhook(
-            f"No participants for lottery {lottery.lottery_reference}. Lottery ended with no winners."
+            f"Aucune participation pour la loterie {lottery.lottery_reference}. La loterie s'est terminée sans gagnants."
         )
         return
 
@@ -116,7 +95,7 @@ def select_winners_for_lottery(lottery):
     lottery.status = "completed"
     lottery.save()
     send_discord_webhook(
-        f"Lottery {lottery.lottery_reference} ended! {winners_count} winners selected. Total pot: {pot} ISK."
+        f"La loterie {lottery.lottery_reference} s'est terminée ! {winners_count} gagnants ont été sélectionnés. Pot total : {pot} ISK."
     )
 
 
@@ -125,12 +104,12 @@ def process_wallet_tickets():
     """
     Process wallet entries for all active lotteries.
     """
-    logger.info("Processing wallet entries for active lotteries.")
+    logger.info("Traitement des entrées de portefeuille pour les loteries actives.")
     active_lotteries = Lottery.objects.filter(status="active")
 
     if not active_lotteries.exists():
-        logger.info("No active lotteries found.")
-        return "No active lotteries to process."
+        logger.info("Aucune loterie active trouvée.")
+        return "Aucune loterie active à traiter."
 
     processed_entries = 0
     for lottery in active_lotteries:
@@ -145,7 +124,7 @@ def process_wallet_tickets():
         )
 
         if not payments.exists():
-            logger.info(f"No payments found for lottery: {lottery.id}")
+            logger.info(f"Aucun paiement trouvé pour la loterie : {lottery.id}")
             continue
 
         for payment in payments:
@@ -158,12 +137,14 @@ def process_wallet_tickets():
                 lottery=lottery, payment_id=payment_id
             ).exists():
                 logger.info(
-                    f"Anomaly already recorded for payment {payment_id}, skipping."
+                    f"Anomalie déjà enregistrée pour le paiement {payment_id}, passage."
                 )
                 continue
 
             if not (lottery.start_date <= payment.date <= lottery.end_date):
-                anomaly_reason = "Payment date not within lottery timeframe."
+                anomaly_reason = (
+                    "Date de paiement en dehors de la période de la loterie."
+                )
 
             try:
                 character = EveCharacter.objects.get(
@@ -172,7 +153,9 @@ def process_wallet_tickets():
                 ownership = character.character_ownership
                 if not ownership or not ownership.user:
                     if anomaly_reason is None:
-                        anomaly_reason = "No main user for character."
+                        anomaly_reason = (
+                            "Aucun utilisateur principal pour le personnage."
+                        )
                 else:
                     user = ownership.user
                     user_ticket_count = TicketPurchase.objects.filter(
@@ -180,11 +163,11 @@ def process_wallet_tickets():
                     ).count()
                     if user_ticket_count >= lottery.max_tickets_per_user:
                         if anomaly_reason is None:
-                            anomaly_reason = f"User '{user.username}' exceeded max tickets ({lottery.max_tickets_per_user})."
+                            anomaly_reason = f"L'utilisateur '{user.username}' a dépassé le nombre maximum de tickets ({lottery.max_tickets_per_user})."
             except EveCharacter.DoesNotExist:
                 if anomaly_reason is None:
                     anomaly_reason = (
-                        f"EveCharacter {payment.first_party_name_id} not found."
+                        f"Personnage Eve {payment.first_party_name_id} non trouvé."
                     )
 
             if anomaly_reason:
@@ -197,10 +180,10 @@ def process_wallet_tickets():
                     amount=int(payment.amount),
                     payment_id=payment_id,
                 )
-                logger.info(f"Anomaly detected: {anomaly_reason}")
+                logger.info(f"Anomalie détectée : {anomaly_reason}")
                 continue
 
-            # No anomaly, create the ticket
+            # Aucun anomalie, créer le ticket
             try:
                 with transaction.atomic():
                     TicketPurchase.objects.create(
@@ -210,35 +193,41 @@ def process_wallet_tickets():
                         amount=int(payment.amount),
                         purchase_date=timezone.now(),
                     )
-                    logger.info(f"Ticket registered for user '{user.username}'.")
+                    logger.info(
+                        f"Ticket enregistré pour l'utilisateur '{user.username}'."
+                    )
                 processed_entries += 1
             except IntegrityError as e:
                 TicketAnomaly.objects.create(
                     lottery=lottery,
                     character=character,
                     user=user,
-                    reason=f"Integrity error: {e}",
+                    reason=f"Erreur d'intégrité : {e}",
                     payment_date=payment.date,
                     amount=int(payment.amount),
                     payment_id=payment_id,
                 )
-                logger.error(f"Integrity error processing payment {payment.id}: {e}")
+                logger.error(
+                    f"Erreur d'intégrité lors du traitement du paiement {payment.id} : {e}"
+                )
             except Exception as e:
                 TicketAnomaly.objects.create(
                     lottery=lottery,
                     character=character,
                     user=user,
-                    reason=f"Unexpected error: {e}",
+                    reason=f"Erreur inattendue : {e}",
                     payment_date=payment.date,
                     amount=int(payment.amount),
                     payment_id=payment_id,
                 )
                 logger.exception(
-                    f"Unexpected error processing payment {payment.id}: {e}"
+                    f"Erreur inattendue lors du traitement du paiement {payment.id} : {e}"
                 )
 
-    logger.info(f"Processed {processed_entries} tickets across active lotteries.")
-    return f"Processed {processed_entries} tickets for all active lotteries."
+    logger.info(
+        f"{processed_entries} tickets traités pour toutes les loteries actives."
+    )
+    return f"{processed_entries} tickets traités pour toutes les loteries actives."
 
 
 def setup_tasks(sender, **kwargs):
@@ -281,7 +270,7 @@ def create_lottery_from_auto(autolottery_id):
         autolottery = AutoLottery.objects.get(id=autolottery_id, is_active=True)
     except AutoLottery.DoesNotExist:
         logger.warning(
-            f"AutoLottery with ID {autolottery_id} does not exist or is inactive."
+            f"AutoLottery avec l'ID {autolottery_id} n'existe pas ou est inactive."
         )
         return
 
@@ -299,5 +288,5 @@ def create_lottery_from_auto(autolottery_id):
     lottery.save()
 
     logger.info(
-        f"Automatic Lottery '{autolottery.name}' created with reference {lottery.lottery_reference}."
+        f"Loterie automatique '{autolottery.name}' créée avec la référence {lottery.lottery_reference}."
     )

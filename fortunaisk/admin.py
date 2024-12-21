@@ -1,40 +1,16 @@
-"""Django admin configuration for the FortunaIsk lottery application."""
+# fortunaisk/admin.py
+"""Configuration de l'administration Django pour l'application FortunaIsk."""
 
-# Third Party
-import requests
+# Standard Library
+import logging
 
 # Django
 from django.contrib import admin
-from django.contrib.auth.decorators import login_required, permission_required
-from django.shortcuts import render
-from django.utils import timezone
 
-from .models import (
-    Lottery,
-    LotterySettings,
-    TicketAnomaly,
-    TicketPurchase,
-    WebhookConfiguration,
-)
+from .models import Lottery, LotterySettings, TicketAnomaly, WebhookConfiguration
+from .utils import send_discord_webhook
 
-
-def send_discord_webhook_notification(message):
-    """
-    Send a notification to the configured Discord webhook.
-    """
-    webhook = (
-        WebhookConfiguration.objects.first()
-    )  # Get the first webhook configuration
-    if not webhook:
-        return  # No webhook configured, do nothing
-
-    payload = {"content": message}
-    try:
-        response = requests.post(webhook.webhook_url, json=payload, timeout=5)
-        if response.status_code != 204:
-            print(f"Failed to send webhook: {response.status_code} {response.text}")
-    except Exception as e:
-        print(f"Error sending webhook notification: {e}")
+logger = logging.getLogger(__name__)
 
 
 @admin.register(Lottery)
@@ -89,7 +65,7 @@ class LotteryAdmin(admin.ModelAdmin):
                 f"**Date de fin :** {obj.end_date.strftime('%Y-%m-%d %H:%M:%S')}\n"
                 f"**Récepteur des paiements :** {obj.payment_receiver}"
             )
-            send_discord_webhook_notification(message)
+            send_discord_webhook(message)
 
     @admin.action(description="Mark selected lotteries as completed")
     def mark_completed(self, request, queryset):
@@ -151,48 +127,3 @@ class WebhookConfigurationAdmin(admin.ModelAdmin):
         if WebhookConfiguration.objects.exists():
             return False
         return super().has_add_permission(request)
-
-
-@login_required
-@permission_required("fortunaisk.admin", raise_exception=True)
-def admin_dashboard(request):
-    active_lotteries = Lottery.objects.filter(status="active")
-    anomalies = TicketAnomaly.objects.all()
-
-    total_tickets = TicketPurchase.objects.count()
-    total_lotteries = Lottery.objects.count()
-    total_anomalies = anomalies.count()
-
-    completed_lotteries = Lottery.objects.filter(status="completed")
-    if completed_lotteries.exists():
-        avg_participation = (
-            sum(lot.participant_count for lot in completed_lotteries)
-            / completed_lotteries.count()
-        )
-    else:
-        avg_participation = 0
-
-    lotteries = Lottery.objects.all().order_by("id")
-    lottery_names = [lot.lottery_reference for lot in lotteries]
-    tickets_per_lottery = [
-        TicketPurchase.objects.filter(lottery=lot).count() for lot in lotteries
-    ]
-    total_pots = [lot.total_pot for lot in lotteries]
-
-    stats = {
-        "total_tickets": total_tickets,
-        "total_lotteries": total_lotteries,
-        "total_anomalies": total_anomalies,
-        "avg_participation": avg_participation,
-    }
-
-    context = {
-        "active_lotteries": active_lotteries,
-        "anomalies": anomalies,
-        "stats": stats,
-        "lottery_names": lottery_names,
-        "tickets_per_lottery": tickets_per_lottery,
-        "total_pots": total_pots,
-    }
-
-    return render(request, "fortunaisk/admin.html", context)

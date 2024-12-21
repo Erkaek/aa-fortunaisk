@@ -1,3 +1,4 @@
+<!-- fortunaisk/templates/fortunaisk/base.html -->
 {% extends "allianceauth/base-bs5.html" %}
 {% load i18n %}
 {% load navactive %}
@@ -13,7 +14,9 @@
 {% endblock head %}
 
 {% block header_nav_brand %}
-    {% trans "FortunaIsk" %}
+    <a class="navbar-brand" href="{% url 'fortunaisk:lottery' %}">
+        {% trans "FortunaIsk" %}
+    </a>
 {% endblock header_nav_brand %}
 
 {% block header_nav_collapse_left %}
@@ -27,7 +30,7 @@
         <li class="nav-item {% navactive request 'fortunaisk:lottery_history' %}">
             <a class="nav-link" href="{% url 'fortunaisk:lottery_history' %}">{% trans "Lottery History" %}</a>
         </li>
-        {% if perms.fortunaisk.admin %}
+        {% if perms.fortunaisk.admin_dashboard %}
         <li class="nav-item {% navactive request 'fortunaisk:ticket_purchases' %}">
             <a class="nav-link" href="{% url 'fortunaisk:ticket_purchases' %}">{% trans "Ticket Purchases" %}</a>
         </li>
@@ -47,12 +50,17 @@
         <li class="nav-item {% navactive request 'fortunaisk:user_dashboard' %}">
             <a class="nav-link" href="{% url 'fortunaisk:user_dashboard' %}">{% trans "My Dashboard" %}</a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'logout' %}">{% trans "Logout" %}</a>
+        </li>
+        {% else %}
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'login' %}">{% trans "Login" %}</a>
+        </li>
         {% endif %}
     </ul>
 {% endblock header_nav_collapse_right %}
 
 {% block content %}
-    <div class="container mt-4">
-        {% block details %}{% endblock %}
-    </div>
+    {% block details %}{% endblock %}
 {% endblock content %}

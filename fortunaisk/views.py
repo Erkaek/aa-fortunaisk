@@ -25,8 +25,9 @@ def lottery(request):
     lotteries_info = []
 
     for lot in active_lotteries:
-        corp_name = (
-            (
+        # Récupérer le nom de la corporation
+        if str(lot.payment_receiver).isdigit():
+            corp_name = (
                 EveCorporationInfo.objects.filter(
                     corporation_id=int(lot.payment_receiver)
                 )
@@ -34,15 +35,16 @@ def lottery(request):
                 .first()
                 or "Unknown Corporation"
             )
-            if str(lot.payment_receiver).isdigit()
-            else lot.payment_receiver
-        )
+        else:
+            corp_name = lot.payment_receiver
 
+        # Vérifier si l'utilisateur a déjà un ticket
         user_ticket_count = TicketPurchase.objects.filter(
             user=request.user, lottery=lot
         ).count()
         has_ticket = user_ticket_count > 0
 
+        # Instructions pour participer
         instructions = _(
             "To participate, send {ticket_price} ISK to {corp_name} with the reference '{lottery_reference}' in the payment reason."
         ).format(

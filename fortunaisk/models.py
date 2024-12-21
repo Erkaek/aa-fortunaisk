@@ -14,10 +14,14 @@ from solo.models import SingletonModel
 # Django
 from django.contrib.auth.models import User
 from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.utils import timezone
 
 # Alliance Auth
 from allianceauth.eveonline.models import EveCharacter
+
+from .utils import send_discord_webhook
 
 logger = logging.getLogger(__name__)
 
@@ -158,6 +162,27 @@ class Lottery(models.Model):
         super().delete(*args, **kwargs)
 
 
+@receiver(post_save, sender=Lottery)
+def notify_discord_on_lottery_creation(sender, instance, created, **kwargs):
+    """
+    Send a notification to Discord when a new Lottery is created.
+    """
+    if created:  # Only for new Lottery instances
+        settings = LotterySettings.objects.get_or_create()[0]
+        if not settings.discord_webhook:
+            return  # No webhook configured
+
+        message = (
+            f":tada: Une nouvelle loterie a été créée !\n"
+            f"**Référence :** {instance.lottery_reference}\n"
+            f"**Prix du ticket :** {instance.ticket_price} ISK\n"
+            f"**Date de fin :** {instance.end_date.strftime('%Y-%m-%d %H:%M:%S')}\n"
+            f"**Récepteur des paiements :** {instance.payment_receiver}"
+        )
+
+        send_discord_webhook(message)
+
+
 class TicketPurchase(models.Model):
     """
     Represents a ticket purchased by a user for a specific lottery.
@@ -289,21 +314,13 @@ class AutoLottery(models.Model):
         # Define the task name uniquely
         task_name = f"AutoLottery_{self.id}"
 
-        # Define the task arguments
-        task_args = json.dumps([self.id])
-
-        # Create or update the PeriodicTask
+        # Define or update the PeriodicTask
         PeriodicTask.objects.update_or_create(
             name=task_name,
             defaults={
                 "task": "fortunaisk.tasks.create_lottery_from_auto",
                 "interval": schedule,
-                "args": task_args,
-                "enabled": self.is_active,
+                "args": json.dumps([self.id]),
             },
         )
-
-    def delete(self, *args, **kwargs):
-        # Delete the associated PeriodicTask when deleting AutoLottery
-        PeriodicTask.objects.filter(name=f"AutoLottery_{self.id}").delete()
-        super().delete(*args, **kwargs)
+        logger.info(f"Periodic task '{task_name}' set for AutoLottery '{self.name}'.")
