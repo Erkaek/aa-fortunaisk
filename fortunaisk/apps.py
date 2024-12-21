@@ -4,13 +4,12 @@
 # Django
 from django.apps import AppConfig
 
-from .tasks import setup_tasks
 
-
-class FortunaIskConfig(AppConfig):
+class FortunaiskConfig(AppConfig):
     name = "fortunaisk"
 
     def ready(self):
-        # Define a signal receiver that accepts **kwargs
-        def run_setup_tasks(sender, **kwargs):
-            setup_tasks()  # Call your existing function
+        # Import here to ensure it is only executed after Django is fully loaded
+        from .tasks import setup_tasks
+
+        setup_tasks()
