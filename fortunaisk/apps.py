@@ -3,13 +3,14 @@
 
 # Django
 from django.apps import AppConfig
-from django.db.models.signals import post_migrate
+
+from .tasks import setup_tasks
 
 
-class FortunaiskConfig(AppConfig):
+class FortunaIskConfig(AppConfig):
     name = "fortunaisk"
 
     def ready(self):
-        from .tasks import setup_tasks
-
-        post_migrate.connect(setup_tasks, sender=self)
+        # Define a signal receiver that accepts **kwargs
+        def run_setup_tasks(sender, **kwargs):
+            setup_tasks()  # Call your existing function
