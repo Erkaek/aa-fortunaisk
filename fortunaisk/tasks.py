@@ -191,6 +191,7 @@ def process_wallet_tickets():
                         character=character,
                         amount=int(payment.amount),
                         purchase_date=timezone.now(),
+                        payment_id=payment.id,  # Enregistrer l'ID du paiement
                     )
                     logger.info(
                         f"Ticket enregistré pour l'utilisateur '{user.username}'."
@@ -217,7 +218,7 @@ def process_wallet_tickets():
                     reason=f"Erreur inattendue : {e}",
                     payment_date=payment.date,
                     amount=int(payment.amount),
-                    payment_id=payment_id,
+                    payment_id=payment.id,
                 )
                 logger.exception(
                     f"Erreur inattendue lors du traitement du paiement {payment.id} : {e}"

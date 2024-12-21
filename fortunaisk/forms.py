@@ -1,4 +1,5 @@
 # fortunaisk/forms.py
+
 # Django
 from django import forms
 from django.utils import timezone
@@ -7,6 +8,10 @@ from .models import AutoLottery, Lottery, LotterySettings
 
 
 class LotterySettingsForm(forms.ModelForm):
+    """
+    Form for managing global lottery settings.
+    """
+
     class Meta:
         model = LotterySettings
         fields = [
@@ -30,6 +35,10 @@ class LotterySettingsForm(forms.ModelForm):
 
 
 class LotteryCreateForm(forms.ModelForm):
+    """
+    Form for creating a new lottery.
+    """
+
     class Meta:
         model = Lottery
         fields = [
@@ -88,6 +97,10 @@ class LotteryCreateForm(forms.ModelForm):
 
 
 class AutoLotteryForm(forms.ModelForm):
+    """
+    Form for creating or editing an automatic lottery.
+    """
+
     class Meta:
         model = AutoLottery
         fields = [
