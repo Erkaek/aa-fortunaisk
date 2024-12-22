@@ -3,7 +3,6 @@
 # Standard Library
 import logging
 from decimal import Decimal
-from typing import TYPE_CHECKING
 
 # Django
 from django.contrib.auth.models import User
@@ -11,9 +10,6 @@ from django.db import models
 
 # Alliance Auth
 from allianceauth.eveonline.models import EveCharacter
-
-if TYPE_CHECKING:
-    from .lottery import Lottery
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +21,7 @@ class TicketPurchase(models.Model):
     """
 
     lottery = models.ForeignKey(
-        "fortunaisk.Lottery",
+        "fortunaisk.Lottery",  # string reference to avoid circular import
         on_delete=models.CASCADE,
         related_name="ticket_purchases",
         verbose_name="Lottery",
@@ -107,7 +103,7 @@ class TicketAnomaly(models.Model):
     """
 
     lottery = models.ForeignKey(
-        Lottery,
+        "fortunaisk.Lottery",  # string reference again
         on_delete=models.CASCADE,
         related_name="anomalies",
         verbose_name="Lottery",

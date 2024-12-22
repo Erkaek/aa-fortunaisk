@@ -1,4 +1,5 @@
 # fortunaisk/models/reward.py
+
 # Standard Library
 import logging
 

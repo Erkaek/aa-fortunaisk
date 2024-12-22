@@ -167,7 +167,8 @@ class AutoLottery(models.Model):
             duration_unit=self.duration_unit,
         )
         logger.info(
-            f"Created initial Lottery '{new_lottery.lottery_reference}' from AutoLottery '{self.name}'."
+            f"Created initial Lottery '{new_lottery.lottery_reference}' "
+            f"from AutoLottery '{self.name}'."
         )
 
     def save(self, *args: Any, **kwargs: Any) -> None:

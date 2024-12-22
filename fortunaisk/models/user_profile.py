@@ -1,4 +1,5 @@
 # fortunaisk/models/user_profile.py
+
 # Standard Library
 import logging
 
@@ -22,24 +23,22 @@ class UserProfile(models.Model):
     )
     points = models.PositiveIntegerField(default=0, verbose_name="User Points")
 
-    # "Reward" is imported locally to avoid circular import
     def _reward_model():
         from .reward import Reward
 
         return Reward
 
     rewards = models.ManyToManyField(
-        _reward_model(), blank=True, related_name="users", verbose_name="Rewards"
+        _reward_model(),
+        blank=True,
+        related_name="users",
+        verbose_name="Rewards",
     )
 
     def __str__(self) -> str:
         return f"Profile of {self.user.username}"
 
     def check_rewards(self) -> None:
-        """
-        Checks if the user is eligible for new rewards and assigns them.
-        Also triggers a Discord notification for newly granted rewards.
-        """
         # fortunaisk
         from fortunaisk.notifications import send_discord_notification
 
@@ -51,7 +50,6 @@ class UserProfile(models.Model):
 
         for reward in eligible_rewards:
             self.rewards.add(reward)
-            # Notify user via Discord
             send_discord_notification(
                 message=(f"{self.user.username} has earned the reward '{reward.name}'!")
             )

@@ -119,9 +119,6 @@ class Lottery(models.Model):
         # Additional logic for notifications or signals can happen via signals.py
 
     def notify_discord(self, embed: dict) -> None:
-        """
-        Send a Discord notification with an embed.
-        """
         # fortunaisk
         from fortunaisk.notifications import send_discord_notification
 
@@ -129,15 +126,11 @@ class Lottery(models.Model):
         logger.info(f"Discord notification sent: {embed}")
 
     def complete_lottery(self) -> None:
-        """
-        Complete the lottery, select winners, send a Discord notification.
-        """
         if self.status != "active":
             return
 
         self.status = "completed"
         winners = self.select_winners()
-
         if winners:
             embed = {
                 "title": "Lottery Completed!",
@@ -172,28 +165,21 @@ class Lottery(models.Model):
                     {"name": "Winners", "value": "No winners", "inline": False},
                 ],
             }
-
         self.notify_discord(embed)
         self.save()
 
     def select_winners(self):
-        """
-        Select winners based on the number of winners and distribution.
-        Returns a list of Winner objects created.
-        """
         tickets = TicketPurchase.objects.filter(lottery=self)
         if not tickets.exists():
             return []
 
         winners = []
         distributions = self.winners_distribution
-
         for idx, percentage in enumerate(distributions):
             if idx >= self.winner_count:
                 break
             random_ticket = tickets.order_by("?").first()
             if random_ticket and all(w.ticket != random_ticket for w in winners):
-                # create the winner
                 new_winner = Winner.objects.create(
                     character=random_ticket.character,
                     ticket=random_ticket,
@@ -201,11 +187,8 @@ class Lottery(models.Model):
                 )
                 winners.append(new_winner)
 
-                # add points to user
                 profile, _ = UserProfile.objects.get_or_create(user=random_ticket.user)
-                # example ratio: 1 point per 1000 ISK
                 profile.points += int(new_winner.prize_amount / 1000)
                 profile.save()
                 profile.check_rewards()
-
         return winners
