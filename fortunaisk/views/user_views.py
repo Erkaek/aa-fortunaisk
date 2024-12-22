@@ -26,9 +26,9 @@ def user_dashboard(request):
         .select_related("ticket__lottery", "character")
         .order_by("-won_at")
     )
-    # Rewards come from user.profile if it exists
-    user_profile = getattr(user, "profile", None)
-    rewards = user_profile.rewards.all() if user_profile else []
+    # Previously: user.profile
+    fortunaisk_profile = getattr(user, "fortunaisk_profile", None)
+    rewards = fortunaisk_profile.rewards.all() if fortunaisk_profile else []
 
     return render(
         request,
