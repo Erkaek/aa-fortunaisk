@@ -59,6 +59,7 @@
                             </div>
                         </div>
                         {% endif %}
+
                         <!-- 1) Basic Info -->
                         <div class="mb-4">
                             <div class="d-flex align-items-center mb-3">
@@ -334,11 +335,19 @@ document.addEventListener('DOMContentLoaded', function() {
             const container = FORM_ELEMENTS.distributionContainer;
             container.innerHTML = '';
 
-            for(let i = 0; i < count; i++) {
-                let value = 100 / count;
-                if (i === count -1) {
-                    // The last winner gets "the remainder" to ensure total=100
-                    value = 100 - (100 * (count -1)/ count);
+            for (let i = 0; i < count; i++) {
+                // Ex.: arrondi simple
+                let baseValue = 100 / count;
+                let value = Math.round(baseValue);
+                // si dernier indice => prendre le reste
+                if (i === count - 1) {
+                    // calcul de la somme déjà utilisée
+                    const usedInputs = container.querySelectorAll('.prize-distribution');
+                    let usedSum = 0;
+                    usedInputs.forEach(inp => {
+                        usedSum += parseInt(inp.value.trim()) || 0;
+                    });
+                    value = 100 - usedSum;
                 }
                 const field = this.createDistributionField(i, value);
                 container.appendChild(field);

@@ -25,6 +25,8 @@ class AutoLotteryForm(forms.ModelForm):
             "duration_unit",
             "winner_count",
             "winners_distribution",
+            "payment_receiver",
+            "max_tickets_per_user",
         ]
 
     def clean_winners_distribution(self) -> list[int]:
