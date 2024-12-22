@@ -29,11 +29,6 @@ def list_auto_lotteries(request):
 def create_auto_lottery(request):
     if request.method == "POST":
         form = AutoLotteryForm(request.POST)
-        if not form.is_valid():
-            print(
-                "DEBUG winners_distribution=", request.POST.get("winners_distribution")
-            )
-            print("DEBUG form errors:", form.errors)
         if form.is_valid():
             form.save()
             messages.success(request, "Automatic lottery created successfully.")
@@ -43,12 +38,19 @@ def create_auto_lottery(request):
     else:
         form = AutoLotteryForm()
 
-    # Calculer distribution_range
-    winner_count = form.instance.winner_count or form.data.get("winner_count", 1)
+    # Déterminer la plage de distribution basée sur le nombre de gagnants
+    if request.method == "POST":
+        winner_count = request.POST.get("winner_count", 1)
+    else:
+        winner_count = form.instance.winner_count or 1
+
     try:
         winner_count = int(winner_count)
+        if winner_count < 1:
+            winner_count = 1
     except (ValueError, TypeError):
         winner_count = 1
+
     distribution_range = range(winner_count)
 
     return render(
@@ -77,7 +79,7 @@ def edit_auto_lottery(request, autolottery_id):
     else:
         form = AutoLotteryForm(instance=autolottery)
 
-    # Déterminer le nombre de gagnants pour distribution_range
+    # Déterminer la plage de distribution basée sur le nombre de gagnants
     winner_count = form.instance.winner_count or 1
 
     try:

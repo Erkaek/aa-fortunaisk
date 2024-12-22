@@ -2,23 +2,40 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> **Disclaimer**: This project is in **active development** and **not ready** for production use.
+> **Avertissement** : Ce projet est en **développement actif** et **n'est pas prêt** pour une utilisation en production.
 
-FortunaISK is a monthly lottery module for [Alliance Auth](https://gitlab.com/allianceauth/allianceauth). Its goal is to streamline ticket purchases, automate payment verification, and provide a user-friendly interface to track winners and lottery history. However, as FortunaISK is still a work in progress, some features remain incomplete or are subject to change.
+FortunaISK est un module de loterie mensuelle pour [Alliance Auth](https://gitlab.com/allianceauth/allianceauth). Son objectif est de simplifier l'achat de billets, d'automatiser la vérification des paiements et de fournir une interface conviviale pour suivre les gagnants et l'historique des loteries. Cependant, comme FortunaISK est encore en cours de développement, certaines fonctionnalités restent incomplètes ou sont susceptibles de changer.
 
-## Features (Under Development)
+## Table des Matières
 
-- **Configurable Ticket Price & Reference**\
-  Define a custom ISK ticket price and assign unique lottery references.
-- **Automated Payment Verification**\
-  Integrates with `allianceauth-corp-tools` (in progress) to monitor wallet transactions and validate ticket purchases.
-- **Winners History**\
-  Upcoming UI component to display past winners, their prize amounts, and other relevant details.
+- [Fonctionnalités (En Développement)](#fonctionnalités-en-développement)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Exécution de l'Application](#exécution-de-lapplication)
+- [Configuration de Celery et des Tâches Périodiques](#configuration-de-celery-et-des-tâches-périodiques)
+- [Utilisation](#utilisation)
+- [Plans Futurs](#plans-futurs)
+- [Licence](#licence)
 
-## Future Plans
+## Fonctionnalités (En Développement)
 
-Additional features, comprehensive documentation, and usage instructions will become available once FortunaISK is closer to a stable release.
+- **Prix des Billets & Référence Configurables**\
+  Définissez un prix de billet en ISK personnalisé et assignez des références de loterie uniques.
 
-## License
+- **Vérification Automatisée des Paiements**\
+  Intègre `allianceauth-corp-tools` (en cours) pour surveiller les transactions de portefeuille et valider les achats de billets.
 
-This project is licensed under the [MIT License](LICENSE).
+- **Historique des Gagnants**\
+  Composant UI à venir pour afficher les gagnants passés, leurs montants de prix et d'autres détails pertinents.
+
+## Installation
+
+### **Prérequis**
+
+- **Système d'Exploitation :** Basé sur Linux (testé sur Ubuntu 20.04+)
+- **Python :** 3.8 ou supérieur
+- **Django :** Compatible avec la version utilisée par votre installation Alliance Auth
+- **Base de Données :** PostgreSQL (recommandé) ou autres bases de données supportées
+- **Celery :** Pour le traitement asynchrone des tâches
+- **Redis ou RabbitMQ :** Comme courtier de messages pour Celery
+- **Alliance Auth :** Déjà installé et configuré
