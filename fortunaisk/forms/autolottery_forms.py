@@ -29,19 +29,35 @@ class AutoLotteryForm(forms.ModelForm):
             "max_tickets_per_user",
         ]
 
-    def clean_winners_distribution(self) -> list[int]:
-        distribution = self.cleaned_data.get("winners_distribution", [])
+    def clean_winners_distribution(self):
+        distribution_str = self.cleaned_data.get("winners_distribution", "")
         winner_count = self.cleaned_data.get("winner_count", 0)
 
-        if not isinstance(distribution, list):
-            raise ValidationError("Please enter a valid list of percentages.")
-        if len(distribution) != winner_count:
+        # 1) Convertir la chaîne "70,20,10" en [70, 20, 10]
+        if isinstance(distribution_str, str):
+            try:
+                distribution_list = [
+                    int(x) for x in distribution_str.split(",") if x.strip()
+                ]
+            except ValueError:
+                raise ValidationError(
+                    "Please enter valid integers separated by commas."
+                )
+        else:
             raise ValidationError(
-                f"Distribution length ({len(distribution)}) does not match the number of winners ({winner_count})."
+                "Please enter a valid comma-separated list of percentages."
             )
-        if sum(distribution) != 100:
-            raise ValidationError("The sum of percentages must be 100.")
-        return distribution
+
+        # 2) Vérifications
+        if len(distribution_list) != winner_count:
+            raise ValidationError(
+                "Distribution length does not match number of winners."
+            )
+
+        if sum(distribution_list) != 100:
+            raise ValidationError("The sum of distribution must be 100.")
+
+        return distribution_list
 
     def save(self, commit: bool = True) -> AutoLottery:
         instance = super().save(commit=False)
