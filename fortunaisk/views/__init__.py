@@ -8,6 +8,7 @@ from .autolottery_views import (
     list_auto_lotteries,
 )
 from .lottery_views import (
+    create_lottery,
     lottery,
     lottery_history,
     lottery_participants,
@@ -30,4 +31,5 @@ __all__ = [
     "lottery_history",
     "terminate_lottery",
     "user_dashboard",
+    "create_lottery",
 ]
