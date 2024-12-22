@@ -3,6 +3,7 @@
 # Standard Library
 import logging
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 # Django
 from django.contrib.auth.models import User
@@ -10,6 +11,9 @@ from django.db import models
 
 # Alliance Auth
 from allianceauth.eveonline.models import EveCharacter
+
+if TYPE_CHECKING:
+    from .lottery import Lottery
 
 logger = logging.getLogger(__name__)
 
@@ -20,10 +24,8 @@ class TicketPurchase(models.Model):
     Links a user and optionally an EveCharacter to the purchase.
     """
 
-    from .lottery import Lottery
-
     lottery = models.ForeignKey(
-        Lottery,
+        "fortunaisk.Lottery",
         on_delete=models.CASCADE,
         related_name="ticket_purchases",
         verbose_name="Lottery",
@@ -103,8 +105,6 @@ class TicketAnomaly(models.Model):
     Represents any anomaly detected during ticket processing.
     E.g., payment outside lottery period, user exceeding max tickets, etc.
     """
-
-    from .lottery import Lottery
 
     lottery = models.ForeignKey(
         Lottery,
