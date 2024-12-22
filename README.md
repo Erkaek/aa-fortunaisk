@@ -8,11 +8,11 @@ FortunaISK est un module de loterie mensuelle pour [Alliance Auth](https://gitla
 
 ## Table des Matières
 
-- [Fonctionnalités (En Développement)](#fonctionnalités-en-développement)
+- [Fonctionnalités (En Développement)](#fonctionnalit%C3%A9s-en-d%C3%A9veloppement)
 - [Installation](#installation)
 - [Configuration](#configuration)
-- [Exécution de l'Application](#exécution-de-lapplication)
-- [Configuration de Celery et des Tâches Périodiques](#configuration-de-celery-et-des-tâches-périodiques)
+- [Exécution de l'Application](#ex%C3%A9cution-de-lapplication)
+- [Configuration de Celery et des Tâches Périodiques](#configuration-de-celery-et-des-t%C3%A2ches-p%C3%A9riodiques)
 - [Utilisation](#utilisation)
 - [Plans Futurs](#plans-futurs)
 - [Licence](#licence)
