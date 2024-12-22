@@ -77,8 +77,16 @@ def edit_auto_lottery(request, autolottery_id):
     else:
         form = AutoLotteryForm(instance=autolottery)
 
-    # Pareil, on calcule distribution_range
-    winner_count = form.instance.winner_count or 0
+    # Déterminer le nombre de gagnants pour distribution_range
+    winner_count = form.instance.winner_count or 1
+
+    try:
+        winner_count = int(winner_count)
+        if winner_count < 1:
+            winner_count = 1
+    except (ValueError, TypeError):
+        winner_count = 1
+
     distribution_range = range(winner_count)
 
     return render(

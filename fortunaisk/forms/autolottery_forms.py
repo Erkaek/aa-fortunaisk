@@ -1,76 +1,54 @@
-# fortunaisk/forms/autolottery_forms.py
+# fortunaisk/views/autolottery_views.py
+
+# Standard Library
+import logging
 
 # Django
-from django import forms
-from django.core.exceptions import ValidationError
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required, permission_required
+from django.shortcuts import redirect, render
 
 # fortunaisk
-from fortunaisk.models import AutoLottery, LotterySettings
+from fortunaisk.forms import AutoLotteryForm
+
+logger = logging.getLogger(__name__)
 
 
-class AutoLotteryForm(forms.ModelForm):
-    """
-    Form for creating or editing an AutoLottery.
-    """
-
-    class Meta:
-        model = AutoLottery
-        fields = [
-            "is_active",
-            "name",
-            "frequency",
-            "frequency_unit",
-            "ticket_price",
-            "duration_value",
-            "duration_unit",
-            "winner_count",
-            "winners_distribution",
-            "payment_receiver",
-            "max_tickets_per_user",
-        ]
-
-    def clean_winners_distribution(self):
-        distribution_str = self.cleaned_data.get("winners_distribution", "")
-        winner_count = self.cleaned_data.get("winner_count", 0)
-
-        # 1) Convertir la chaîne "70,20,10" en [70, 20, 10]
-        if isinstance(distribution_str, str):
-            try:
-                distribution_list = [
-                    float(x) for x in distribution_str.split(",") if x.strip()
-                ]
-            except ValueError:
-                raise ValidationError("Please enter valid numbers separated by commas.")
+@login_required
+@permission_required("fortunaisk.add_autolottery", raise_exception=True)
+def create_auto_lottery(request):
+    if request.method == "POST":
+        form = AutoLotteryForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Automatic lottery created successfully.")
+            return redirect("fortunaisk:auto_lottery_list")
         else:
-            raise ValidationError(
-                "Please enter a valid comma-separated list of percentages."
-            )
+            messages.error(request, "Please correct the errors below.")
+    else:
+        form = AutoLotteryForm()
 
-        # 2) Vérifications
-        if len(distribution_list) != winner_count:
-            raise ValidationError(
-                "Distribution length does not match number of winners."
-            )
+    # Déterminer le nombre de gagnants pour distribution_range
+    if request.method == "POST":
+        winner_count = request.POST.get("winner_count", 1)
+    else:
+        winner_count = form.instance.winner_count or 1
 
-        if round(sum(distribution_list), 2) != 100.00:
-            raise ValidationError("The sum of distribution must be 100.")
+    try:
+        winner_count = int(winner_count)
+        if winner_count < 1:
+            winner_count = 1
+    except (ValueError, TypeError):
+        winner_count = 1
 
-        # Optionnel: Arrondir les valeurs à deux décimales
-        distribution_list = [round(x, 2) for x in distribution_list]
+    distribution_range = range(winner_count)
 
-        return distribution_list
-
-    def save(self, commit: bool = True) -> AutoLottery:
-        instance = super().save(commit=False)
-        # auto-assign payment receiver from settings
-        lottery_settings = LotterySettings.objects.first()
-        if lottery_settings:
-            instance.payment_receiver = lottery_settings.default_payment_receiver
-
-        # set max tickets to 1 if not set
-        if instance.max_tickets_per_user < 1:
-            instance.max_tickets_per_user = 1
-
-        if commit:
-            instance.save()
-        return instance
+    return render(
+        request,
+        "fortunaisk/lottery_form.html",
+        {
+            "form": form,
+            "is_auto_lottery": True,
+            "distribution_range": distribution_range,  # Passer la variable
+        },
+    )

@@ -116,13 +116,34 @@ def create_lottery(request):
             form.save()
             messages.success(request, "Lottery created successfully.")
             return redirect("fortunaisk:lottery")
+        else:
+            messages.error(request, "Please correct the errors below.")
     else:
         form = LotteryCreateForm()
+
+    # Déterminer le nombre de gagnants pour distribution_range
+    if request.method == "POST":
+        winner_count = request.POST.get("winner_count", 1)
+    else:
+        winner_count = form.instance.winner_count or 1
+
+    try:
+        winner_count = int(winner_count)
+        if winner_count < 1:
+            winner_count = 1
+    except (ValueError, TypeError):
+        winner_count = 1
+
+    distribution_range = range(winner_count)
 
     return render(
         request,
         "fortunaisk/lottery_form.html",
-        {"form": form, "is_auto_lottery": False},
+        {
+            "form": form,
+            "is_auto_lottery": False,
+            "distribution_range": distribution_range,  # Passer la variable
+        },
     )
 
 

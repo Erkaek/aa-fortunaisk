@@ -284,7 +284,7 @@ document.addEventListener('DOMContentLoaded', function() {
     class FormValidator {
         static validateDistribution(distributions) {
             if (!distributions || distributions.length === 0) return false;
-            const numbers = distributions.map(n => parseInt(n.value.trim())).filter(n => !isNaN(n));
+            const numbers = distributions.map(n => parseFloat(n.value.trim())).filter(n => !isNaN(n));
             const total = numbers.reduce((a, b) => a + b, 0);
             return total === 100;
         }
@@ -308,14 +308,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-        class PrizeDistributionHandler {
+    class PrizeDistributionHandler {
         static createDistributionField(index, value = 100.00) {
             const div = document.createElement('div');
             div.className = 'input-group mb-2';
 
             const prepend = document.createElement('span');
             prepend.className = 'input-group-text';
-            prepend.textContent = `Winner ${index + 1} %`;
+            prepend.textContent = `Gagnant ${index + 1} %`;
 
             const input = document.createElement('input');
             input.type = 'number';
@@ -353,7 +353,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     }
-    }
 
     class PriceFormatter {
         static handleBlur(event) {
@@ -365,7 +364,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function initializeEventListeners() {
-        // If user changes winner_count, update distribution fields
+        // Si l'utilisateur change le nombre de gagnants, mettre à jour les champs de distribution
         FORM_ELEMENTS.winnerCount?.addEventListener('input', function(e) {
             const count = parseInt(e.target.value);
             if (!isNaN(count) && count > 0) {
@@ -375,26 +374,24 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        // Initialize distribution fields on load
+        // Initialiser les champs de distribution au chargement
         const initialCount = parseInt(FORM_ELEMENTS.winnerCount?.value) || 1;
         PrizeDistributionHandler.updateDistributionFields(initialCount);
 
-        // Format the ticket_price on blur
+        // Formater le prix du ticket au blur
         const priceInput = document.getElementById('id_ticket_price');
         priceInput?.addEventListener('blur', PriceFormatter.handleBlur);
 
-        // Validate distribution on form submit
+        // Valider la distribution au submit du formulaire
         FORM_ELEMENTS.form?.addEventListener('submit', function(event) {
             let isValid = true;
 
-            // Collect all distribution entries
-            const distributionEntries = FORM_ELEMENTS.distributionContainer.querySelectorAll('.prize-distribution_entry');
-            // Alternatively, since we renamed to 'winners_distribution_entry':
+            // Collecter toutes les entrées de distribution
             const distributionElems = FORM_ELEMENTS.distributionContainer.querySelectorAll('.prize-distribution');
 
             let distributionValues = [];
             distributionElems.forEach(input => {
-                const val = parseInt(input.value.trim());
+                const val = parseFloat(input.value.trim());
                 if (isNaN(val) || val < 0 || val > 100) {
                     FormValidator.showError(input, 'Veuillez entrer une valeur entre 0 et 100.');
                     isValid = false;
@@ -413,7 +410,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             }
 
-            // Set the hidden input value
+            // Définir la valeur du champ caché
             const distributionStr = distributionValues.join(',');
             const distributionInput = document.getElementById('id_winners_distribution');
             if (distributionInput) {

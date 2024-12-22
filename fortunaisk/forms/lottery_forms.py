@@ -32,30 +32,40 @@ class LotteryCreateForm(forms.ModelForm):
             "start_date": forms.DateTimeInput(attrs={"type": "datetime-local"}),
         }
 
-    def clean(self) -> dict:
-        cleaned_data = super().clean()
-        start_date = cleaned_data.get("start_date")
-        end_date = cleaned_data.get("end_date")
+    def clean_winners_distribution(self):
+        distribution_str = self.cleaned_data.get("winners_distribution", "")
+        winner_count = self.cleaned_data.get("winner_count", 0)
 
-        if start_date and end_date:
-            if end_date <= start_date:
-                raise ValidationError("End date must be strictly after start date.")
-
-        # check distribution
-        distribution = cleaned_data.get("winners_distribution", [])
-        winner_count = cleaned_data.get("winner_count", 0)
-        if not isinstance(distribution, list):
-            raise ValidationError("Winners distribution must be a list.")
-        if len(distribution) != winner_count:
+        # 1) Convertir la chaîne "70,20,10" en [70, 20, 10]
+        if isinstance(distribution_str, str):
+            try:
+                distribution_list = [
+                    float(x) for x in distribution_str.split(",") if x.strip()
+                ]
+            except ValueError:
+                raise ValidationError(
+                    "Veuillez entrer des nombres valides séparés par des virgules."
+                )
+        elif isinstance(distribution_str, list):
+            distribution_list = distribution_str
+        else:
             raise ValidationError(
-                f"The distribution length ({len(distribution)}) does not match the number of winners ({winner_count})."
-            )
-        if sum(distribution) != 100:
-            raise ValidationError(
-                "The sum of the distribution percentages must be 100."
+                "Veuillez entrer une liste valide de pourcentages séparés par des virgules."
             )
 
-        return cleaned_data
+        # 2) Vérifications
+        if len(distribution_list) != winner_count:
+            raise ValidationError(
+                "La longueur de la répartition ne correspond pas au nombre de gagnants."
+            )
+
+        if round(sum(distribution_list), 2) != 100.00:
+            raise ValidationError("La somme de la répartition doit être égale à 100.")
+
+        # Optionnel: Arrondir les valeurs à deux décimales
+        distribution_list = [round(x, 2) for x in distribution_list]
+
+        return distribution_list
 
     def save(self, commit: bool = True) -> Lottery:
         instance = super().save(commit=False)
@@ -69,7 +79,7 @@ class LotteryCreateForm(forms.ModelForm):
             instance.lottery_reference = Lottery.generate_unique_reference()
 
         # If max tickets was not specified, fallback to 1
-        if instance.max_tickets_per_user is None:
+        if instance.max_tickets_per_user is None or instance.max_tickets_per_user < 1:
             instance.max_tickets_per_user = 1
 
         # Force the start_date if blank

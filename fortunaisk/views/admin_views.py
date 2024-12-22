@@ -5,7 +5,7 @@ import logging
 
 # Django
 from django.contrib.auth.decorators import login_required, permission_required
-from django.db.models import Count, Sum
+from django.db.models import Avg, Count, Sum
 from django.shortcuts import render
 
 # fortunaisk
@@ -35,10 +35,7 @@ def admin_dashboard(request):
         "total_lotteries": lotteries.count(),
         "total_tickets": ticket_purchases.aggregate(total=Sum("amount"))["total"] or 0,
         "total_anomalies": anomalies.count(),
-        "avg_participation": active_lotteries.aggregate(avg=Count("participant_count"))[
-            "avg"
-        ]
-        or 0,
+        "avg_participation": active_lotteries.aggregate(avg=Avg("tickets"))["avg"] or 0,
     }
 
     # Anomalies per lottery
@@ -58,11 +55,11 @@ def admin_dashboard(request):
         .annotate(ticket_count=Count("id"))
         .order_by("-ticket_count")[:10]
     )
-    # on récupère deux listes distinctes
+    # Récupérer deux listes distinctes
     top_users_names = [item["user__username"] for item in top_users]
     top_users_tickets = [item["ticket_count"] for item in top_users]
 
-    # NOUS ZIPpons les deux listes en Python
+    # ZIP les deux listes en Python
     top_active_users = zip(top_users_names, top_users_tickets)
 
     context = {
@@ -76,10 +73,10 @@ def admin_dashboard(request):
             active_lotteries.values_list("lottery_reference", flat=True)
         ),
         "tickets_per_lottery": list(active_lotteries.values_list("tickets", flat=True)),
-        "total_pots": list(active_lotteries.values_list("total_pot", flat=True)),
+        # Vérifiez si 'total_pot' existe. Si non, commentez ou ajustez cette ligne
+        # "total_pots": list(active_lotteries.values_list("total_pot", flat=True)),
         "anomaly_lottery_names": anomaly_lottery_names,
         "anomalies_per_lottery": anomalies_per_lottery,
-        # ON PASSE top_active_users au template
         "top_active_users": top_active_users,
     }
 
