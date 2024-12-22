@@ -1,3 +1,5 @@
+# fortunaisk/templatetags/my_filters.py
+
 # Django
 from django import template
 
@@ -6,9 +8,7 @@ register = template.Library()
 
 @register.filter
 def index(sequence, position):
-    """
-    Retourne sequence[position] si possible, sinon chaîne vide.
-    """
+    """Returns the item at the given position in the sequence."""
     try:
         return sequence[position]
     except (IndexError, TypeError, ValueError):

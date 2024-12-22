@@ -156,18 +156,18 @@
                             </div>
                             <div class="row g-3">
                                 <div class="col-md-6">
-                                    <label class="form-label">
+                                    <label for="{{ form.payment_receiver.id_for_label }}" class="form-label">
                                         {% trans "Payment Receiver" %}
                                     </label>
                                     <div class="input-group">
                                         <span class="input-group-text">
                                             <i class="fas fa-user"></i>
                                         </span>
-                                        <input type="number"
-                                               class="form-control"
-                                               value="{{ form.initial.payment_receiver }}"
-                                               >
+                                        {{ form.payment_receiver }}
                                     </div>
+                                    {% if form.payment_receiver.errors %}
+                                        <div class="text-danger mt-1">{{ form.payment_receiver.errors|striptags }}</div>
+                                    {% endif %}
                                 </div>
                                 <div class="col-md-6">
                                     <label for="{{ form.winner_count.id_for_label }}" class="form-label">
@@ -195,7 +195,7 @@
                                                 {% trans "Winner" %} {{ idx|add:"1" }}%
                                             </span>
                                             <input type="number"
-                                                   name="winners_distribution"
+                                                   name="winners_distribution_entry"
                                                    class="form-control prize-distribution"
                                                    value="{{ form.instance.winners_distribution|index:idx }}"
                                                    min="0"
@@ -205,6 +205,8 @@
                                         </div>
                                         {% endfor %}
                                     </div>
+                                    <!-- Champ caché pour la répartition des gagnants -->
+                                    <input type="hidden" id="id_winners_distribution" name="winners_distribution" value="">
                                     {% if form.winners_distribution.errors %}
                                         <div class="text-danger mt-1">
                                             {{ form.winners_distribution.errors|striptags }}
@@ -222,15 +224,18 @@
                             </div>
                             <div class="row g-3">
                                 <div class="col-md-6">
-                                    <label class="form-label">
+                                    <label for="{{ form.max_tickets_per_user.id_for_label }}" class="form-label">
                                         {% trans "Max Tickets Per User" %}
                                     </label>
                                     <div class="input-group">
                                         <span class="input-group-text">
                                             <i class="fas fa-ticket-alt"></i>
                                         </span>
-                                        <input type="number" class="form-control" value="1" min="1">
+                                        {{ form.max_tickets_per_user }}
                                     </div>
+                                    {% if form.max_tickets_per_user.errors %}
+                                        <div class="text-danger mt-1">{{ form.max_tickets_per_user.errors|striptags }}</div>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
@@ -303,8 +308,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    class PrizeDistributionHandler {
-        static createDistributionField(index, value = 100) {
+        class PrizeDistributionHandler {
+        static createDistributionField(index, value = 100.00) {
             const div = document.createElement('div');
             div.className = 'input-group mb-2';
 
@@ -316,8 +321,9 @@ document.addEventListener('DOMContentLoaded', function() {
             input.type = 'number';
             input.min = '0';
             input.max = '100';
+            input.step = '0.01';  // Permettre deux décimales
             input.className = 'form-control prize-distribution';
-            input.value = value;
+            input.value = value.toFixed(2);
             input.required = true;
 
             const append = document.createElement('span');
@@ -335,24 +341,18 @@ document.addEventListener('DOMContentLoaded', function() {
             const container = FORM_ELEMENTS.distributionContainer;
             container.innerHTML = '';
 
+            let usedSum = 0;
             for (let i = 0; i < count; i++) {
-                // Ex.: arrondi simple
-                let baseValue = 100 / count;
-                let value = Math.round(baseValue);
-                // si dernier indice => prendre le reste
+                let value = parseFloat((100 / count).toFixed(2));
                 if (i === count - 1) {
-                    // calcul de la somme déjà utilisée
-                    const usedInputs = container.querySelectorAll('.prize-distribution');
-                    let usedSum = 0;
-                    usedInputs.forEach(inp => {
-                        usedSum += parseInt(inp.value.trim()) || 0;
-                    });
-                    value = 100 - usedSum;
+                    value = parseFloat((100 - usedSum).toFixed(2));
                 }
+                usedSum += value;
                 const field = this.createDistributionField(i, value);
                 container.appendChild(field);
             }
         }
+    }
     }
 
     class PriceFormatter {
@@ -375,7 +375,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        // We'll forcibly re-init distribution fields on load
+        // Initialize distribution fields on load
         const initialCount = parseInt(FORM_ELEMENTS.winnerCount?.value) || 1;
         PrizeDistributionHandler.updateDistributionFields(initialCount);
 
@@ -387,18 +387,11 @@ document.addEventListener('DOMContentLoaded', function() {
         FORM_ELEMENTS.form?.addEventListener('submit', function(event) {
             let isValid = true;
 
-            // Check required fields
-            this.querySelectorAll('input[required]').forEach(input => {
-                if (!input.value) {
-                    FormValidator.showError(input, ERROR_MESSAGES.required);
-                    isValid = false;
-                } else {
-                    FormValidator.removeError(input);
-                }
-            });
-
-            // Check distribution
+            // Collect all distribution entries
+            const distributionEntries = FORM_ELEMENTS.distributionContainer.querySelectorAll('.prize-distribution_entry');
+            // Alternatively, since we renamed to 'winners_distribution_entry':
             const distributionElems = FORM_ELEMENTS.distributionContainer.querySelectorAll('.prize-distribution');
+
             let distributionValues = [];
             distributionElems.forEach(input => {
                 const val = parseInt(input.value.trim());
@@ -420,16 +413,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             }
 
+            // Set the hidden input value
+            const distributionStr = distributionValues.join(',');
+            const distributionInput = document.getElementById('id_winners_distribution');
+            if (distributionInput) {
+                distributionInput.value = distributionStr;
+            }
+
             if (!isValid) {
                 event.preventDefault();
                 event.stopPropagation();
-            } else {
-                // Convert distribution to string
-                const distributionStr = distributionValues.join(',');
-                const distributionInput = document.getElementById('id_winners_distribution');
-                if (distributionInput) {
-                    distributionInput.value = distributionStr;
-                }
             }
         });
     }

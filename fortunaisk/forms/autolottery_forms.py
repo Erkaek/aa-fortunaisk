@@ -37,12 +37,10 @@ class AutoLotteryForm(forms.ModelForm):
         if isinstance(distribution_str, str):
             try:
                 distribution_list = [
-                    int(x) for x in distribution_str.split(",") if x.strip()
+                    float(x) for x in distribution_str.split(",") if x.strip()
                 ]
             except ValueError:
-                raise ValidationError(
-                    "Please enter valid integers separated by commas."
-                )
+                raise ValidationError("Please enter valid numbers separated by commas.")
         else:
             raise ValidationError(
                 "Please enter a valid comma-separated list of percentages."
@@ -54,8 +52,11 @@ class AutoLotteryForm(forms.ModelForm):
                 "Distribution length does not match number of winners."
             )
 
-        if sum(distribution_list) != 100:
+        if round(sum(distribution_list), 2) != 100.00:
             raise ValidationError("The sum of distribution must be 100.")
+
+        # Optionnel: Arrondir les valeurs à deux décimales
+        distribution_list = [round(x, 2) for x in distribution_list]
 
         return distribution_list
 
