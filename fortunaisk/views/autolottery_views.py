@@ -37,8 +37,19 @@ def create_auto_lottery(request):
             messages.error(request, "Please correct the errors below.")
     else:
         form = AutoLotteryForm()
+
+    # Calculer distribution_range :
+    winner_count = form.instance.winner_count or 0
+    distribution_range = range(winner_count)
+
     return render(
-        request, "fortunaisk/lottery_form.html", {"form": form, "is_auto_lottery": True}
+        request,
+        "fortunaisk/lottery_form.html",
+        {
+            "form": form,
+            "is_auto_lottery": True,
+            "distribution_range": distribution_range,  # On passe la variable
+        },
     )
 
 
@@ -56,8 +67,19 @@ def edit_auto_lottery(request, autolottery_id):
             messages.error(request, "Please correct the errors below.")
     else:
         form = AutoLotteryForm(instance=autolottery)
+
+    # Pareil, on calcule distribution_range
+    winner_count = form.instance.winner_count or 0
+    distribution_range = range(winner_count)
+
     return render(
-        request, "fortunaisk/lottery_form.html", {"form": form, "is_auto_lottery": True}
+        request,
+        "fortunaisk/lottery_form.html",
+        {
+            "form": form,
+            "is_auto_lottery": True,
+            "distribution_range": distribution_range,
+        },
     )
 
 

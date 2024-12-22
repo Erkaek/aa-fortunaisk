@@ -15,9 +15,9 @@
 <div class="container mt-4">
     <div class="row justify-content-center">
         <div class="col-12 col-lg-10">
-            <!-- Carte principale -->
+            <!-- Main card -->
             <div class="card shadow-lg">
-                <!-- En-tête -->
+                <!-- Header -->
                 <div class="card-header {% if is_auto_lottery %}bg-success{% else %}bg-primary{% endif %} text-white py-3">
                     <div class="d-flex align-items-center">
                         <i class="fas {% if is_auto_lottery %}fa-sync{% else %}fa-ticket-alt{% endif %} fa-2x me-3"></i>
@@ -39,14 +39,13 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- Corps du formulaire -->
+                <!-- Body -->
                 <div class="card-body p-4">
                     <form method="post" class="needs-validation" novalidate>
                         {% csrf_token %}
 
                         {% if is_auto_lottery %}
-                        <!-- Enable Automatic Lottery Switch -->
+                        <!-- is_active Switch -->
                         <div class="mb-4 p-3 bg-light rounded">
                             <div class="d-flex align-items-center">
                                 <div class="form-check form-switch">
@@ -59,34 +58,34 @@
                             </div>
                         </div>
                         {% endif %}
-                        <!-- Section 1: Informations de Base -->
+                        <!-- 1) Basic Info -->
                         <div class="mb-4">
                             <div class="d-flex align-items-center mb-3">
                                 <i class="fas fa-info-circle text-primary me-2"></i>
                                 <h5 class="mb-0">{% trans "Basic Information" %}</h5>
                             </div>
-
                             <div class="row g-3">
                                 {% if is_auto_lottery %}
-                                <!-- Nom (Auto Lottery uniquement) -->
                                 <div class="col-md-6">
                                     <label for="{{ form.name.id_for_label }}" class="form-label">
                                         {% trans "Lottery Name" %}*
                                     </label>
                                     <div class="input-group">
-                                        <span class="input-group-text"><i class="fas fa-tag"></i></span>
+                                        <span class="input-group-text">
+                                            <i class="fas fa-tag"></i>
+                                        </span>
                                         {{ form.name }}
                                     </div>
                                     {% if form.name.errors %}
                                         <div class="text-danger mt-1">{{ form.name.errors|striptags }}</div>
                                     {% endif %}
                                 </div>
-
-                                <!-- Fréquence -->
                                 <div class="col-md-6 frequency-section">
                                     <label class="form-label">{% trans "Frequency" %}*</label>
                                     <div class="input-group">
-                                        <span class="input-group-text"><i class="fas fa-clock"></i></span>
+                                        <span class="input-group-text">
+                                            <i class="fas fa-clock"></i>
+                                        </span>
                                         {{ form.frequency }}
                                         {{ form.frequency_unit }}
                                     </div>
@@ -96,13 +95,14 @@
                                 </div>
                                 {% endif %}
 
-                                <!-- Prix du ticket -->
                                 <div class="col-md-6">
                                     <label for="{{ form.ticket_price.id_for_label }}" class="form-label">
                                         {% trans "Ticket Price (ISK)" %}*
                                     </label>
                                     <div class="input-group">
-                                        <span class="input-group-text"><i class="fas fa-coins"></i></span>
+                                        <span class="input-group-text">
+                                            <i class="fas fa-coins"></i>
+                                        </span>
                                         {{ form.ticket_price }}
                                         <span class="input-group-text">ISK</span>
                                     </div>
@@ -110,15 +110,15 @@
                                         <div class="text-danger mt-1">{{ form.ticket_price.errors|striptags }}</div>
                                     {% endif %}
                                 </div>
-
-                                <!-- Date de fin ou Durée -->
                                 <div class="col-md-6">
                                     {% if is_auto_lottery %}
                                     <label for="{{ form.duration_value.id_for_label }}" class="form-label">
                                         {% trans "Duration" %}*
                                     </label>
                                     <div class="input-group">
-                                        <span class="input-group-text"><i class="fas fa-hourglass-half"></i></span>
+                                        <span class="input-group-text">
+                                            <i class="fas fa-hourglass-half"></i>
+                                        </span>
                                         {{ form.duration_value }}
                                         {{ form.duration_unit }}
                                     </div>
@@ -130,10 +130,14 @@
                                         {% trans "End Date" %}*
                                     </label>
                                     <div class="input-group">
-                                        <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                                        <span class="input-group-text">
+                                            <i class="fas fa-calendar-alt"></i>
+                                        </span>
                                         {{ form.end_date }}
                                     </div>
-                                    <div class="form-text">{% trans "Format: YYYY-MM-DD HH:MM" %}</div>
+                                    <div class="form-text">
+                                        {% trans "Format: YYYY-MM-DD HH:MM" %}
+                                    </div>
                                     {% if form.end_date.errors %}
                                         <div class="text-danger mt-1">{{ form.end_date.errors|striptags }}</div>
                                     {% endif %}
@@ -142,89 +146,102 @@
                             </div>
                         </div>
 
-                        <!-- Section 2: Configuration des Gagnants -->
+                        <!-- 2) Winners Configuration -->
                         <div class="mb-4">
                             <div class="d-flex align-items-center mb-3">
                                 <i class="fas fa-trophy text-warning me-2"></i>
                                 <h5 class="mb-0">{% trans "Winners Configuration" %}</h5>
                             </div>
-
                             <div class="row g-3">
-                                <!-- Récepteur des paiements (défini par défaut) -->
                                 <div class="col-md-6">
                                     <label class="form-label">
                                         {% trans "Payment Receiver" %}
                                     </label>
                                     <div class="input-group">
-                                        <span class="input-group-text"><i class="fas fa-user"></i></span>
-                                        <input type="number" class="form-control" value="{{ form.initial.payment_receiver }}" readonly>
+                                        <span class="input-group-text">
+                                            <i class="fas fa-user"></i>
+                                        </span>
+                                        <input type="number"
+                                               class="form-control"
+                                               value="{{ form.initial.payment_receiver }}"
+                                               readonly>
                                     </div>
                                 </div>
-
-                                <!-- Nombre de gagnants -->
                                 <div class="col-md-6">
                                     <label for="{{ form.winner_count.id_for_label }}" class="form-label">
                                         {% trans "Number of Winners" %}*
                                     </label>
                                     <div class="input-group">
-                                        <span class="input-group-text"><i class="fas fa-users"></i></span>
+                                        <span class="input-group-text">
+                                            <i class="fas fa-users"></i>
+                                        </span>
                                         {{ form.winner_count }}
                                     </div>
                                     {% if form.winner_count.errors %}
                                         <div class="text-danger mt-1">{{ form.winner_count.errors|striptags }}</div>
                                     {% endif %}
                                 </div>
-
-                                <!-- Distribution des gains -->
                                 <div class="col-12">
                                     <label class="form-label">
                                         {% trans "Prize Distribution" %}
                                     </label>
                                     <div id="prize-distribution-container">
-                                        <!-- Les champs de distribution des prix seront ajoutés dynamiquement ici -->
-                                        {% for idx in range(form.instance.winner_count) %}
+                                        <!-- dynamic fields here -->
+                                        {% for idx in distribution_range %}
                                         <div class="input-group mb-2">
-                                            <span class="input-group-text">{% trans "Winner" %} {{ idx|add:"1" }}%</span>
-                                            <input type="number" name="winners_distribution" class="form-control prize-distribution" value="{{ form.instance.winners_distribution|index:idx }}" min="0" max="100" required>
+                                            <span class="input-group-text">
+                                                {% trans "Winner" %} {{ idx|add:"1" }}%
+                                            </span>
+                                            <input type="number"
+                                                   name="winners_distribution"
+                                                   class="form-control prize-distribution"
+                                                   value="{{ form.instance.winners_distribution|index:idx }}"
+                                                   min="0"
+                                                   max="100"
+                                                   required>
                                             <span class="input-group-text">%</span>
                                         </div>
                                         {% endfor %}
                                     </div>
                                     {% if form.winners_distribution.errors %}
-                                        <div class="text-danger mt-1">{{ form.winners_distribution.errors|striptags }}</div>
+                                        <div class="text-danger mt-1">
+                                            {{ form.winners_distribution.errors|striptags }}
+                                        </div>
                                     {% endif %}
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Section 3: Paramètres Additionnels -->
+                        <!-- 3) Additional Settings -->
                         <div class="mb-4">
                             <div class="d-flex align-items-center mb-3">
                                 <i class="fas fa-cog text-secondary me-2"></i>
                                 <h5 class="mb-0">{% trans "Additional Settings" %}</h5>
                             </div>
-
                             <div class="row g-3">
-                                <!-- Limite de tickets par utilisateur (défini automatiquement) -->
                                 <div class="col-md-6">
                                     <label class="form-label">
                                         {% trans "Max Tickets Per User" %}
                                     </label>
                                     <div class="input-group">
-                                        <span class="input-group-text"><i class="fas fa-ticket-alt"></i></span>
+                                        <span class="input-group-text">
+                                            <i class="fas fa-ticket-alt"></i>
+                                        </span>
                                         <input type="number" class="form-control" value="1" readonly>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Boutons d'action -->
+                        <!-- Actions -->
                         <div class="d-flex justify-content-between align-items-center mt-4">
                             <a href="{% if is_auto_lottery %}{% url 'fortunaisk:auto_lottery_list' %}{% else %}{% url 'fortunaisk:lottery' %}{% endif %}"
-                                class="btn btn-outline-secondary">
-                            <i class="fas fa-arrow-left me-2"></i>{% trans "Back" %}
+                               class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>
+                                {% trans "Back" %}
                             </a>
-                            <button type="submit" class="btn btn-lg {% if is_auto_lottery %}btn-success{% else %}btn-primary{% endif %}">
+                            <button type="submit"
+                                    class="btn btn-lg {% if is_auto_lottery %}btn-success{% else %}btn-primary{% endif %}">
                                 <i class="fas {% if is_auto_lottery %}fa-sync{% else %}fa-plus{% endif %} me-2"></i>
                                 {% if is_auto_lottery %}
                                     {% trans "Create Automatic Lottery" %}
@@ -240,10 +257,10 @@
     </div>
 </div>
 
-<!-- Script de gestion dynamique des gagnants et distribution des prix -->
+<!-- JS for dynamic distribution -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Constantes pour les éléments du formulaire
+    // Form references
     const FORM_ELEMENTS = {
         form: document.querySelector('form'),
         winnerCount: document.getElementById('id_winner_count'),
@@ -251,19 +268,16 @@ document.addEventListener('DOMContentLoaded', function() {
         distributionInputs: document.querySelectorAll('.prize-distribution'),
     };
 
-    // Messages d'erreur
+    // Error messages
     const ERROR_MESSAGES = {
         distribution: 'La somme des pourcentages doit être égale à 100',
         required: 'Ce champ est obligatoire'
     };
 
-    // Classe utilitaire pour la validation
     class FormValidator {
         static validateDistribution(distributions) {
             if (!distributions || distributions.length === 0) return false;
-
             const numbers = distributions.map(n => parseInt(n.value.trim())).filter(n => !isNaN(n));
-
             const total = numbers.reduce((a, b) => a + b, 0);
             return total === 100;
         }
@@ -287,9 +301,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Gestionnaire pour les champs de distribution des prix
     class PrizeDistributionHandler {
-        static createDistributionField(index, value=100) {
+        static createDistributionField(index, value = 100) {
             const div = document.createElement('div');
             div.className = 'input-group mb-2';
 
@@ -322,29 +335,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
             for(let i = 0; i < count; i++) {
                 let value = 100 / count;
-                if(i === count -1){
-                    // Le dernier gagnant prend le reste pour s'assurer que la somme fait 100
+                if (i === count -1) {
+                    // The last winner gets "the remainder" to ensure total=100
                     value = 100 - (100 * (count -1)/ count);
                 }
                 const field = this.createDistributionField(i, value);
                 container.appendChild(field);
             }
         }
-
-        static getDistributionValues() {
-            const inputs = container.querySelectorAll('.prize-distribution');
-            const values = [];
-            inputs.forEach(input => {
-                const val = parseInt(input.value.trim());
-                if(!isNaN(val)){
-                    values.push(val);
-                }
-            });
-            return values;
-        }
     }
 
-    // Gestionnaire pour le formatage des prix
     class PriceFormatter {
         static handleBlur(event) {
             const input = event.target;
@@ -354,31 +354,30 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Initialisation des écouteurs d'événements
     function initializeEventListeners() {
-        // Écouteur pour le changement du nombre de gagnants
+        // If user changes winner_count, update distribution fields
         FORM_ELEMENTS.winnerCount?.addEventListener('input', function(e) {
             const count = parseInt(e.target.value);
-            if(!isNaN(count) && count > 0){
+            if (!isNaN(count) && count > 0) {
                 PrizeDistributionHandler.updateDistributionFields(count);
             } else {
                 FORM_ELEMENTS.distributionContainer.innerHTML = '';
             }
         });
 
-        // Initialiser les champs de distribution en fonction de la valeur initiale
+        // We'll forcibly re-init distribution fields on load
         const initialCount = parseInt(FORM_ELEMENTS.winnerCount?.value) || 1;
         PrizeDistributionHandler.updateDistributionFields(initialCount);
 
-        // Écouteur pour le formatage des prix
+        // Format the ticket_price on blur
         const priceInput = document.getElementById('id_ticket_price');
         priceInput?.addEventListener('blur', PriceFormatter.handleBlur);
 
-        // Validation du formulaire à la soumission
+        // Validate distribution on form submit
         FORM_ELEMENTS.form?.addEventListener('submit', function(event) {
             let isValid = true;
 
-            // Validation des champs requis
+            // Check required fields
             this.querySelectorAll('input[required]').forEach(input => {
                 if (!input.value) {
                     FormValidator.showError(input, ERROR_MESSAGES.required);
@@ -388,13 +387,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
 
-            // Validation de la distribution
-            const distributions = FORM_ELEMENTS.distributionContainer.querySelectorAll('.prize-distribution');
+            // Check distribution
+            const distributionElems = FORM_ELEMENTS.distributionContainer.querySelectorAll('.prize-distribution');
             let distributionValues = [];
-            distributions.forEach(input => {
+            distributionElems.forEach(input => {
                 const val = parseInt(input.value.trim());
-                if(isNaN(val) || val <0 || val >100){
-                    FormValidator.showError(input, 'Veuillez entrer une valeur valide entre 0 et 100.');
+                if (isNaN(val) || val < 0 || val > 100) {
+                    FormValidator.showError(input, 'Veuillez entrer une valeur entre 0 et 100.');
                     isValid = false;
                 } else {
                     FormValidator.removeError(input);
@@ -403,29 +402,28 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             const total = distributionValues.reduce((a, b) => a + b, 0);
-            if(total !== 100){
+            if (total !== 100) {
                 alert(ERROR_MESSAGES.distribution);
                 isValid = false;
-                distributions.forEach(input => {
+                distributionElems.forEach(input => {
                     FormValidator.showError(input, ERROR_MESSAGES.distribution);
                 });
             }
 
-            if(!isValid){
+            if (!isValid) {
                 event.preventDefault();
                 event.stopPropagation();
             } else {
-                // Définir winners_distribution
+                // Convert distribution to string
                 const distributionStr = distributionValues.join(',');
                 const distributionInput = document.getElementById('id_winners_distribution');
-                if(distributionInput){
+                if (distributionInput) {
                     distributionInput.value = distributionStr;
                 }
             }
         });
     }
 
-    // Initialisation
     initializeEventListeners();
 });
 </script>

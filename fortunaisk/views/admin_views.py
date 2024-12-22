@@ -52,14 +52,18 @@ def admin_dashboard(request):
     ]
     anomalies_per_lottery = [item["count"] for item in anomaly_data[:10]]
 
-    # Top active users
+    # Top Active Users
     top_users = (
         TicketPurchase.objects.values("user__username")
         .annotate(ticket_count=Count("id"))
         .order_by("-ticket_count")[:10]
     )
+    # on récupère deux listes distinctes
     top_users_names = [item["user__username"] for item in top_users]
     top_users_tickets = [item["ticket_count"] for item in top_users]
+
+    # NOUS ZIPpons les deux listes en Python
+    top_active_users = zip(top_users_names, top_users_tickets)
 
     context = {
         "lotteries": lotteries,
@@ -75,8 +79,8 @@ def admin_dashboard(request):
         "total_pots": list(active_lotteries.values_list("total_pot", flat=True)),
         "anomaly_lottery_names": anomaly_lottery_names,
         "anomalies_per_lottery": anomalies_per_lottery,
-        "top_users_names": top_users_names,
-        "top_users_tickets": top_users_tickets,
+        # ON PASSE top_active_users au template
+        "top_active_users": top_active_users,
     }
 
     return render(request, "fortunaisk/admin.html", context)
