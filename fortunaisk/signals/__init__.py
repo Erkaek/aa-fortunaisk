@@ -1,3 +1,3 @@
 # fortunaisk/signals/__init__.py
 
-from .lottery_signals import *
+from . import lottery_signals  # noqa: F401

@@ -1,12 +1,17 @@
 # fortunaisk/models/autolottery.py
+
+# Standard Library
 import json
 import logging
 from datetime import timedelta
 from typing import Any
 
+# Third Party
+from django_celery_beat.models import IntervalSchedule, PeriodicTask
+
+# Django
 from django.db import models
 from django.utils import timezone
-from django_celery_beat.models import IntervalSchedule, PeriodicTask
 
 from .lottery import Lottery
 
@@ -34,80 +39,72 @@ class AutoLottery(models.Model):
     is_active = models.BooleanField(
         default=True,
         verbose_name="Is Active",
-        help_text="Activates or deactivates the automatic lottery schedule."
+        help_text="Activates or deactivates the automatic lottery schedule.",
     )
     name = models.CharField(
         max_length=100,
         unique=True,
         verbose_name="AutoLottery Name",
-        help_text="Unique name for the automatic lottery."
+        help_text="Unique name for the automatic lottery.",
     )
     frequency = models.PositiveIntegerField(
         verbose_name="Frequency Value",
-        help_text="Number of {unit} between each creation of a new lottery."
+        help_text="Number of {unit} between each creation of a new lottery.",
     )
     frequency_unit = models.CharField(
         max_length=10,
         choices=FREQUENCY_UNITS,
         default="days",
         verbose_name="Frequency Unit",
-        help_text="The unit of frequency for auto-creating lotteries."
+        help_text="The unit of frequency for auto-creating lotteries.",
     )
     ticket_price = models.DecimalField(
         max_digits=20,
         decimal_places=2,
         verbose_name="Ticket Price (ISK)",
-        help_text="Price of a single ticket in ISK."
+        help_text="Price of a single ticket in ISK.",
     )
     duration_value = models.PositiveIntegerField(
         verbose_name="Lottery Duration Value",
-        help_text="Duration of the lottery (numeric part)."
+        help_text="Duration of the lottery (numeric part).",
     )
     duration_unit = models.CharField(
         max_length=10,
         choices=DURATION_UNITS,
         default="hours",
-        verbose_name="Lottery Duration Unit"
+        verbose_name="Lottery Duration Unit",
     )
     payment_receiver = models.IntegerField(
         verbose_name="Payment Receiver ID",
-        help_text="ID of the default payment receiver."
+        help_text="ID of the default payment receiver.",
     )
     winner_count = models.PositiveIntegerField(
-        default=1,
-        verbose_name="Number of Winners"
+        default=1, verbose_name="Number of Winners"
     )
     winners_distribution = models.JSONField(
         default=list,
         blank=True,
         verbose_name="Winners Distribution",
-        help_text="Percentage distribution for the winners (sum must be 100)."
+        help_text="Percentage distribution for the winners (sum must be 100).",
     )
     max_tickets_per_user = models.PositiveIntegerField(
-        default=1,
-        verbose_name="Max Tickets per User"
+        default=1, verbose_name="Max Tickets per User"
     )
 
     def __str__(self) -> str:
         return self.name
 
     def get_duration_timedelta(self) -> timedelta:
-        """
-        Convert duration_value + duration_unit to a timedelta.
-        """
         if self.duration_unit == "hours":
             return timedelta(hours=self.duration_value)
         elif self.duration_unit == "days":
             return timedelta(days=self.duration_value)
         elif self.duration_unit == "months":
-            # approximate month = 30 days
+            # approximate 30 days
             return timedelta(days=30 * self.duration_value)
         return timedelta(hours=self.duration_value)
 
     def schedule_periodic_task(self) -> None:
-        """
-        Schedule or update a periodic Celery task for this AutoLottery.
-        """
         if self.frequency_unit == "minutes":
             interval, _ = IntervalSchedule.objects.get_or_create(
                 every=self.frequency,
@@ -149,17 +146,11 @@ class AutoLottery(models.Model):
         logger.info(f"Periodic task '{task_name}' scheduled or updated.")
 
     def unschedule_periodic_task(self) -> None:
-        """
-        Remove the associated periodic Celery task if it exists.
-        """
         task_name = f"create_lottery_auto_{self.id}"
         PeriodicTask.objects.filter(name=task_name).delete()
         logger.info(f"Periodic task '{task_name}' unscheduled.")
 
     def create_first_lottery(self) -> None:
-        """
-        Create the first lottery immediately after creating this AutoLottery.
-        """
         start_date = timezone.now()
         end_date = start_date + self.get_duration_timedelta()
 

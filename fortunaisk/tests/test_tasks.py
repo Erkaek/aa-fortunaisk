@@ -1,8 +1,14 @@
 # fortunaisk/tests/test_tasks.py
+# Third Party
 import pytest
+
+# Django
 from django.utils import timezone
+
+# fortunaisk
 from fortunaisk.models import Lottery
 from fortunaisk.tasks import check_lotteries
+
 
 @pytest.mark.django_db
 def test_check_lotteries():

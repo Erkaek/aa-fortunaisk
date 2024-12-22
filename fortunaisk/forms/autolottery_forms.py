@@ -1,9 +1,10 @@
 # fortunaisk/forms/autolottery_forms.py
-from typing import List
 
+# Django
 from django import forms
 from django.core.exceptions import ValidationError
 
+# fortunaisk
 from fortunaisk.models import AutoLottery, LotterySettings
 
 
@@ -26,7 +27,7 @@ class AutoLotteryForm(forms.ModelForm):
             "winners_distribution",
         ]
 
-    def clean_winners_distribution(self) -> List[int]:
+    def clean_winners_distribution(self) -> list[int]:
         distribution = self.cleaned_data.get("winners_distribution", [])
         winner_count = self.cleaned_data.get("winner_count", 0)
 

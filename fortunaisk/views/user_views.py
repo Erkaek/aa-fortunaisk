@@ -1,10 +1,13 @@
 # fortunaisk/views/user_views.py
 
+# Standard Library
 import logging
 
+# Django
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
+# fortunaisk
 from fortunaisk.models import TicketPurchase, Winner
 
 logger = logging.getLogger(__name__)

@@ -1,24 +1,21 @@
 # fortunaisk/views/lottery_views.py
 
+# Standard Library
 import logging
 
+# Django
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.paginator import Paginator
-from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext as _
-from django.utils import timezone
 
+# Alliance Auth
 from allianceauth.eveonline.models import EveCorporationInfo
 
+# fortunaisk
 from fortunaisk.forms import LotteryCreateForm
-from fortunaisk.models import (
-    Lottery,
-    TicketPurchase,
-    Winner,
-    TicketAnomaly,
-)
-
+from fortunaisk.models import Lottery, TicketPurchase, Winner
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +56,11 @@ def lottery(request):
             }
         )
 
-    return render(request, "fortunaisk/lottery.html", {"active_lotteries": lotteries_info})
+    return render(
+        request,
+        "fortunaisk/lottery.html",
+        {"active_lotteries": lotteries_info},
+    )
 
 
 @login_required
@@ -81,7 +82,9 @@ def ticket_purchases(request):
 @login_required
 @permission_required("fortunaisk.view_ticketpurchase", raise_exception=True)
 def winner_list(request):
-    winners = Winner.objects.select_related("character", "ticket__lottery").order_by("-won_at")
+    winners = Winner.objects.select_related("character", "ticket__lottery").order_by(
+        "-won_at"
+    )
     paginator = Paginator(winners, 25)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
@@ -97,7 +100,11 @@ def lottery_history(request):
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
-    return render(request, "fortunaisk/lottery_history.html", {"past_lotteries": page_obj, "page_obj": page_obj})
+    return render(
+        request,
+        "fortunaisk/lottery_history.html",
+        {"past_lotteries": page_obj, "page_obj": page_obj},
+    )
 
 
 @login_required
@@ -112,7 +119,11 @@ def create_lottery(request):
     else:
         form = LotteryCreateForm()
 
-    return render(request, "fortunaisk/lottery_form.html", {"form": form, "is_auto_lottery": False})
+    return render(
+        request,
+        "fortunaisk/lottery_form.html",
+        {"form": form, "is_auto_lottery": False},
+    )
 
 
 @login_required
@@ -122,7 +133,10 @@ def terminate_lottery(request, lottery_id):
     if lottery_obj.status == "active":
         lottery_obj.status = "completed"
         lottery_obj.save()
-        messages.success(request, f"Lottery '{lottery_obj.lottery_reference}' has been terminated prematurely.")
+        messages.success(
+            request,
+            f"Lottery '{lottery_obj.lottery_reference}' has been terminated prematurely.",
+        )
     return redirect("fortunaisk:admin_dashboard")
 
 

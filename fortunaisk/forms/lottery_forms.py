@@ -1,10 +1,11 @@
 # fortunaisk/forms/lottery_forms.py
-from typing import List
 
+# Django
 from django import forms
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 
+# fortunaisk
 from fortunaisk.models import Lottery, LotterySettings
 
 
@@ -27,12 +28,8 @@ class LotteryCreateForm(forms.ModelForm):
         ]
         widgets = {
             "ticket_price": forms.NumberInput(attrs={"step": "0.01"}),
-            "end_date": forms.DateTimeInput(
-                attrs={"type": "datetime-local"}
-            ),
-            "start_date": forms.DateTimeInput(
-                attrs={"type": "datetime-local"}
-            ),
+            "end_date": forms.DateTimeInput(attrs={"type": "datetime-local"}),
+            "start_date": forms.DateTimeInput(attrs={"type": "datetime-local"}),
         }
 
     def clean(self) -> dict:
@@ -54,7 +51,9 @@ class LotteryCreateForm(forms.ModelForm):
                 f"The distribution length ({len(distribution)}) does not match the number of winners ({winner_count})."
             )
         if sum(distribution) != 100:
-            raise ValidationError("The sum of the distribution percentages must be 100.")
+            raise ValidationError(
+                "The sum of the distribution percentages must be 100."
+            )
 
         return cleaned_data
 

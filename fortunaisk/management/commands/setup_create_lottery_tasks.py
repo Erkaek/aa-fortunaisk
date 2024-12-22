@@ -1,10 +1,15 @@
 # fortunaisk/management/commands/setup_create_lottery_tasks.py
+# Standard Library
 import json
 import logging
 
-from django.core.management.base import BaseCommand
+# Third Party
 from django_celery_beat.models import IntervalSchedule, PeriodicTask
 
+# Django
+from django.core.management.base import BaseCommand
+
+# fortunaisk
 from fortunaisk.models import AutoLottery
 
 logger = logging.getLogger(__name__)
@@ -23,11 +28,15 @@ class Command(BaseCommand):
             # convert frequency unit to IntervalSchedule period
             period_type = self.get_period_type(autolottery.frequency_unit)
             if not period_type:
-                logger.error(f"Unsupported frequency_unit: {autolottery.frequency_unit}")
+                logger.error(
+                    f"Unsupported frequency_unit: {autolottery.frequency_unit}"
+                )
                 continue
 
             interval, _ = IntervalSchedule.objects.get_or_create(
-                every=self.get_every_value(autolottery.frequency, autolottery.frequency_unit),
+                every=self.get_every_value(
+                    autolottery.frequency, autolottery.frequency_unit
+                ),
                 period=period_type,
             )
             task, created = PeriodicTask.objects.update_or_create(

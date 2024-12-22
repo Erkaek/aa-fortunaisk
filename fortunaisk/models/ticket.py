@@ -1,13 +1,15 @@
 # fortunaisk/models/ticket.py
+
+# Standard Library
 import logging
 from decimal import Decimal
-from typing import Optional
 
-from django.db import models
-from django.utils import timezone
-
-from allianceauth.eveonline.models import EveCharacter
+# Django
 from django.contrib.auth.models import User
+from django.db import models
+
+# Alliance Auth
+from allianceauth.eveonline.models import EveCharacter
 
 logger = logging.getLogger(__name__)
 
@@ -24,13 +26,13 @@ class TicketPurchase(models.Model):
         Lottery,
         on_delete=models.CASCADE,
         related_name="ticket_purchases",
-        verbose_name="Lottery"
+        verbose_name="Lottery",
     )
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
         related_name="ticket_purchases",
-        verbose_name="Django User"
+        verbose_name="Django User",
     )
     character = models.ForeignKey(
         EveCharacter,
@@ -39,24 +41,20 @@ class TicketPurchase(models.Model):
         on_delete=models.SET_NULL,
         related_name="ticket_purchases",
         verbose_name="Eve Character",
-        help_text="Eve character that made the payment (if identifiable)."
+        help_text="Eve character that made the payment (if identifiable).",
     )
     amount = models.DecimalField(
         max_digits=25,
         decimal_places=2,
         default=Decimal("0"),
         verbose_name="Ticket Amount",
-        help_text="Amount of ISK paid for this ticket."
+        help_text="Amount of ISK paid for this ticket.",
     )
     purchase_date = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name="Purchase Date"
+        auto_now_add=True, verbose_name="Purchase Date"
     )
     payment_id = models.CharField(
-        max_length=255,
-        null=True,
-        blank=True,
-        verbose_name="Payment ID"
+        max_length=255, null=True, blank=True, verbose_name="Payment ID"
     )
 
     def __str__(self) -> str:
@@ -76,7 +74,7 @@ class Winner(models.Model):
         TicketPurchase,
         on_delete=models.CASCADE,
         related_name="winner",
-        verbose_name="Ticket Purchase"
+        verbose_name="Ticket Purchase",
     )
     character = models.ForeignKey(
         EveCharacter,
@@ -84,19 +82,16 @@ class Winner(models.Model):
         blank=True,
         on_delete=models.SET_NULL,
         related_name="winners",
-        verbose_name="Winning Eve Character"
+        verbose_name="Winning Eve Character",
     )
     prize_amount = models.DecimalField(
         max_digits=25,
         decimal_places=2,
         default=0,
         verbose_name="Prize Amount",
-        help_text="ISK amount that the winner receives."
+        help_text="ISK amount that the winner receives.",
     )
-    won_at = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name="Winning Date"
-    )
+    won_at = models.DateTimeField(auto_now_add=True, verbose_name="Winning Date")
 
     def __str__(self) -> str:
         char_name = self.character.character_name if self.character else "Unknown"
@@ -115,21 +110,21 @@ class TicketAnomaly(models.Model):
         Lottery,
         on_delete=models.CASCADE,
         related_name="anomalies",
-        verbose_name="Lottery"
+        verbose_name="Lottery",
     )
     character = models.ForeignKey(
         EveCharacter,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        verbose_name="Eve Character"
+        verbose_name="Eve Character",
     )
     user = models.ForeignKey(
         User,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        verbose_name="Django User"
+        verbose_name="Django User",
     )
     reason = models.TextField(verbose_name="Anomaly Reason")
     payment_date = models.DateTimeField(verbose_name="Payment Date")
@@ -137,16 +132,10 @@ class TicketAnomaly(models.Model):
         max_digits=25,
         decimal_places=2,
         default=Decimal("0"),
-        verbose_name="Anomaly Amount"
+        verbose_name="Anomaly Amount",
     )
-    payment_id = models.CharField(
-        max_length=255,
-        verbose_name="Payment ID"
-    )
-    recorded_at = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name="Recorded At"
-    )
+    payment_id = models.CharField(max_length=255, verbose_name="Payment ID")
+    recorded_at = models.DateTimeField(auto_now_add=True, verbose_name="Recorded At")
 
     def __str__(self) -> str:
         return f"Anomaly: {self.reason} (Lottery {self.lottery.lottery_reference})"

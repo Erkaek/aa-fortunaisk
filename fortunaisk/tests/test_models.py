@@ -1,8 +1,14 @@
 # fortunaisk/tests/test_models.py
+# Third Party
 import pytest
-from django.utils import timezone
+
+# Django
 from django.contrib.auth.models import User
+from django.utils import timezone
+
+# fortunaisk
 from fortunaisk.models import Lottery, TicketPurchase
+
 
 @pytest.mark.django_db
 def test_lottery_creation():
@@ -16,6 +22,7 @@ def test_lottery_creation():
         winners_distribution=[100],
     )
     assert lottery.id is not None
+
 
 @pytest.mark.django_db
 def test_ticket_purchase():

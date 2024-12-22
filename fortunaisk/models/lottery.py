@@ -1,14 +1,19 @@
 # fortunaisk/models/lottery.py
+
+# Standard Library
 import logging
 import random
 import string
-from datetime import timedelta
-from typing import Any, Dict, List, Optional
 
+# Django
 from django.db import models
-from django.utils import timezone
+
+# fortunaisk
+from fortunaisk.models.ticket import TicketPurchase, Winner
+from fortunaisk.models.user_profile import UserProfile
 
 logger = logging.getLogger(__name__)
+
 
 class Lottery(models.Model):
     """
@@ -26,14 +31,14 @@ class Lottery(models.Model):
         max_digits=20,
         decimal_places=2,
         verbose_name="Ticket Price (ISK)",
-        help_text="Price of a single lottery ticket in ISK."
+        help_text="Price of a single lottery ticket in ISK.",
     )
     start_date = models.DateTimeField(verbose_name="Start Date")
     end_date = models.DateTimeField(db_index=True, verbose_name="End Date")
     payment_receiver = models.IntegerField(
         db_index=True,
         verbose_name="Payment Receiver ID",
-        help_text="Corporation or character ID that receives ISK payments."
+        help_text="Corporation or character ID that receives ISK payments.",
     )
     lottery_reference = models.CharField(
         max_length=20,
@@ -41,55 +46,47 @@ class Lottery(models.Model):
         blank=True,
         null=True,
         db_index=True,
-        verbose_name="Lottery Reference"
+        verbose_name="Lottery Reference",
     )
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
         default="active",
         db_index=True,
-        verbose_name="Lottery Status"
+        verbose_name="Lottery Status",
     )
     winners_distribution = models.JSONField(
         default=list,
         blank=True,
         verbose_name="Winners Distribution",
-        help_text="List of percentage splits for winners (sum must be 100)."
+        help_text="List of percentage splits for winners (sum must be 100).",
     )
     max_tickets_per_user = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        verbose_name="Max Tickets Per User"
+        null=True, blank=True, verbose_name="Max Tickets Per User"
     )
     participant_count = models.PositiveIntegerField(
-        default=0,
-        verbose_name="Participant Count"
+        default=0, verbose_name="Participant Count"
     )
     total_pot = models.DecimalField(
         max_digits=25,
         decimal_places=2,
         default=0,
         verbose_name="Total Pot (ISK)",
-        help_text="Cumulative ISK pot from ticket purchases."
+        help_text="Cumulative ISK pot from ticket purchases.",
     )
     duration_value = models.PositiveIntegerField(
         default=24,
         verbose_name="Lottery Duration Value",
-        help_text="Duration numeric part (e.g., 24 hours)."
+        help_text="Duration numeric part (e.g., 24 hours).",
     )
     duration_unit = models.CharField(
         max_length=10,
-        choices=[
-            ("hours", "Hours"),
-            ("days", "Days"),
-            ("months", "Months"),
-        ],
+        choices=[("hours", "Hours"), ("days", "Days"), ("months", "Months")],
         default="hours",
-        verbose_name="Lottery Duration Unit"
+        verbose_name="Lottery Duration Unit",
     )
     winner_count = models.PositiveIntegerField(
-        default=1,
-        verbose_name="Number of Winners"
+        default=1, verbose_name="Number of Winners"
     )
 
     class Meta:
@@ -107,12 +104,8 @@ class Lottery(models.Model):
         return self.status == "active"
 
     @property
-    def next_drawing_date(self) -> timezone.datetime:
+    def next_drawing_date(self):
         return self.end_date
-
-    def save(self, *args: Any, **kwargs: Any) -> None:
-        super().save(*args, **kwargs)
-        # Additional logic for notifications or signals can happen via signals.py
 
     @staticmethod
     def generate_unique_reference() -> str:
@@ -121,11 +114,17 @@ class Lottery(models.Model):
             if not Lottery.objects.filter(lottery_reference=reference).exists():
                 return reference
 
-    def notify_discord(self, embed: Dict[str, Any]) -> None:
+    def save(self, *args, **kwargs) -> None:
+        super().save(*args, **kwargs)
+        # Additional logic for notifications or signals can happen via signals.py
+
+    def notify_discord(self, embed: dict) -> None:
         """
         Send a Discord notification with an embed.
         """
+        # fortunaisk
         from fortunaisk.notifications import send_discord_notification
+
         send_discord_notification(embed=embed)
         logger.info(f"Discord notification sent: {embed}")
 
@@ -137,13 +136,12 @@ class Lottery(models.Model):
             return
 
         self.status = "completed"
-        from fortunaisk.models import TicketPurchase, Winner
         winners = self.select_winners()
 
         if winners:
             embed = {
                 "title": "Lottery Completed!",
-                "color": 15158332,  # Red color
+                "color": 15158332,  # red color
                 "fields": [
                     {
                         "name": "Reference",
@@ -154,7 +152,7 @@ class Lottery(models.Model):
                     {
                         "name": "Winners",
                         "value": "\n".join(
-                            [str(winner.character.character_name) for winner in winners if winner.character]
+                            w.character.character_name for w in winners if w.character
                         ),
                         "inline": False,
                     },
@@ -178,31 +176,28 @@ class Lottery(models.Model):
         self.notify_discord(embed)
         self.save()
 
-    def select_winners(self) -> List["Winner"]:
+    def select_winners(self):
         """
-        Selects winners based on the number of winners and the distribution.
-        Returns the list of Winner objects created.
+        Select winners based on the number of winners and distribution.
+        Returns a list of Winner objects created.
         """
-        from fortunaisk.models import TicketPurchase, Winner, UserProfile
-
         tickets = TicketPurchase.objects.filter(lottery=self)
         if not tickets.exists():
             return []
 
-        winners: List[Winner] = []
+        winners = []
         distributions = self.winners_distribution
 
         for idx, percentage in enumerate(distributions):
             if idx >= self.winner_count:
                 break
-            # pick a random ticket
-            random_ticket: Optional[TicketPurchase] = tickets.order_by("?").first()
-            if random_ticket and random_ticket not in [w.ticket for w in winners]:
+            random_ticket = tickets.order_by("?").first()
+            if random_ticket and all(w.ticket != random_ticket for w in winners):
                 # create the winner
                 new_winner = Winner.objects.create(
                     character=random_ticket.character,
                     ticket=random_ticket,
-                    prize_amount=self.total_pot * (percentage / 100.0)
+                    prize_amount=self.total_pot * (percentage / 100.0),
                 )
                 winners.append(new_winner)
 

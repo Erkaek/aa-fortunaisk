@@ -1,7 +1,9 @@
 # fortunaisk/forms/settings_forms.py
+# Django
 from django import forms
 
-from fortunaisk.models import LotterySettings, AutoLottery
+# fortunaisk
+from fortunaisk.models import AutoLottery, LotterySettings
 
 
 class LotterySettingsForm(forms.ModelForm):
@@ -19,11 +21,16 @@ class LotterySettingsForm(forms.ModelForm):
             "default_max_tickets_per_user",
         ]
         widgets = {
-            "default_payment_receiver": forms.NumberInput(attrs={"class": "form-control"}),
+            "default_payment_receiver": forms.NumberInput(
+                attrs={"class": "form-control"}
+            ),
             "discord_webhook": forms.URLInput(attrs={"class": "form-control"}),
-            "default_lottery_duration_value": forms.NumberInput(attrs={"class": "form-control"}),
+            "default_lottery_duration_value": forms.NumberInput(
+                attrs={"class": "form-control"}
+            ),
             "default_lottery_duration_unit": forms.Select(
-                choices=AutoLottery.DURATION_UNITS, attrs={"class": "form-select"},
+                choices=AutoLottery.DURATION_UNITS,
+                attrs={"class": "form-select"},
             ),
             "default_max_tickets_per_user": forms.NumberInput(
                 attrs={"class": "form-control"}

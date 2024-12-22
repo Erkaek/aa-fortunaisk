@@ -1,13 +1,15 @@
 # fortunaisk/views/admin_views.py
 
+# Standard Library
 import logging
 
-from django.contrib import messages
+# Django
 from django.contrib.auth.decorators import login_required, permission_required
 from django.db.models import Count, Sum
 from django.shortcuts import render
 
-from fortunaisk.models import Lottery, TicketPurchase, Winner, TicketAnomaly
+# fortunaisk
+from fortunaisk.models import Lottery, TicketAnomaly, TicketPurchase, Winner
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +22,12 @@ def admin_dashboard(request):
     Shows overall statistics, active lotteries, purchases, winners, anomalies.
     """
     lotteries = Lottery.objects.all().select_related()
-    active_lotteries = lotteries.filter(status="active").annotate(tickets=Count("ticket_purchases"))
-    ticket_purchases = TicketPurchase.objects.select_related("user", "character", "lottery")
+    active_lotteries = lotteries.filter(status="active").annotate(
+        tickets=Count("ticket_purchases")
+    )
+    ticket_purchases = TicketPurchase.objects.select_related(
+        "user", "character", "lottery"
+    )
     winners = Winner.objects.select_related("character", "ticket__lottery")
     anomalies = TicketAnomaly.objects.select_related("lottery", "user", "character")
 
@@ -29,7 +35,10 @@ def admin_dashboard(request):
         "total_lotteries": lotteries.count(),
         "total_tickets": ticket_purchases.aggregate(total=Sum("amount"))["total"] or 0,
         "total_anomalies": anomalies.count(),
-        "avg_participation": active_lotteries.aggregate(avg=Count("participant_count"))["avg"] or 0,
+        "avg_participation": active_lotteries.aggregate(avg=Count("participant_count"))[
+            "avg"
+        ]
+        or 0,
     }
 
     # Anomalies per lottery
@@ -38,7 +47,9 @@ def admin_dashboard(request):
         .annotate(count=Count("id"))
         .order_by("-count")
     )
-    anomaly_lottery_names = [item["lottery__lottery_reference"] for item in anomaly_data[:10]]
+    anomaly_lottery_names = [
+        item["lottery__lottery_reference"] for item in anomaly_data[:10]
+    ]
     anomalies_per_lottery = [item["count"] for item in anomaly_data[:10]]
 
     # Top active users
@@ -57,7 +68,9 @@ def admin_dashboard(request):
         "winners": winners,
         "anomalies": anomalies,
         "stats": stats,
-        "lottery_names": list(active_lotteries.values_list("lottery_reference", flat=True)),
+        "lottery_names": list(
+            active_lotteries.values_list("lottery_reference", flat=True)
+        ),
         "tickets_per_lottery": list(active_lotteries.values_list("tickets", flat=True)),
         "total_pots": list(active_lotteries.values_list("total_pot", flat=True)),
         "anomaly_lottery_names": anomaly_lottery_names,

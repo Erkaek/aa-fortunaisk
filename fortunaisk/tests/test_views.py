@@ -1,15 +1,21 @@
 # fortunaisk/tests/test_views.py
+
+# Third Party
 import pytest
-from django.urls import reverse
+
+# Django
 from django.contrib.auth.models import User
-from fortunaisk.models import Lottery
+from django.urls import reverse
 from django.utils import timezone
+
+# fortunaisk
+from fortunaisk.models import Lottery
 
 
 @pytest.mark.django_db
 def test_lottery_view(client):
-    # Create user
-    user = User.objects.create_user(username="testuser", password="pass")
+    # Create user (no variable needed)
+    User.objects.create_user(username="testuser", password="pass")
     # Create an active lottery
     Lottery.objects.create(
         ticket_price=50.0,
@@ -31,8 +37,8 @@ def test_lottery_view(client):
 
 @pytest.mark.django_db
 def test_user_dashboard_view(client):
-    # Create user
-    user = User.objects.create_user(username="testuser2", password="pass2")
+    # Create user (no variable needed)
+    User.objects.create_user(username="testuser2", password="pass2")
     client.login(username="testuser2", password="pass2")
 
     url = reverse("fortunaisk:user_dashboard")

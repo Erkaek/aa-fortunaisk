@@ -1,10 +1,10 @@
 # fortunaisk/models/__init__.py
-from .lottery import Lottery
 from .autolottery import AutoLottery
-from .ticket import TicketPurchase, Winner, TicketAnomaly
-from .user_profile import UserProfile
-from .reward import Reward
 from .base_settings import LotterySettings
+from .lottery import Lottery
+from .reward import Reward
+from .ticket import TicketAnomaly, TicketPurchase, Winner
+from .user_profile import UserProfile
 
 __all__ = [
     "Lottery",

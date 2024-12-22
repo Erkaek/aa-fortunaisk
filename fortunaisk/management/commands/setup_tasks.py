@@ -1,9 +1,13 @@
 # fortunaisk/management/commands/setup_tasks.py
+# Standard Library
 import json
 import logging
 
-from django.core.management.base import BaseCommand
+# Third Party
 from django_celery_beat.models import IntervalSchedule, PeriodicTask
+
+# Django
+from django.core.management.base import BaseCommand
 
 logger = logging.getLogger(__name__)
 
@@ -42,12 +46,16 @@ class Command(BaseCommand):
             )
 
             # Optionally, run setup_create_lottery_tasks
+            # fortunaisk
             from fortunaisk.management.commands.setup_create_lottery_tasks import (
                 Command as SetupAutoLotteryCommand,
             )
+
             SetupAutoLotteryCommand().setup_auto_lottery_tasks()
 
-            self.stdout.write(self.style.SUCCESS("Periodic tasks have been set up successfully."))
+            self.stdout.write(
+                self.style.SUCCESS("Periodic tasks have been set up successfully.")
+            )
             logger.info("Periodic tasks have been set up successfully.")
         except Exception as e:
             self.stderr.write(self.style.ERROR(f"Error setting up tasks: {e}"))
