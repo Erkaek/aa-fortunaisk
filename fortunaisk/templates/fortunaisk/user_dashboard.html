@@ -18,7 +18,7 @@
             <h5 class="mb-0">{% trans "Your Points" %}</h5>
         </div>
         <div class="card-body">
-            <h3 class="card-title">{{ user.userprofile.points }} Points</h3>
+            <h3 class="card-title">{{ user.profile.points }} Points</h3>
             <p class="card-text">{% trans "Earn points by purchasing tickets and winning lotteries." %}</p>
         </div>
     </div>
@@ -34,7 +34,7 @@
             <div class="card-body">
                 <p><strong>{% trans "Lottery Reference" %}:</strong> {{ purchase.lottery.lottery_reference }}</p>
                 <p><strong>{% trans "Character" %}:</strong> {{ purchase.character.character_name }}</p>
-                <p><strong>{% trans "Amount" %}:</strong> {{ purchase.amount|space_separated }} ISK</p>
+                <p><strong>{% trans "Amount" %}:</strong> {{ purchase.amount|floatformat:2 }} ISK</p>
                 <p><strong>{% trans "Date" %}:</strong> {{ purchase.date|date:"Y-m-d H:i" }}</p>
             </div>
         </div>
@@ -59,15 +59,22 @@
                 <p><strong>{% trans "Lottery Reference" %}:</strong> {{ win.ticket.lottery.lottery_reference }}</p>
                 <p><strong>{% trans "Character" %}:</strong> {{ win.character.character_name }}</p>
                 <p><strong>{% trans "Win Date" %}:</strong> {{ win.won_at|date:"Y-m-d H:i" }}</p>
-                <p><strong>{% trans "Prize" %}:</strong> {{ win.prize_amount|intcomma }} ISK</p>
+                <p><strong>{% trans "Prize" %}:</strong> {{ win.prize_amount|floatformat:2 }} ISK</p>
             </div>
         </div>
         {% endfor %}
     </div>
+    {% else %}
+    <div class="alert alert-info text-center">
+        <i class="fas fa-info-circle"></i>
+        {% trans "You have not won any lotteries yet." %}
+    </div>
+    {% endif %}
+
     <h3 class="mb-3">{% trans "My Rewards" %}</h3>
-    {% if user.userprofile.rewards.all %}
+    {% if rewards %}
     <div class="d-flex flex-wrap justify-content-center gap-4">
-        {% for reward in user.userprofile.rewards.all %}
+        {% for reward in rewards %}
         <div class="card shadow" style="width: 20rem;">
             <div class="card-header bg-warning text-dark">
                 <h5 class="mb-0">{{ reward.name }}</h5>
@@ -84,4 +91,6 @@
         <i class="fas fa-info-circle"></i>
         {% trans "You have not earned any rewards yet." %}
     </div>
-{% endif %}
+    {% endif %}
+</div>
+{% endblock details %}

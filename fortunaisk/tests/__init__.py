@@ -1,1 +1,2 @@
-"""Initialize the tests"""
+# fortunaisk/tests/__init__.py
+# Empty file or basic init

@@ -26,7 +26,7 @@
                     <th scope="col">{% trans "Name" %}</th>
                     <th scope="col">{% trans "Frequency" %}</th>
                     <th scope="col">{% trans "Ticket Price (ISK)" %}</th>
-                    <th scope="col">{% trans "Duration (Hours)" %}</th>
+                    <th scope="col">{% trans "Duration" %}</th>
                     <th scope="col">{% trans "Payment Receiver ID" %}</th>
                     <th scope="col">{% trans "Number of Winners" %}</th>
                     <th scope="col">{% trans "Is Active" %}</th>
@@ -38,8 +38,8 @@
                 <tr>
                     <td>{{ autolottery.name }}</td>
                     <td>{{ autolottery.frequency }} {{ autolottery.get_frequency_unit_display }}</td>
-                    <td>{{ autolottery.ticket_price }}</td>
-                    <td>{{ autolottery.duration_hours }}</td>
+                    <td>{{ autolottery.ticket_price|floatformat:2 }}</td>
+                    <td>{{ autolottery.duration_value }} {{ autolottery.get_duration_unit_display }}</td>
                     <td>{{ autolottery.payment_receiver }}</td>
                     <td>{{ autolottery.winner_count }}</td>
                     <td>

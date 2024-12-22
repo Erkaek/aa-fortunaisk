@@ -1,15 +1,16 @@
 # fortunaisk/apps.py
-"""Django AppConfig for the FortunaIsk lottery application."""
+# Standard Library
+import logging
 
 # Django
 from django.apps import AppConfig
 
+logger = logging.getLogger(__name__)
 
-class FortunaiskConfig(AppConfig):
+
+class FortunaIskConfig(AppConfig):
+    default_auto_field = "django.db.models.BigAutoField"
     name = "fortunaisk"
 
-    def ready(self):
-        # Importer les tâches périodiques pour s'assurer qu'elles sont configurées au démarrage
-        from .tasks import setup_tasks
-
-        setup_tasks()
+    def ready(self) -> None:
+        pass

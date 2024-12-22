@@ -1,30 +1,44 @@
 # fortunaisk/notifications.py
-
 # Standard Library
 import logging
 
 # Third Party
 import requests
 
-from .webhooks import WebhookConfiguration
+# Django
+from django.core.cache import cache
+
+# fortunaisk
+from fortunaisk.models import WebhookConfiguration
 
 logger = logging.getLogger(__name__)
 
 
-def send_discord_notification(embed=None, message=None):
+def get_webhook_url() -> str:
     """
-    Envoie une notification à Discord via le webhook configuré.
+    Retrieves the Discord webhook URL from the database, cached for 5 minutes.
+    """
+    webhook_url = cache.get("discord_webhook_url")
+    if webhook_url is None:
+        webhook_config = WebhookConfiguration.objects.first()
+        if webhook_config:
+            webhook_url = webhook_config.webhook_url
+            cache.set("discord_webhook_url", webhook_url, 300)
+        else:
+            logger.warning("No webhook configured.")
+            webhook_url = ""
+    return webhook_url
 
-    :param embed: Un dictionnaire représentant l'embed Discord.
-    :param message: Un message texte simple.
+
+def send_discord_notification(embed=None, message: str = None) -> None:
+    """
+    Sends a notification to Discord via the configured webhook.
     """
     try:
-        webhook_config = WebhookConfiguration.objects.first()
-        if not webhook_config:
-            logger.warning("Aucun webhook configuré.")
+        webhook_url = get_webhook_url()
+        if not webhook_url:
             return
 
-        webhook_url = webhook_config.webhook_url
         data = {}
         if embed:
             data["embeds"] = [embed]
@@ -34,7 +48,7 @@ def send_discord_notification(embed=None, message=None):
         response = requests.post(webhook_url, json=data)
         if response.status_code not in (200, 204):
             logger.error(
-                f"Échec de l’envoi du message (Code {response.status_code}): {response.text}"
+                f"Failed to send Discord message (HTTP {response.status_code}): {response.text}"
             )
     except Exception as e:
-        logger.exception("Erreur lors de l'envoi d'une notification Discord: %s", e)
+        logger.exception(f"Error sending Discord notification: {e}")

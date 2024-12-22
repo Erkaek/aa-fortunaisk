@@ -1,7 +1,8 @@
+<!-- fortunaisk/templates/fortunaisk/lottery_history.html -->
 {% extends "fortunaisk/base.html" %}
 {% load i18n %}
-{% load fortunaisk_tags %}
 {% load humanize %}
+{% load fortunaisk_tags %}
 {% load fortunaisk_filters %}
 
 {% block page_title %}
@@ -19,19 +20,17 @@
                 <h5 class="mb-0">{{ lottery.lottery_reference }}</h5>
             </div>
             <div class="card-body">
-                <p><strong>{% trans "Ticket Price" %}:</strong> {{ lottery.ticket_price|space_separated }} ISK</p>
+                <p><strong>{% trans "Ticket Price" %}:</strong> {{ lottery.ticket_price|floatformat:2 }} ISK</p>
                 <p><strong>{% trans "Start Date" %}:</strong> {{ lottery.start_date|date:"Y-m-d H:i" }}</p>
                 <p><strong>{% trans "End Date" %}:</strong> {{ lottery.end_date|date:"Y-m-d H:i" }}</p>
                 <p><strong>{% trans "Status" %}:</strong> {{ lottery.get_status_display }}</p>
                 <p><strong>{% trans "Participants" %}:</strong> {{ lottery.participant_count }}</p>
                 <p><strong>{% trans "Total Pot" %}:</strong> {{ lottery.total_pot|intcomma }} ISK</p>
                 <p><strong>{% trans "Winners" %}:</strong>
-                    {% with winners_list=winners|get_winner:lottery.id %}
+                    {% with winners_list=lottery.winners.all %}
                     {% if winners_list %}
-                        {% for w in winners %}
-                            {% if w.ticket.lottery.id == lottery.id %}
-                                {{ w.character.character_name }} ({{ w.prize_amount|intcomma }} ISK)<br>
-                            {% endif %}
+                        {% for winner in winners_list %}
+                            {{ winner.character.character_name }} ({{ winner.prize_amount|intcomma }} ISK)<br>
                         {% endfor %}
                     {% else %}
                         <span class="text-muted">{% trans "No winner" %}</span>
@@ -42,6 +41,42 @@
         </div>
         {% endfor %}
     </div>
+    <!-- Pagination -->
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link" aria-hidden="true">&laquo;</span>
+            </li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                {% else %}
+                    <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+                {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link" aria-hidden="true">&raquo;</span>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
     {% else %}
     <div class="alert alert-warning text-center">
         <i class="fas fa-exclamation-circle alert-icon"></i>
