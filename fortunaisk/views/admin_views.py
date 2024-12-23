@@ -55,11 +55,11 @@ def admin_dashboard(request):
         .annotate(ticket_count=Count("id"))
         .order_by("-ticket_count")[:10]
     )
-    # Récupérer deux listes distinctes
+    # Retrieve two distinct lists
     top_users_names = [item["user__username"] for item in top_users]
     top_users_tickets = [item["ticket_count"] for item in top_users]
 
-    # ZIP les deux listes en Python
+    # ZIP the two lists in Python
     top_active_users = zip(top_users_names, top_users_tickets)
 
     context = {

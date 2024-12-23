@@ -9,6 +9,7 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext as _
+from django.views.decorators.http import require_POST
 
 # Alliance Auth
 from allianceauth.eveonline.models import EveCorporationInfo
@@ -142,6 +143,7 @@ def create_lottery(request):
     )
 
 
+@require_POST
 @login_required
 @permission_required("fortunaisk.terminate_lottery", raise_exception=True)
 def terminate_lottery(request, lottery_id):
