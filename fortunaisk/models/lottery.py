@@ -9,7 +9,6 @@ from decimal import Decimal
 
 # Django
 from django.db import models
-from django.db.models import Sum
 
 # fortunaisk
 from fortunaisk.models.ticket import TicketPurchase, Winner
@@ -155,10 +154,9 @@ class Lottery(models.Model):
             )
             return
 
-        # Recalculer total_pot avant de sélectionner les gagnants
-        self.total_pot = TicketPurchase.objects.filter(lottery=self).aggregate(
-            total=Sum("amount")
-        )["total"] or Decimal("0")
+        # Calculer le nombre de tickets achetés
+        ticket_count = TicketPurchase.objects.filter(lottery=self).count()
+        self.total_pot = self.ticket_price * Decimal(ticket_count)
         logger.debug(
             f"Loterie {self.lottery_reference} - Total Pot recalculé: {self.total_pot} ISK"
         )
