@@ -4,11 +4,13 @@
 import logging
 import random
 import string
-from datetime import timedelta  # Assurez-vous que cette importation est en place
+from datetime import timedelta
 from decimal import Decimal
 
 # Django
 from django.db import models
+from django.db.models.signals import post_delete, post_save
+from django.dispatch import receiver
 
 # fortunaisk
 from fortunaisk.models.ticket import TicketPurchase, Winner
@@ -98,7 +100,7 @@ class Lottery(models.Model):
         permissions = [
             ("view_lotteryhistory", "Can view lottery history"),
             ("terminate_lottery", "Can terminate lottery"),
-            ("admin_dashboard", "Can access admin dashboard"),  # Ajout de la permission
+            ("admin_dashboard", "Can access admin dashboard"),
         ]
 
     def __str__(self) -> str:
@@ -113,7 +115,7 @@ class Lottery(models.Model):
 
     def clean(self):
         """
-        Assure que la distribution des gagnants est valide.
+        Ensures that the winners_distribution is valid.
         """
         if self.winners_distribution:
             if len(self.winners_distribution) != self.winner_count:
@@ -147,6 +149,17 @@ class Lottery(models.Model):
             )  # Approximate 30 days per month.
         return timedelta(hours=self.duration_value)
 
+    def update_total_pot(self):
+        """
+        Update the total_pot based on the number of tickets and ticket price.
+        """
+        ticket_count = self.ticket_purchases.count()
+        self.total_pot = self.ticket_price * Decimal(ticket_count)
+        self.save(update_fields=["total_pot"])
+        logger.debug(
+            f"Loterie {self.lottery_reference} - Total Pot mis à jour: {self.total_pot} ISK"
+        )
+
     def complete_lottery(self):
         if self.status != "active":
             logger.info(
@@ -154,9 +167,8 @@ class Lottery(models.Model):
             )
             return
 
-        # Calculer le nombre de tickets achetés
-        ticket_count = TicketPurchase.objects.filter(lottery=self).count()
-        self.total_pot = self.ticket_price * Decimal(ticket_count)
+        # Recalculer total_pot avant de sélectionner les gagnants
+        self.update_total_pot()
         logger.debug(
             f"Loterie {self.lottery_reference} - Total Pot recalculé: {self.total_pot} ISK"
         )
@@ -166,10 +178,11 @@ class Lottery(models.Model):
                 f"Loterie {self.lottery_reference} a un pot total de {self.total_pot} ISK. Abandon de la distribution des prix."
             )
             self.status = "completed"
-            self.save()
+            self.save(update_fields=["status"])
             return
 
         self.status = "completed"
+        self.save(update_fields=["status"])
         winners = self.select_winners()
         self.notify_discord(winners)
         self.save()
@@ -199,7 +212,10 @@ class Lottery(models.Model):
                 selected_ticket_ids.add(random_ticket.id)
                 # Conversion de percentage en Decimal
                 percentage_decimal = Decimal(str(percentage))
-                prize_amount = self.total_pot * (percentage_decimal / Decimal("100"))
+                prize_amount = (self.ticket_price * percentage_decimal) / Decimal("100")
+                prize_amount = prize_amount.quantize(
+                    Decimal("0.01")
+                )  # Ensure two decimal places
                 logger.debug(
                     f"Calculé prize_amount: {prize_amount} ISK pour le gagnant: {random_ticket.user.username}"
                 )
@@ -269,3 +285,16 @@ class Lottery(models.Model):
     def participant_count(self):
         """Returns the number of participants in the lottery."""
         return self.ticket_purchases.count()
+
+
+@receiver(post_save, sender=TicketPurchase)
+def update_total_pot_on_ticket_purchase(sender, instance, created, **kwargs):
+    if created:
+        lottery = instance.lottery
+        lottery.update_total_pot()
+
+
+@receiver(post_delete, sender=TicketPurchase)
+def update_total_pot_on_ticket_delete(sender, instance, **kwargs):
+    lottery = instance.lottery
+    lottery.update_total_pot()

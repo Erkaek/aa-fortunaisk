@@ -141,7 +141,7 @@ class LotteryAdmin(ExportCSVMixin, admin.ModelAdmin):
 
     @admin.action(description="Mark selected lotteries as cancelled")
     def mark_cancelled(self, request, queryset):
-        updated = queryset.update(status="cancelled")
+        updated = queryset.filter(status="active").update(status="cancelled")
         self.message_user(request, f"{updated} lottery(ies) cancelled.")
         send_discord_notification(
             message=f"{updated} lottery(ies) have been cancelled."

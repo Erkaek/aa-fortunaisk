@@ -101,18 +101,18 @@ def process_wallet_tickets() -> str:
         # Strict match on amount and partial match on reason
         payments = CorporationWalletJournalEntry.objects.filter(
             second_party_name_id=lottery.payment_receiver,
-            amount=lottery.ticket_price,  # Assurez-vous que le montant correspond au prix du ticket
+            amount=lottery.ticket_price,  # Ensure amount matches ticket_price
             reason__icontains=reason_filter,
         ).select_related("first_party_name")
 
         for payment in payments:
-            # Identifier les anomalies potentielles
+            # Identify potential anomalies
             anomaly_reason = None
             eve_character = None
             user = None
             payment_id_str = str(payment.id)
 
-            # Vérifier si l'anomalie est déjà enregistrée
+            # Check if anomaly is already recorded
             if TicketAnomaly.objects.filter(
                 lottery=lottery, payment_id=payment_id_str
             ).exists():
@@ -121,11 +121,11 @@ def process_wallet_tickets() -> str:
                 )
                 continue
 
-            # Vérifier la plage de dates
+            # Check date range
             if not (lottery.start_date <= payment.date <= lottery.end_date):
                 anomaly_reason = "Payment date outside lottery period."
 
-            # Identifier le personnage
+            # Identify character
             try:
                 eve_character = EveCharacter.objects.get(
                     character_id=payment.first_party_name_id
@@ -136,7 +136,7 @@ def process_wallet_tickets() -> str:
                         anomaly_reason = "No primary user for the character."
                 else:
                     user = ownership.user
-                    # Vérifier le nombre maximal de tickets par utilisateur
+                    # Check max tickets per user
                     user_ticket_count = TicketPurchase.objects.filter(
                         user=user, lottery=lottery
                     ).count()
@@ -153,7 +153,7 @@ def process_wallet_tickets() -> str:
                         f"EveCharacter {payment.first_party_name_id} not found."
                     )
 
-            # Enregistrer l'anomalie si trouvée
+            # Record anomaly if found
             if anomaly_reason:
                 TicketAnomaly.objects.create(
                     lottery=lottery,
@@ -167,14 +167,14 @@ def process_wallet_tickets() -> str:
                 logger.info(f"Anomaly detected: {anomaly_reason}")
                 continue
 
-            # Créer le TicketPurchase avec le montant correct
+            # Otherwise, create the TicketPurchase with correct amount
             try:
                 with transaction.atomic():
                     TicketPurchase.objects.create(
                         user=user,
                         lottery=lottery,
                         character=eve_character,
-                        amount=lottery.ticket_price,  # Définir le montant à ticket_price
+                        amount=lottery.ticket_price,  # Set amount to ticket_price
                         purchase_date=timezone.now(),
                         payment_id=payment_id_str,
                     )
