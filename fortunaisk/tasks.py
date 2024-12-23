@@ -5,13 +5,14 @@ import logging
 
 # Third Party
 from celery import shared_task
+from corptools.models import CorporationWalletJournalEntry
 
 # Django
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 # Alliance Auth
-from allianceauth.eveonline.models import CorporationWalletJournalEntry, EveCharacter
+from allianceauth.eveonline.models import EveCharacter
 
 # fortunaisk
 from fortunaisk.models import AutoLottery, Lottery, TicketAnomaly, TicketPurchase
