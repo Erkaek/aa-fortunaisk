@@ -119,7 +119,7 @@ class AutoLottery(models.Model):
         )
         # Logique supplémentaire si nécessaire
 
-    def save(self, *args: Any, **kwargs: Any) -> None:
+    def save(self, *args: any, **kwargs: any) -> None:
         is_new = self.pk is None
         super().save(*args, **kwargs)
         if is_new:
@@ -131,6 +131,6 @@ class AutoLottery(models.Model):
             else:
                 self.unschedule_periodic_task()
 
-    def delete(self, *args: Any, **kwargs: Any) -> None:
+    def delete(self, *args: any, **kwargs: any) -> None:
         self.unschedule_periodic_task()
         super().delete(*args, **kwargs)
