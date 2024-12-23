@@ -176,27 +176,49 @@ class Lottery(models.Model):
         return winners
 
     def notify_discord(self, winners):
-        # fortunaisk
-        from fortunaisk.notifications import send_discord_notification
+    # fortunaisk
+    from fortunaisk.notifications import send_discord_notification
+    
+    if not winners:
+        message = f"⚠️ La loterie {self.lottery_reference} s'est terminée sans gagnant."
+        send_discord_notification(message=message)
+        return
 
-        if not winners:
-            message = f"Lottery {self.lottery_reference} completed with no winners."
-            send_discord_notification(message=message)
-            return
-
-        winner_details = "\n".join(
-            [f"{w.character} won {w.prize_amount} ISK" for w in winners]
-        )
+    for winner in winners:
         embed = {
-            "title": "Lottery Completed!",
-            "color": 3066993,  # green color
+            "title": "🎉🎉 **Félicitations au Gagnant!** 🎉🎉",
+            "description": f"Nous sommes ravis d'annoncer que **{winner.character.character_name}** a remporté la loterie **{self.lottery_reference}** !",
+            "color": 0xFFD700,  # Or
+            "thumbnail": {
+                "url": "https://i.imgur.com/4M34hi2.png"  # Image de trophée
+            },
             "fields": [
                 {
-                    "name": "Winners",
-                    "value": winner_details,
-                    "inline": False,
+                    "name": "🏆 **Utilisateur**",
+                    "value": f"{winner.ticket.user.username}",
+                    "inline": True
+                },
+                {
+                    "name": "🛡️ **Personnage**",
+                    "value": f"{winner.character.character_name}",
+                    "inline": True
+                },
+                {
+                    "name": "💰 **Prix**",
+                    "value": f"{winner.prize_amount:,.2f} ISK",
+                    "inline": True
+                },
+                {
+                    "name": "📅 **Date de Gain**",
+                    "value": f"{winner.won_at.strftime('%Y-%m-%d %H:%M')}",
+                    "inline": False
                 }
             ],
+            "footer": {
+                "text": "Bonne chance à tous! 🍀",
+                "icon_url": "https://i.imgur.com/4M34hi2.png"  # Icône du footer
+            },
+            "timestamp": winner.won_at.isoformat()
         }
         send_discord_notification(embed=embed)
 
