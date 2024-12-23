@@ -23,7 +23,7 @@ def setup_periodic_tasks(sender, **kwargs):
     Sets up periodic Celery tasks after migrations.
     This includes the default tasks and those for AutoLotteries.
     """
-    if sender.name != 'fortunaisk':
+    if sender.name != "fortunaisk":
         return  # Eviter l'exécution multiple
 
     try:
@@ -71,7 +71,9 @@ def setup_periodic_tasks(sender, **kwargs):
             }
             period_type = period_map.get(autolottery.frequency_unit)
             if not period_type:
-                logger.error(f"Unsupported frequency_unit: {autolottery.frequency_unit}")
+                logger.error(
+                    f"Unsupported frequency_unit: {autolottery.frequency_unit}"
+                )
                 continue
 
             # Pour les mois, approximer à 30 jours
@@ -99,7 +101,9 @@ def setup_periodic_tasks(sender, **kwargs):
             else:
                 logger.info(f"Periodic task '{task_name}' updated.")
 
-        logger.info("All periodic tasks for AutoLotteries have been set up successfully.")
+        logger.info(
+            "All periodic tasks for AutoLotteries have been set up successfully."
+        )
 
     except Exception as e:
         logger.exception(f"Error setting up periodic tasks: {e}")
