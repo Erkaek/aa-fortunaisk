@@ -190,3 +190,8 @@ class Lottery(models.Model):
             ],
         }
         send_discord_notification(embed=embed)
+
+    @property
+    def participant_count(self):
+        """Returns the number of participants in the lottery."""
+        return self.ticket_purchases.count()
