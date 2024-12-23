@@ -103,7 +103,7 @@ def process_wallet_tickets() -> str:
             second_party_name_id=lottery.payment_receiver,
             amount=lottery.ticket_price,
             reason__icontains=reason_filter,
-        ).select_related("first_party")
+        ).select_related("first_party_name")
 
         for payment in payments:
             # Identify potential anomalies
