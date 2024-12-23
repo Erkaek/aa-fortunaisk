@@ -24,10 +24,10 @@ def setup_periodic_tasks(sender, **kwargs):
     This includes the default tasks and those for AutoLotteries.
     """
     if sender.name != "fortunaisk":
-        return  # Eviter l'exécution multiple
+        return  # Avoid multiple executions
 
     try:
-        # 1. Configurer les tâches par défaut
+        # 1. Configure default tasks
         # check_lotteries every 15 minutes
         schedule_15, created = IntervalSchedule.objects.get_or_create(
             every=15,
@@ -58,11 +58,11 @@ def setup_periodic_tasks(sender, **kwargs):
 
         logger.info("Default periodic tasks have been set up successfully.")
 
-        # 2. Configurer les tâches pour les AutoLotteries actives
+        # 2. Configure tasks for active AutoLotteries
         active_autolotteries = AutoLottery.objects.filter(is_active=True)
         for autolottery in active_autolotteries:
             task_name = f"create_lottery_auto_{autolottery.id}"
-            # Convertir frequency_unit en IntervalSchedule.period
+            # Convert frequency_unit to IntervalSchedule.period
             period_map = {
                 "minutes": IntervalSchedule.MINUTES,
                 "hours": IntervalSchedule.HOURS,
@@ -76,7 +76,7 @@ def setup_periodic_tasks(sender, **kwargs):
                 )
                 continue
 
-            # Pour les mois, approximer à 30 jours
+            # For months, approximate to 30 days
             if autolottery.frequency_unit == "months":
                 every = autolottery.frequency * 30
             else:
@@ -87,7 +87,7 @@ def setup_periodic_tasks(sender, **kwargs):
                 period=period_type,
             )
 
-            # Eviter de créer des tâches multiples
+            # Avoid creating multiple tasks
             PeriodicTask.objects.update_or_create(
                 name=task_name,
                 defaults={

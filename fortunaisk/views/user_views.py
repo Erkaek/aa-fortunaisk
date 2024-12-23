@@ -26,7 +26,7 @@ def user_dashboard(request):
         .select_related("ticket__lottery", "character")
         .order_by("-won_at")
     )
-    # Accéder au profil via 'fortunaisk_profile'
+    # Access profile via 'fortunaisk_profile'
     fortunaisk_profile = getattr(user, "fortunaisk_profile", None)
     rewards = fortunaisk_profile.rewards.all() if fortunaisk_profile else []
 

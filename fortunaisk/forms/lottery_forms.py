@@ -35,7 +35,7 @@ class LotteryCreateForm(forms.ModelForm):
         if not distribution:
             raise ValidationError("La répartition des gagnants est requise.")
 
-        # Convertir en liste si possible
+        # Convert to list if possible
         try:
             if isinstance(distribution, str):
                 distribution_list = [float(x.strip()) for x in distribution.split(",")]
@@ -48,13 +48,13 @@ class LotteryCreateForm(forms.ModelForm):
                 "Veuillez entrer des pourcentages valides (séparés par des virgules)."
             )
 
-        # Vérifier la correspondance avec le nombre de gagnants
+        # Check match with winner_count
         if len(distribution_list) != winner_count:
             raise ValidationError(
                 "La répartition doit correspondre au nombre de gagnants."
             )
 
-        # Vérifier que la somme des pourcentages est 100
+        # Check that the sum of percentages is 100
         if round(sum(distribution_list), 2) != 100.0:
             raise ValidationError("La somme des pourcentages doit être égale à 100.")
 

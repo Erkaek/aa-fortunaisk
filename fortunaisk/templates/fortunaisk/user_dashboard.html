@@ -12,16 +12,18 @@
 <div class="container mt-4">
     <h2 class="text-center mb-4">{% trans "My Dashboard" %}</h2>
 
-    <!-- Affichage des Points -->
+    <!-- Suppression de l'affichage des Points -->
+    {#
     <div class="card text-white bg-info mb-4">
         <div class="card-header">
             <h5 class="mb-0">{% trans "Your Points" %}</h5>
         </div>
         <div class="card-body">
-            <h3 class="card-title">{{ user.profile.points }} Points</h3>
+            <h3 class="card-title">{{ user.fortunaisk_profile.points }} Points</h3>
             <p class="card-text">{% trans "Earn points by purchasing tickets and winning lotteries." %}</p>
         </div>
     </div>
+    #}
 
     <h3 class="mb-3">{% trans "My Ticket Purchases" %}</h3>
     {% if ticket_purchases %}
@@ -35,7 +37,7 @@
                 <p><strong>{% trans "Lottery Reference" %}:</strong> {{ purchase.lottery.lottery_reference }}</p>
                 <p><strong>{% trans "Character" %}:</strong> {{ purchase.character.character_name }}</p>
                 <p><strong>{% trans "Amount" %}:</strong> {{ purchase.amount|floatformat:2 }} ISK</p>
-                <p><strong>{% trans "Date" %}:</strong> {{ purchase.date|date:"Y-m-d H:i" }}</p>
+                <p><strong>{% trans "Date" %}:</strong> {{ purchase.purchase_date|date:"Y-m-d H:i" }}</p>
             </div>
         </div>
         {% endfor %}
@@ -81,7 +83,8 @@
             </div>
             <div class="card-body">
                 <p>{{ reward.description }}</p>
-                <p><strong>{% trans "Points Required" %}:</strong> {{ reward.points_required }}</p>
+                {# Suppression de la ligne "Points Required" #}
+                {# <p><strong>{% trans "Points Required" %}:</strong> {{ reward.points_required }}</p> #}
             </div>
         </div>
         {% endfor %}

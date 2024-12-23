@@ -209,9 +209,9 @@ class RewardAdmin(admin.ModelAdmin):
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ("user", "points")
+    list_display = ("user",)
     search_fields = ("user__username",)
-    fields = ("user", "points", "rewards")
+    fields = ("user", "rewards")
 
 
 @admin.register(AutoLottery)

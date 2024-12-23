@@ -167,19 +167,26 @@ class Lottery(models.Model):
                 )
                 winners.append(winner)
 
-                profile, _ = UserProfile.objects.get_or_create(user=random_ticket.user)
-                profile.points += int(prize_amount / 1000)
-                profile.save()
         return winners
 
     def notify_discord(self, winners):
         # fortunaisk
         from fortunaisk.notifications import send_discord_notification
 
+        if not winners:
+            message = f"Lottery {self.lottery_reference} completed with no winners."
+            send_discord_notification(message=message)
+            return
+
         embed = {
             "title": "Lottery Completed!",
             "fields": [
-                {"name": "Winners", "value": ", ".join(str(w) for w in winners)}
+                {
+                    "name": "Winners",
+                    "value": ", ".join(
+                        [f"{w.character} won {w.prize_amount} ISK" for w in winners]
+                    ),
+                }
             ],
         }
         send_discord_notification(embed=embed)

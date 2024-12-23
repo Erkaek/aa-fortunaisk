@@ -7,7 +7,7 @@ from django.db.models.signals import post_save, pre_delete
 from django.dispatch import receiver
 
 # fortunaisk
-from fortunaisk.models import Lottery, UserProfile, Winner
+from fortunaisk.models import Lottery, Winner
 from fortunaisk.notifications import send_discord_notification
 
 logger = logging.getLogger(__name__)
@@ -61,13 +61,10 @@ def notify_discord_on_lottery_deletion(sender, instance: Lottery, **kwargs):
 
 
 @receiver(post_save, sender=Winner)
-def award_points_to_winners(sender, instance: Winner, created: bool, **kwargs):
+def notify_discord_on_winner_creation(
+    sender, instance: Winner, created: bool, **kwargs
+):
     if created:
-        profile, _ = UserProfile.objects.get_or_create(user=instance.ticket.user)
-        # example: 100 points for each winner
-        profile.points += 100
-        profile.save()
-        profile.check_rewards()
         send_discord_notification(
-            message=f"Congratulations {instance.ticket.user.username}, you earned 100 points for winning!"
+            message=f"Congratulations {instance.ticket.user.username}, you have won the lottery '{instance.ticket.lottery.lottery_reference}'!"
         )

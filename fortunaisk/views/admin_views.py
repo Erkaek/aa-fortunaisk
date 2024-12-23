@@ -73,8 +73,6 @@ def admin_dashboard(request):
             active_lotteries.values_list("lottery_reference", flat=True)
         ),
         "tickets_per_lottery": list(active_lotteries.values_list("tickets", flat=True)),
-        # Vérifiez si 'total_pot' existe. Si non, commentez ou ajustez cette ligne
-        # "total_pots": list(active_lotteries.values_list("total_pot", flat=True)),
         "anomaly_lottery_names": anomaly_lottery_names,
         "anomalies_per_lottery": anomalies_per_lottery,
         "top_active_users": top_active_users,

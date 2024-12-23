@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 # fortunaisk
-from fortunaisk.models import AutoLottery, Lottery, LotterySettings  # Ajout de Lottery
+from fortunaisk.models import AutoLottery, Lottery, LotterySettings  # Removed Lottery
 
 
 class AutoLotteryForm(forms.ModelForm):
@@ -48,7 +48,7 @@ class AutoLotteryForm(forms.ModelForm):
         if not distribution_str:
             raise ValidationError("La répartition des gagnants est requise.")
 
-        # Convertir la chaîne séparée par des virgules en une liste de floats
+        # Convert string separated by commas to a list of floats
         try:
             distribution_list = [
                 float(x.strip()) for x in distribution_str.split(",") if x.strip()
@@ -58,40 +58,32 @@ class AutoLotteryForm(forms.ModelForm):
                 "Veuillez entrer des nombres valides séparés par des virgules."
             )
 
-        # Vérifier que la longueur correspond au nombre de gagnants
+        # Check length matches winner_count
         if len(distribution_list) != winner_count:
             raise ValidationError(
                 "La longueur de la répartition ne correspond pas au nombre de gagnants."
             )
 
-        # Vérifier que la somme est égale à 100
+        # Check sum equals 100
         if round(sum(distribution_list), 2) != 100.00:
             raise ValidationError("La somme de la répartition doit être égale à 100.")
 
-        # Optionnel : arrondir chaque valeur à deux décimales
+        # Optionally: round each value to two decimals
         distribution_list = [round(x, 2) for x in distribution_list]
 
         return distribution_list
 
     def save(self, commit=True):
         instance = super().save(commit=False)
-        # Auto-attribuer le receveur de paiement depuis les paramètres si non spécifié
+        # Auto-assign the payment receiver from settings if not specified
         if not instance.payment_receiver:
             lottery_settings = LotterySettings.objects.first()
             if lottery_settings:
                 instance.payment_receiver = lottery_settings.default_payment_receiver
 
-        # Générer une référence si elle n'existe pas
-        if not instance.lottery_reference:
-            instance.lottery_reference = Lottery.generate_unique_reference()
-
-        # Si le nombre maximal de tickets n'est pas spécifié, revenir à 1
+        # If max tickets is not specified, default to 1
         if instance.max_tickets_per_user is None or instance.max_tickets_per_user < 1:
             instance.max_tickets_per_user = 1
-
-        # Forcer la date de début si elle est vide
-        if not instance.start_date:
-            instance.start_date = timezone.now()
 
         if commit:
             instance.save()
