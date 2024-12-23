@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 # fortunaisk
-from fortunaisk.models import AutoLottery, Lottery, LotterySettings
+from fortunaisk.models import AutoLottery, Lottery, LotterySettings  # Ajout de Lottery
 
 
 class AutoLotteryForm(forms.ModelForm):
@@ -26,7 +26,7 @@ class AutoLotteryForm(forms.ModelForm):
             "winner_count",
             "winners_distribution",
             "max_tickets_per_user",
-            "payment_receiver",  # Ajout du champ payment_receiver
+            "payment_receiver",  # Champ ajouté précédemment
             "is_active",
         ]
         widgets = {
@@ -46,8 +46,11 @@ class AutoLotteryForm(forms.ModelForm):
         }
 
     def clean_winners_distribution(self):
-        distribution_str = self.cleaned_data.get("winners_distribution", "")
+        distribution_str = self.cleaned_data.get("winners_distribution") or ""
         winner_count = self.cleaned_data.get("winner_count", 0)
+
+        if not distribution_str:
+            raise ValidationError("La répartition des gagnants est requise.")
 
         # Convertir la chaîne séparée par des virgules en une liste de floats
         try:
@@ -76,7 +79,7 @@ class AutoLotteryForm(forms.ModelForm):
 
     def save(self, commit=True):
         instance = super().save(commit=False)
-        # Auto-attribuer le receveur de paiement depuis les paramètres uniquement si non spécifié
+        # Auto-attribuer le receveur de paiement depuis les paramètres si non spécifié
         if not instance.payment_receiver:
             lottery_settings = LotterySettings.objects.first()
             if lottery_settings:

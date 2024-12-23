@@ -3,12 +3,22 @@
 import csv
 import logging
 
+# Third Party
+from solo.admin import SingletonModelAdmin
+
 # Django
 from django.contrib import admin
 from django.http import HttpResponse
 
 # fortunaisk
-from fortunaisk.models import AutoLottery, Lottery, Reward, TicketAnomaly, UserProfile
+from fortunaisk.models import (
+    AutoLottery,
+    Lottery,
+    Reward,
+    TicketAnomaly,
+    UserProfile,
+    WebhookConfiguration,
+)
 from fortunaisk.notifications import send_discord_notification
 
 logger = logging.getLogger(__name__)
@@ -255,3 +265,15 @@ class AutoLotteryAdmin(ExportCSVMixin, admin.ModelAdmin):
             else:
                 message = f"AutoLottery {obj.name} has been deactivated."
             send_discord_notification(message=message)
+
+
+@admin.register(WebhookConfiguration)
+class WebhookConfigurationAdmin(SingletonModelAdmin):
+    fieldsets = (
+        (
+            None,
+            {
+                "fields": ("webhook_url",),
+            },
+        ),
+    )

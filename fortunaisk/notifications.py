@@ -16,12 +16,12 @@ logger = logging.getLogger(__name__)
 
 def get_webhook_url() -> str:
     """
-    Retrieves the Discord webhook URL from the database, cached for 5 minutes.
+    Retrieves the Discord webhook URL from the singleton configuration, cached for 5 minutes.
     """
     webhook_url = cache.get("discord_webhook_url")
     if webhook_url is None:
-        webhook_config = WebhookConfiguration.objects.first()
-        if webhook_config:
+        webhook_config = WebhookConfiguration.get_solo()
+        if webhook_config and webhook_config.webhook_url:
             webhook_url = webhook_config.webhook_url
             cache.set("discord_webhook_url", webhook_url, 300)
         else:

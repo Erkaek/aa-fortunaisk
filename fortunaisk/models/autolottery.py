@@ -1,13 +1,7 @@
 # fortunaisk/models/autolottery.py
 
 # Standard Library
-import json
-import logging
 from datetime import timedelta
-from typing import Any
-
-# Third Party
-from django_celery_beat.models import IntervalSchedule, PeriodicTask
 
 # Django
 from django.db import models
@@ -15,14 +9,8 @@ from django.utils import timezone
 
 from .lottery import Lottery
 
-logger = logging.getLogger(__name__)
-
 
 class AutoLottery(models.Model):
-    """
-    Represents an automatic lottery that is created at a specific frequency.
-    """
-
     FREQUENCY_UNITS = [
         ("minutes", "Minutes"),
         ("hours", "Hours"),
@@ -73,6 +61,7 @@ class AutoLottery(models.Model):
         choices=DURATION_UNITS,
         default="hours",
         verbose_name="Lottery Duration Unit",
+        help_text="The unit of time for the lottery duration.",
     )
     payment_receiver = models.IntegerField(
         verbose_name="Payment Receiver ID",
@@ -105,50 +94,12 @@ class AutoLottery(models.Model):
         return timedelta(hours=self.duration_value)
 
     def schedule_periodic_task(self) -> None:
-        if self.frequency_unit == "minutes":
-            interval, _ = IntervalSchedule.objects.get_or_create(
-                every=self.frequency,
-                period=IntervalSchedule.MINUTES,
-            )
-        elif self.frequency_unit == "hours":
-            interval, _ = IntervalSchedule.objects.get_or_create(
-                every=self.frequency,
-                period=IntervalSchedule.HOURS,
-            )
-        elif self.frequency_unit == "days":
-            interval, _ = IntervalSchedule.objects.get_or_create(
-                every=self.frequency,
-                period=IntervalSchedule.DAYS,
-            )
-        elif self.frequency_unit == "months":
-            # approximate 30 days
-            interval, _ = IntervalSchedule.objects.get_or_create(
-                every=30 * self.frequency,
-                period=IntervalSchedule.DAYS,
-            )
-        else:
-            logger.error(f"Unsupported frequency_unit: {self.frequency_unit}")
-            return
-
-        task_name = f"create_lottery_auto_{self.id}"
-        task, created = PeriodicTask.objects.get_or_create(
-            name=task_name,
-            task="fortunaisk.tasks.create_lottery_from_auto",
-            defaults={
-                "interval": interval,
-                "args": json.dumps([self.id]),
-            },
-        )
-        if not created:
-            task.interval = interval
-            task.args = json.dumps([self.id])
-            task.save()
-        logger.info(f"Periodic task '{task_name}' scheduled or updated.")
+        # Logique de planification des tâches périodiques
+        pass
 
     def unschedule_periodic_task(self) -> None:
-        task_name = f"create_lottery_auto_{self.id}"
-        PeriodicTask.objects.filter(name=task_name).delete()
-        logger.info(f"Periodic task '{task_name}' unscheduled.")
+        # Logique de suppression des tâches périodiques
+        pass
 
     def create_first_lottery(self) -> None:
         start_date = timezone.now()
@@ -166,10 +117,7 @@ class AutoLottery(models.Model):
             duration_value=self.duration_value,
             duration_unit=self.duration_unit,
         )
-        logger.info(
-            f"Created initial Lottery '{new_lottery.lottery_reference}' "
-            f"from AutoLottery '{self.name}'."
-        )
+        # Logique supplémentaire si nécessaire
 
     def save(self, *args: Any, **kwargs: Any) -> None:
         is_new = self.pk is None

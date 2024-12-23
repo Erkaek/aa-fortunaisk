@@ -1,4 +1,5 @@
 # fortunaisk/apps.py
+
 # Standard Library
 import logging
 
@@ -13,4 +14,7 @@ class FortunaIskConfig(AppConfig):
     name = "fortunaisk"
 
     def ready(self) -> None:
-        pass
+        # fortunaisk
+        import fortunaisk.signals  # Charger les signaux
+
+        super().ready()
