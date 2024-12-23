@@ -4,11 +4,11 @@
 import logging
 
 # Django
-from django.db.models.signals import post_save, pre_delete, pre_save
+from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 
 # fortunaisk
-from fortunaisk.models import Lottery, Winner
+from fortunaisk.models import Lottery, TicketPurchase, Winner
 from fortunaisk.notifications import send_discord_notification
 
 logger = logging.getLogger(__name__)
@@ -189,39 +189,20 @@ def lottery_post_save(sender, instance, created, **kwargs):
                 send_discord_notification(message=message)
 
 
-@receiver(pre_delete, sender=Lottery)
-def notify_discord_on_lottery_deletion(sender, instance: Lottery, **kwargs):
-    """
-    Avant de supprimer une loterie, envoyer une notification.
-    """
-    embed = {
-        "title": "🗑️ **Loterie Supprimée!** 🗑️",
-        "color": 15158332,  # Rouge
-        "fields": [
-            {
-                "name": "📌 **Référence**",
-                "value": instance.lottery_reference,
-                "inline": False,
-            },
-            {"name": "🔄 **Statut**", "value": "Supprimée", "inline": False},
-        ],
-        "footer": {
-            "text": "Loterie supprimée définitivement.",
-            "icon_url": "https://i.imgur.com/4M34hi2.png",  # Icône du footer
-        },
-        "timestamp": instance.end_date.isoformat(),
-    }
-    send_discord_notification(embed=embed)
-
-
-@receiver(post_save, sender=Winner)
-def notify_discord_on_winner_creation(
-    sender, instance: Winner, created: bool, **kwargs
-):
-    """
-    Après la création d'un gagnant, envoyer une notification.
-    """
+@receiver(post_save, sender=TicketPurchase)
+def update_total_pot_on_ticket_purchase(sender, instance, created, **kwargs):
     if created:
-        # Si vous avez choisi de regrouper les gagnants dans un seul embed via le signal `lottery_post_save`,
-        # vous pouvez commenter ou supprimer ce signal pour éviter les duplications.
-        pass  # Commenté pour éviter les notifications individuelles
+        lottery = instance.lottery
+        lottery.update_total_pot()
+        logger.info(
+            f"Signal post_save: Updated total_pot for Lottery {lottery.lottery_reference} after ticket purchase."
+        )
+
+
+@receiver(post_delete, sender=TicketPurchase)
+def update_total_pot_on_ticket_delete(sender, instance, **kwargs):
+    lottery = instance.lottery
+    lottery.update_total_pot()
+    logger.info(
+        f"Signal post_delete: Updated total_pot for Lottery {lottery.lottery_reference} after ticket deletion."
+    )

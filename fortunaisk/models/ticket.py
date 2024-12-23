@@ -15,13 +15,8 @@ logger = logging.getLogger(__name__)
 
 
 class TicketPurchase(models.Model):
-    """
-    Represents the purchase of a ticket by a user for a specific lottery.
-    Links a user and optionally an EveCharacter to the purchase.
-    """
-
     lottery = models.ForeignKey(
-        "fortunaisk.Lottery",  # string reference to avoid circular import
+        "fortunaisk.Lottery",
         on_delete=models.CASCADE,
         related_name="ticket_purchases",
         verbose_name="Lottery",

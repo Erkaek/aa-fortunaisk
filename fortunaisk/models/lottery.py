@@ -292,6 +292,9 @@ def update_total_pot_on_ticket_purchase(sender, instance, created, **kwargs):
     if created:
         lottery = instance.lottery
         lottery.update_total_pot()
+        logger.info(
+            f"Signal post_save: Updated total_pot for Lottery {lottery.lottery_reference} after ticket purchase."
+        )
 
 
 @receiver(post_delete, sender=TicketPurchase)
