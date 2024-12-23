@@ -3,6 +3,7 @@
 # Standard Library
 import random
 import string
+from datetime import timedelta  # Correct import added
 
 # Django
 from django.db import models
@@ -18,6 +19,11 @@ class Lottery(models.Model):
     Supports multiple winners based on a distribution.
     """
 
+    DURATION_UNITS = [
+        ("hours", "Hours"),
+        ("days", "Days"),
+        ("months", "Months"),
+    ]
     STATUS_CHOICES = [
         ("active", "Active"),
         ("completed", "Completed"),
@@ -68,6 +74,18 @@ class Lottery(models.Model):
         verbose_name="Total Pot (ISK)",
         help_text="Cumulative ISK pot from ticket purchases.",
     )
+    duration_value = models.PositiveIntegerField(
+        default=24,
+        verbose_name="Duration Value",
+        help_text="Numeric value of the lottery duration.",
+    )
+    duration_unit = models.CharField(
+        max_length=10,
+        choices=DURATION_UNITS,
+        default="hours",
+        verbose_name="Duration Unit",
+        help_text="Unit of time for the lottery duration.",
+    )
     winner_count = models.PositiveIntegerField(
         default=1, verbose_name="Number of Winners"
     )
@@ -106,6 +124,20 @@ class Lottery(models.Model):
         if not self.lottery_reference:
             self.lottery_reference = self.generate_unique_reference()
         super().save(*args, **kwargs)
+
+    def get_duration_timedelta(self) -> timedelta:
+        """
+        Calculate the duration of the lottery as a timedelta.
+        """
+        if self.duration_unit == "hours":
+            return timedelta(hours=self.duration_value)
+        elif self.duration_unit == "days":
+            return timedelta(days=self.duration_value)
+        elif self.duration_unit == "months":
+            return timedelta(
+                days=30 * self.duration_value
+            )  # Approximate 30 days per month.
+        return timedelta(hours=self.duration_value)
 
     def complete_lottery(self):
         if self.status != "active":

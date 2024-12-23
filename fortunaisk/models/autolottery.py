@@ -5,8 +5,20 @@ from django.db import models
 
 
 class AutoLottery(models.Model):
-    FREQUENCY_UNITS = ["minutes", "hours", "days"]
-    DURATION_UNITS = ["hours", "days", "months"]
+    """
+    Represents a recurring lottery configuration.
+    """
+
+    FREQUENCY_UNITS = [
+        ("minutes", "Minutes"),
+        ("hours", "Hours"),
+        ("days", "Days"),
+    ]
+    DURATION_UNITS = [
+        ("hours", "Hours"),
+        ("days", "Days"),
+        ("months", "Months"),
+    ]
 
     is_active = models.BooleanField(default=True, verbose_name="Is Active")
     name = models.CharField(
@@ -15,7 +27,7 @@ class AutoLottery(models.Model):
     frequency = models.PositiveIntegerField(verbose_name="Frequency Value")
     frequency_unit = models.CharField(
         max_length=10,
-        choices=[(unit, unit.capitalize()) for unit in FREQUENCY_UNITS],
+        choices=FREQUENCY_UNITS,
         default="days",
         verbose_name="Frequency Unit",
     )
@@ -24,11 +36,11 @@ class AutoLottery(models.Model):
     )
     duration_value = models.PositiveIntegerField(
         verbose_name="Lottery Duration Value",
-        help_text="Duration of the lottery (numeric part).",
+        help_text="Numeric part of the lottery duration.",
     )
     duration_unit = models.CharField(
         max_length=10,
-        choices=[(unit, unit.capitalize()) for unit in DURATION_UNITS],
+        choices=DURATION_UNITS,
         default="hours",
         verbose_name="Lottery Duration Unit",
     )
@@ -42,7 +54,6 @@ class AutoLottery(models.Model):
         default=1, verbose_name="Max Tickets Per User"
     )
     payment_receiver = models.IntegerField(verbose_name="Payment Receiver ID")
-
 
     def clean(self):
         if self.winners_distribution:

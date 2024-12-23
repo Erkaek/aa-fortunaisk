@@ -10,10 +10,6 @@ from fortunaisk.models import Lottery, LotterySettings
 
 
 class LotteryCreateForm(forms.ModelForm):
-    """
-    Form for creating a new one-time Lottery.
-    """
-
     class Meta:
         model = Lottery
         fields = [

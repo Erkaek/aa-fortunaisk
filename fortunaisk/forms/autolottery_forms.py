@@ -10,10 +10,6 @@ from fortunaisk.models import AutoLottery, Lottery, LotterySettings  # Ajout de 
 
 
 class AutoLotteryForm(forms.ModelForm):
-    """
-    Formulaire pour créer et mettre à jour un AutoLottery.
-    """
-
     class Meta:
         model = AutoLottery
         fields = [
@@ -26,7 +22,7 @@ class AutoLotteryForm(forms.ModelForm):
             "winner_count",
             "winners_distribution",
             "max_tickets_per_user",
-            "payment_receiver",  # Champ ajouté précédemment
+            "payment_receiver",
             "is_active",
         ]
         widgets = {
