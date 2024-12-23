@@ -166,7 +166,9 @@ class Lottery(models.Model):
             random_ticket = available_tickets.order_by("?").first()
             if random_ticket:
                 selected_ticket_ids.add(random_ticket.id)
-                prize_amount = self.total_pot * (Decimal(str(percentage)) / Decimal('100'))
+                prize_amount = self.total_pot * (
+                    Decimal(str(percentage)) / Decimal("100")
+                )
                 winner = Winner.objects.create(
                     character=random_ticket.character,
                     ticket=random_ticket,
