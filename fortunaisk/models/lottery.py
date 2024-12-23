@@ -10,6 +10,7 @@ from django.db import models
 
 # fortunaisk
 from fortunaisk.models.ticket import TicketPurchase, Winner
+from fortunaisk.notifications import send_discord_notification  # Déplacé en haut
 
 
 class Lottery(models.Model):
@@ -176,51 +177,50 @@ class Lottery(models.Model):
         return winners
 
     def notify_discord(self, winners):
-    # fortunaisk
-    from fortunaisk.notifications import send_discord_notification
-    
-    if not winners:
-        message = f"⚠️ La loterie {self.lottery_reference} s'est terminée sans gagnant."
-        send_discord_notification(message=message)
-        return
+        if not winners:
+            message = (
+                f"⚠️ La loterie {self.lottery_reference} s'est terminée sans gagnant."
+            )
+            send_discord_notification(message=message)
+            return
 
-    for winner in winners:
-        embed = {
-            "title": "🎉🎉 **Félicitations au Gagnant!** 🎉🎉",
-            "description": f"Nous sommes ravis d'annoncer que **{winner.character.character_name}** a remporté la loterie **{self.lottery_reference}** !",
-            "color": 0xFFD700,  # Or
-            "thumbnail": {
-                "url": "https://i.imgur.com/4M34hi2.png"  # Image de trophée
-            },
-            "fields": [
-                {
-                    "name": "🏆 **Utilisateur**",
-                    "value": f"{winner.ticket.user.username}",
-                    "inline": True
+        for winner in winners:
+            embed = {
+                "title": "🎉🎉 **Félicitations au Gagnant!** 🎉🎉",
+                "description": f"Nous sommes ravis d'annoncer que **{winner.character.character_name}** a remporté la loterie **{self.lottery_reference}** ! 🏆🥳",
+                "color": 0xFFD700,  # Or
+                "thumbnail": {
+                    "url": "https://static.vecteezy.com/system/resources/previews/008/505/855/non_2x/banknotes-rain-illustration-money-falling-png.png"  # Image de trophée
                 },
-                {
-                    "name": "🛡️ **Personnage**",
-                    "value": f"{winner.character.character_name}",
-                    "inline": True
+                "fields": [
+                    {
+                        "name": "🏆 **Utilisateur**",
+                        "value": f"{winner.ticket.user.username}",
+                        "inline": True,
+                    },
+                    {
+                        "name": "🛡️ **Personnage**",
+                        "value": f"{winner.character.character_name}",
+                        "inline": True,
+                    },
+                    {
+                        "name": "💰 **Prix**",
+                        "value": f"💰 **{winner.prize_amount:,.2f} ISK**",
+                        "inline": True,
+                    },
+                    {
+                        "name": "📅 **Date de Gain**",
+                        "value": f"{winner.won_at.strftime('%Y-%m-%d %H:%M')}",
+                        "inline": False,
+                    },
+                ],
+                "footer": {
+                    "text": "Bonne chance à tous! 🍀",
+                    "icon_url": "https://media.istockphoto.com/id/505920740/fr/vectoriel/bonne-chance.jpg?s=612x612&w=0&k=20&c=_woE0-ItyfRZ2o-wXbe3N1TYqPhxxvTzBHPZkRdP7qw=",  # Icône du footer
                 },
-                {
-                    "name": "💰 **Prix**",
-                    "value": f"{winner.prize_amount:,.2f} ISK",
-                    "inline": True
-                },
-                {
-                    "name": "📅 **Date de Gain**",
-                    "value": f"{winner.won_at.strftime('%Y-%m-%d %H:%M')}",
-                    "inline": False
-                }
-            ],
-            "footer": {
-                "text": "Bonne chance à tous! 🍀",
-                "icon_url": "https://i.imgur.com/4M34hi2.png"  # Icône du footer
-            },
-            "timestamp": winner.won_at.isoformat()
-        }
-        send_discord_notification(embed=embed)
+                "timestamp": winner.won_at.isoformat(),
+            }
+            send_discord_notification(embed=embed)
 
     @property
     def participant_count(self):
