@@ -3,7 +3,7 @@
 # Standard Library
 import random
 import string
-from datetime import timedelta  # Correct import added
+from datetime import timedelta  # Assurez-vous que cette importation est en place
 
 # Django
 from django.db import models
@@ -94,6 +94,7 @@ class Lottery(models.Model):
         permissions = [
             ("view_lotteryhistory", "Can view lottery history"),
             ("terminate_lottery", "Can terminate lottery"),
+            ("admin_dashboard", "Can access admin dashboard"),  # Ajout de la permission
         ]
 
     def __str__(self) -> str:
@@ -153,11 +154,17 @@ class Lottery(models.Model):
             return []
 
         winners = []
+        selected_ticket_ids = set()
         for idx, percentage in enumerate(self.winners_distribution):
             if idx >= self.winner_count:
                 break
-            random_ticket = tickets.order_by("?").first()
-            if random_ticket and all(w.ticket != random_ticket for w in winners):
+            # Ensure unique winners
+            available_tickets = tickets.exclude(id__in=selected_ticket_ids)
+            if not available_tickets.exists():
+                break
+            random_ticket = available_tickets.order_by("?").first()
+            if random_ticket:
+                selected_ticket_ids.add(random_ticket.id)
                 prize_amount = self.total_pot * (percentage / 100.0)
                 winner = Winner.objects.create(
                     character=random_ticket.character,
@@ -177,14 +184,17 @@ class Lottery(models.Model):
             send_discord_notification(message=message)
             return
 
+        winner_details = "\n".join(
+            [f"{w.character} won {w.prize_amount} ISK" for w in winners]
+        )
         embed = {
             "title": "Lottery Completed!",
+            "color": 3066993,  # green color
             "fields": [
                 {
                     "name": "Winners",
-                    "value": ", ".join(
-                        [f"{w.character} won {w.prize_amount} ISK" for w in winners]
-                    ),
+                    "value": winner_details,
+                    "inline": False,
                 }
             ],
         }

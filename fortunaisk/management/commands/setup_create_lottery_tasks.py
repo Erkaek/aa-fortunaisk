@@ -1,4 +1,5 @@
 # fortunaisk/management/commands/setup_create_lottery_tasks.py
+
 # Standard Library
 import json
 import logging
@@ -33,10 +34,16 @@ class Command(BaseCommand):
                 )
                 continue
 
+            every = self.get_every_value(
+                autolottery.frequency, autolottery.frequency_unit
+            )
+
+            # Handle months as 30 days
+            if autolottery.frequency_unit == "months":
+                every = autolottery.frequency * 30
+
             interval, _ = IntervalSchedule.objects.get_or_create(
-                every=self.get_every_value(
-                    autolottery.frequency, autolottery.frequency_unit
-                ),
+                every=every,
                 period=period_type,
             )
             task, created = PeriodicTask.objects.update_or_create(
@@ -57,8 +64,8 @@ class Command(BaseCommand):
             "minutes": IntervalSchedule.MINUTES,
             "hours": IntervalSchedule.HOURS,
             "days": IntervalSchedule.DAYS,
+            "months": IntervalSchedule.DAYS,  # Approximation
         }
-        # months approximated to 30 days
         return unit_map.get(frequency_unit, None)
 
     def get_every_value(self, frequency: int, frequency_unit: str) -> int:

@@ -30,7 +30,7 @@ def lottery(request):
             EveCorporationInfo.objects.filter(corporation_id=lot.payment_receiver)
             .values_list("corporation_name", flat=True)
             .first()
-            or "Unknown Corporation"
+            or "Corporation Inconnue"
         )
 
         user_ticket_count = TicketPurchase.objects.filter(
@@ -39,7 +39,7 @@ def lottery(request):
         has_ticket = user_ticket_count > 0
 
         instructions = _(
-            "To participate, send {ticket_price} ISK to {corp_name} with the reference '{lottery_reference}' in the payment reason."
+            "Pour participer, envoyez {ticket_price} ISK à {corp_name} avec la référence '{lottery_reference}' dans le motif de paiement."
         ).format(
             ticket_price=lot.ticket_price,
             corp_name=corp_name,
@@ -94,9 +94,9 @@ def winner_list(request):
 
 @login_required
 def lottery_history(request):
-    # example: all completed or cancelled lotteries
+    # Exemple: toutes les loteries complétées ou annulées
     past_lotteries = Lottery.objects.exclude(status="active").select_related()
-    paginator = Paginator(past_lotteries, 6)  # 6 per page
+    paginator = Paginator(past_lotteries, 6)  # 6 par page
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
@@ -114,19 +114,14 @@ def create_lottery(request):
         form = LotteryCreateForm(request.POST)
         if form.is_valid():
             form.save()
-            messages.success(request, "Lottery created successfully.")
+            messages.success(request, "Loterie créée avec succès.")
             return redirect("fortunaisk:lottery")
         else:
-            messages.error(request, "Please correct the errors below.")
+            messages.error(request, "Veuillez corriger les erreurs ci-dessous.")
     else:
         form = LotteryCreateForm()
 
-    # Determine the distribution range based on the number of winners
-    if request.method == "POST":
-        winner_count = request.POST.get("winner_count", 1)
-    else:
-        winner_count = form.instance.winner_count or 1
-
+    winner_count = form.instance.winner_count or 1
     try:
         winner_count = int(winner_count)
         if winner_count < 1:
@@ -142,7 +137,7 @@ def create_lottery(request):
         {
             "form": form,
             "is_auto_lottery": False,
-            "distribution_range": distribution_range,  # Pass the variable
+            "distribution_range": distribution_range,
         },
     )
 
@@ -156,7 +151,12 @@ def terminate_lottery(request, lottery_id):
         lottery_obj.save()
         messages.success(
             request,
-            f"Lottery '{lottery_obj.lottery_reference}' has been terminated prematurely.",
+            f"La loterie '{lottery_obj.lottery_reference}' a été terminée prématurément.",
+        )
+    else:
+        messages.info(
+            request,
+            f"La loterie '{lottery_obj.lottery_reference}' n'est pas active et ne peut pas être terminée.",
         )
     return redirect("fortunaisk:admin_dashboard")
 

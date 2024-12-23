@@ -31,19 +31,14 @@ def create_auto_lottery(request):
         form = AutoLotteryForm(request.POST)
         if form.is_valid():
             form.save()
-            messages.success(request, "Automatic lottery created successfully.")
+            messages.success(request, "Loterie automatique créée avec succès.")
             return redirect("fortunaisk:auto_lottery_list")
         else:
-            messages.error(request, "Please correct the errors below.")
+            messages.error(request, "Veuillez corriger les erreurs ci-dessous.")
     else:
         form = AutoLotteryForm()
 
-    # Determine the distribution range based on the number of winners
-    if request.method == "POST":
-        winner_count = request.POST.get("winner_count", 1)
-    else:
-        winner_count = form.instance.winner_count or 1
-
+    winner_count = form.instance.winner_count or 1
     try:
         winner_count = int(winner_count)
         if winner_count < 1:
@@ -59,7 +54,7 @@ def create_auto_lottery(request):
         {
             "form": form,
             "is_auto_lottery": True,
-            "distribution_range": distribution_range,  # Pass the variable
+            "distribution_range": distribution_range,
         },
     )
 
@@ -72,16 +67,14 @@ def edit_auto_lottery(request, autolottery_id):
         form = AutoLotteryForm(request.POST, instance=autolottery)
         if form.is_valid():
             form.save()
-            messages.success(request, "Automatic lottery updated successfully.")
+            messages.success(request, "Loterie automatique mise à jour avec succès.")
             return redirect("fortunaisk:auto_lottery_list")
         else:
-            messages.error(request, "Please correct the errors below.")
+            messages.error(request, "Veuillez corriger les erreurs ci-dessous.")
     else:
         form = AutoLotteryForm(instance=autolottery)
 
-    # Déterminer la plage de distribution basée sur le nombre de gagnants
     winner_count = form.instance.winner_count or 1
-
     try:
         winner_count = int(winner_count)
         if winner_count < 1:
@@ -108,7 +101,7 @@ def delete_auto_lottery(request, autolottery_id):
     autolottery = get_object_or_404(AutoLottery, id=autolottery_id)
     if request.method == "POST":
         autolottery.delete()
-        messages.success(request, "Automatic lottery deleted successfully.")
+        messages.success(request, "Loterie automatique supprimée avec succès.")
         return redirect("fortunaisk:auto_lottery_list")
     return render(
         request,

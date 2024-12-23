@@ -13,6 +13,7 @@ class AutoLottery(models.Model):
         ("minutes", "Minutes"),
         ("hours", "Hours"),
         ("days", "Days"),
+        ("months", "Months"),  # Added months to match usage
     ]
     DURATION_UNITS = [
         ("hours", "Hours"),
@@ -67,3 +68,20 @@ class AutoLottery(models.Model):
     def save(self, *args, **kwargs):
         self.clean()
         super().save(*args, **kwargs)
+
+    def get_duration_timedelta(self):
+        """
+        Calculate the duration of the lottery as a timedelta.
+        """
+        # Standard Library
+        from datetime import timedelta
+
+        if self.duration_unit == "hours":
+            return timedelta(hours=self.duration_value)
+        elif self.duration_unit == "days":
+            return timedelta(days=self.duration_value)
+        elif self.duration_unit == "months":
+            return timedelta(
+                days=30 * self.duration_value
+            )  # Approximate 30 days per month.
+        return timedelta(hours=self.duration_value)

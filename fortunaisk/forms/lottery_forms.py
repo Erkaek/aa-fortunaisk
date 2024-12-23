@@ -26,6 +26,7 @@ class LotteryCreateForm(forms.ModelForm):
             "ticket_price": forms.NumberInput(attrs={"step": "0.01"}),
             "end_date": forms.DateTimeInput(attrs={"type": "datetime-local"}),
             "start_date": forms.DateTimeInput(attrs={"type": "datetime-local"}),
+            "duration_unit": forms.Select(attrs={"class": "form-select"}),
         }
 
     def clean_winners_distribution(self):

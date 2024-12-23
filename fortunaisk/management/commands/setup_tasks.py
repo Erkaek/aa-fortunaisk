@@ -1,4 +1,5 @@
 # fortunaisk/management/commands/setup_tasks.py
+
 # Standard Library
 import json
 import logging

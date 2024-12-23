@@ -1,4 +1,5 @@
 # fortunaisk/forms/settings_forms.py
+
 # Django
 from django import forms
 

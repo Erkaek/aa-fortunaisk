@@ -1,4 +1,5 @@
 # fortunaisk/tasks.py
+
 # Standard Library
 import logging
 

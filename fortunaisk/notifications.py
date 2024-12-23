@@ -1,4 +1,5 @@
 # fortunaisk/notifications.py
+
 # Standard Library
 import logging
 
@@ -20,12 +21,16 @@ def get_webhook_url() -> str:
     """
     webhook_url = cache.get("discord_webhook_url")
     if webhook_url is None:
-        webhook_config = WebhookConfiguration.get_solo()
-        if webhook_config and webhook_config.webhook_url:
-            webhook_url = webhook_config.webhook_url
-            cache.set("discord_webhook_url", webhook_url, 300)
-        else:
-            logger.warning("No webhook configured.")
+        try:
+            webhook_config = WebhookConfiguration.get_solo()
+            if webhook_config and webhook_config.webhook_url:
+                webhook_url = webhook_config.webhook_url
+                cache.set("discord_webhook_url", webhook_url, 300)
+            else:
+                logger.warning("No webhook configured.")
+                webhook_url = ""
+        except Exception as e:
+            logger.exception(f"Error retrieving webhook configuration: {e}")
             webhook_url = ""
     return webhook_url
 
@@ -37,6 +42,7 @@ def send_discord_notification(embed=None, message: str = None) -> None:
     try:
         webhook_url = get_webhook_url()
         if not webhook_url:
+            logger.warning("Webhook URL is not configured. Notification not sent.")
             return
 
         data = {}
@@ -50,5 +56,7 @@ def send_discord_notification(embed=None, message: str = None) -> None:
             logger.error(
                 f"Failed to send Discord message (HTTP {response.status_code}): {response.text}"
             )
+        else:
+            logger.info("Discord notification sent successfully.")
     except Exception as e:
         logger.exception(f"Error sending Discord notification: {e}")

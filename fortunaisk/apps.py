@@ -14,4 +14,8 @@ class FortunaIskConfig(AppConfig):
     name = "fortunaisk"
 
     def ready(self) -> None:
-        super().ready()  # Removed unused import fortunaisk.signals
+        super().ready()
+        # fortunaisk
+        import fortunaisk.signals  # noqa: F401  # Réimportation des signaux pour les enregistrer
+
+        logger.info("FortunaIsk signals loaded.")
