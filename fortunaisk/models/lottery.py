@@ -10,7 +10,6 @@ from django.db import models
 
 # fortunaisk
 from fortunaisk.models.ticket import TicketPurchase, Winner
-from fortunaisk.notifications import send_discord_notification  # Déplacé en haut
 
 
 class Lottery(models.Model):
@@ -177,6 +176,11 @@ class Lottery(models.Model):
         return winners
 
     def notify_discord(self, winners):
+        # fortunaisk
+        from fortunaisk.notifications import (
+            send_discord_notification,  # Déplacement de l'importation
+        )
+
         if not winners:
             message = (
                 f"⚠️ La loterie {self.lottery_reference} s'est terminée sans gagnant."
