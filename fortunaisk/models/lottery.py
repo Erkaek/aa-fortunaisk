@@ -10,7 +10,6 @@ from django.db import models
 
 # fortunaisk
 from fortunaisk.models.ticket import TicketPurchase, Winner
-from fortunaisk.models.user_profile import UserProfile
 
 
 class Lottery(models.Model):

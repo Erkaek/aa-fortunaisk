@@ -265,6 +265,7 @@
 </div>
 
 <!-- JS for dynamic distribution -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Form references
@@ -344,11 +345,30 @@ document.addEventListener('DOMContentLoaded', function() {
 
             let remaining = 100;
             for (let i = 0; i < count; i++) {
-                const value = i === count - 1 ? remaining : parseFloat((100 / count).toFixed(2));
-                remaining -= value;
+                let value;
+                if (count === 1) {
+                    value = 100.00;
+                } else {
+                    // Distribute equally, except last one
+                    if (i === count -1) {
+                        value = remaining;
+                    } else {
+                        value = parseFloat((100 / count).toFixed(2));
+                        remaining -= value;
+                    }
+                }
                 const field = this.createDistributionField(i, value);
                 container.appendChild(field);
             }
+
+            // After setting the distribution fields, set the hidden input
+            this.updateHiddenDistribution();
+        }
+
+        static updateHiddenDistribution() {
+            const distributionElems = FORM_ELEMENTS.distributionInputs();
+            const distributionValues = Array.from(distributionElems).map(input => parseFloat(input.value.trim()).toFixed(2));
+            FORM_ELEMENTS.hiddenDistributionInput.value = distributionValues.join(',');
         }
     }
 
@@ -369,6 +389,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 PrizeDistributionHandler.updateDistributionFields(count);
             } else {
                 FORM_ELEMENTS.distributionContainer.innerHTML = '';
+                FORM_ELEMENTS.hiddenDistributionInput.value = '';
             }
         });
 
@@ -409,9 +430,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             }
 
-            // Set the hidden input value
+            // Set the hidden input value if valid
             if (isValid) {
-                FORM_ELEMENTS.hiddenDistributionInput.value = distributionValues.join(',');
+                PrizeDistributionHandler.updateHiddenDistribution();
             } else {
                 event.preventDefault();
                 event.stopPropagation();
@@ -421,6 +442,5 @@ document.addEventListener('DOMContentLoaded', function() {
 
     initializeEventListeners();
 });
-
 </script>
 {% endblock details %}

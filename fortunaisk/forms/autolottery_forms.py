@@ -1,12 +1,16 @@
 # fortunaisk/forms/autolottery_forms.py
 
+# Standard Library
+import logging
+
 # Django
 from django import forms
 from django.core.exceptions import ValidationError
-from django.utils import timezone
 
 # fortunaisk
-from fortunaisk.models import AutoLottery, Lottery, LotterySettings  # Removed Lottery
+from fortunaisk.models import AutoLottery, LotterySettings
+
+logger = logging.getLogger(__name__)
 
 
 class AutoLotteryForm(forms.ModelForm):
@@ -46,6 +50,7 @@ class AutoLotteryForm(forms.ModelForm):
         winner_count = self.cleaned_data.get("winner_count", 0)
 
         if not distribution_str:
+            logger.error("winners_distribution est vide.")
             raise ValidationError("La répartition des gagnants est requise.")
 
         # Convert string separated by commas to a list of floats
@@ -53,19 +58,27 @@ class AutoLotteryForm(forms.ModelForm):
             distribution_list = [
                 float(x.strip()) for x in distribution_str.split(",") if x.strip()
             ]
+            logger.debug(f"Répartition des gagnants: {distribution_list}")
         except ValueError:
+            logger.error("Valeurs non valides dans winners_distribution.")
             raise ValidationError(
                 "Veuillez entrer des nombres valides séparés par des virgules."
             )
 
         # Check length matches winner_count
         if len(distribution_list) != winner_count:
+            logger.error(
+                f"Longueur de la répartition ({len(distribution_list)}) ne correspond pas au nombre de gagnants ({winner_count})."
+            )
             raise ValidationError(
                 "La longueur de la répartition ne correspond pas au nombre de gagnants."
             )
 
         # Check sum equals 100
         if round(sum(distribution_list), 2) != 100.00:
+            logger.error(
+                f"La somme de la répartition est {sum(distribution_list)}, doit être 100."
+            )
             raise ValidationError("La somme de la répartition doit être égale à 100.")
 
         # Optionally: round each value to two decimals
