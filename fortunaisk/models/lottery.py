@@ -10,7 +10,6 @@ from django.db import models
 
 # fortunaisk
 from fortunaisk.models.ticket import TicketPurchase, Winner
-from fortunaisk.notifications import send_discord_notification
 
 
 class Lottery(models.Model):
@@ -180,6 +179,10 @@ class Lottery(models.Model):
         if not winners:
             # Ne rien faire ici, la notification est gérée par le signal
             return
+
+        # Import local pour éviter l'import circulaire
+        # fortunaisk
+        from fortunaisk.notifications import send_discord_notification
 
         for winner in winners:
             embed = {

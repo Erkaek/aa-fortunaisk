@@ -9,9 +9,6 @@ import requests
 # Django
 from django.core.cache import cache
 
-# fortunaisk
-from fortunaisk.models import WebhookConfiguration
-
 logger = logging.getLogger(__name__)
 
 
@@ -22,6 +19,9 @@ def get_webhook_url() -> str:
     webhook_url = cache.get("discord_webhook_url")
     if webhook_url is None:
         try:
+            # fortunaisk
+            from fortunaisk.models import WebhookConfiguration  # Import local
+
             webhook_config = WebhookConfiguration.get_solo()
             if webhook_config and webhook_config.webhook_url:
                 webhook_url = webhook_config.webhook_url
@@ -50,6 +50,8 @@ def send_discord_notification(embed=None, message: str = None) -> None:
             data["embeds"] = [embed]
         if message:
             data["content"] = message
+
+        logger.debug(f"Envoi de la notification Discord avec les données: {data}")
 
         response = requests.post(webhook_url, json=data)
         if response.status_code not in (200, 204):

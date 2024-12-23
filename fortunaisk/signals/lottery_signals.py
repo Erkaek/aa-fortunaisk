@@ -222,39 +222,6 @@ def notify_discord_on_winner_creation(
     Après la création d'un gagnant, envoyer une notification.
     """
     if created:
-        embed = {
-            "title": "🏆 **Nouveau Gagnant!** 🏆",
-            "description": f"Félicitations à **{instance.ticket.user.username}** qui a remporté la loterie **{instance.ticket.lottery.lottery_reference}**! 🎉",
-            "color": 0x00FF00,  # Vert
-            "thumbnail": {
-                "url": "https://i.imgur.com/4M34hi2.png",  # Icône du gagnant
-            },
-            "fields": [
-                {
-                    "name": "📌 **Utilisateur**",
-                    "value": instance.ticket.user.username,
-                    "inline": True,
-                },
-                {
-                    "name": "🛡️ **Personnage**",
-                    "value": instance.character.character_name,
-                    "inline": True,
-                },
-                {
-                    "name": "💰 **Prix**",
-                    "value": f"{instance.prize_amount:,.2f} ISK",
-                    "inline": True,
-                },
-                {
-                    "name": "📅 **Date de Gain**",
-                    "value": instance.won_at.strftime("%Y-%m-%d %H:%M"),
-                    "inline": False,
-                },
-            ],
-            "footer": {
-                "text": "Bonne chance à tous! 🍀",
-                "icon_url": "https://i.imgur.com/4M34hi2.png",  # Icône du footer
-            },
-            "timestamp": instance.won_at.isoformat(),
-        }
-        send_discord_notification(embed=embed)
+        # Si vous avez choisi de regrouper les gagnants dans un seul embed via le signal `lottery_post_save`,
+        # vous pouvez commenter ou supprimer ce signal pour éviter les duplications.
+        pass  # Commenté pour éviter les notifications individuelles
