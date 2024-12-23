@@ -14,7 +14,4 @@ class FortunaIskConfig(AppConfig):
     name = "fortunaisk"
 
     def ready(self) -> None:
-        # fortunaisk
-        import fortunaisk.signals  # Charger les signaux
-
-        super().ready()
+        super().ready()  # Removed unused import fortunaisk.signals

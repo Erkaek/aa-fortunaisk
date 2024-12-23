@@ -33,37 +33,34 @@ class LotteryCreateForm(forms.ModelForm):
         }
 
     def clean_winners_distribution(self):
-        distribution_str = self.cleaned_data.get("winners_distribution", "")
+        distribution = self.cleaned_data.get("winners_distribution", "")
         winner_count = self.cleaned_data.get("winner_count", 0)
 
-        # 1) Convertir la chaîne "70,20,10" en [70, 20, 10]
-        if isinstance(distribution_str, str):
-            try:
-                distribution_list = [
-                    float(x) for x in distribution_str.split(",") if x.strip()
-                ]
-            except ValueError:
-                raise ValidationError(
-                    "Veuillez entrer des nombres valides séparés par des virgules."
-                )
-        elif isinstance(distribution_str, list):
-            distribution_list = distribution_str
-        else:
+        if not distribution:
+            raise ValidationError("La répartition des gagnants est requise.")
+
+        # Convertir en liste si possible
+        try:
+            if isinstance(distribution, str):
+                distribution_list = [float(x.strip()) for x in distribution.split(",")]
+            elif isinstance(distribution, list):
+                distribution_list = [float(x) for x in distribution]
+            else:
+                raise ValueError
+        except ValueError:
             raise ValidationError(
-                "Veuillez entrer une liste valide de pourcentages séparés par des virgules."
+                "Veuillez entrer des pourcentages valides (séparés par des virgules)."
             )
 
-        # 2) Vérifications
+        # Vérifier la correspondance avec le nombre de gagnants
         if len(distribution_list) != winner_count:
             raise ValidationError(
-                "La longueur de la répartition ne correspond pas au nombre de gagnants."
+                "La répartition doit correspondre au nombre de gagnants."
             )
 
-        if round(sum(distribution_list), 2) != 100.00:
-            raise ValidationError("La somme de la répartition doit être égale à 100.")
-
-        # Optionnel: Arrondir les valeurs à deux décimales
-        distribution_list = [round(x, 2) for x in distribution_list]
+        # Vérifier que la somme des pourcentages est 100
+        if round(sum(distribution_list), 2) != 100.0:
+            raise ValidationError("La somme des pourcentages doit être égale à 100.")
 
         return distribution_list
 

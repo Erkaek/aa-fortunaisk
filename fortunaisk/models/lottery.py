@@ -1,7 +1,6 @@
 # fortunaisk/models/lottery.py
 
 # Standard Library
-import logging
 import random
 import string
 
@@ -11,8 +10,6 @@ from django.db import models
 # fortunaisk
 from fortunaisk.models.ticket import TicketPurchase, Winner
 from fortunaisk.models.user_profile import UserProfile
-
-logger = logging.getLogger(__name__)
 
 
 class Lottery(models.Model):
@@ -64,26 +61,12 @@ class Lottery(models.Model):
     max_tickets_per_user = models.PositiveIntegerField(
         null=True, blank=True, verbose_name="Max Tickets Per User"
     )
-    participant_count = models.PositiveIntegerField(
-        default=0, verbose_name="Participant Count"
-    )
     total_pot = models.DecimalField(
         max_digits=25,
         decimal_places=2,
         default=0,
         verbose_name="Total Pot (ISK)",
         help_text="Cumulative ISK pot from ticket purchases.",
-    )
-    duration_value = models.PositiveIntegerField(
-        default=24,
-        verbose_name="Lottery Duration Value",
-        help_text="Duration numeric part (e.g., 24 hours).",
-    )
-    duration_unit = models.CharField(
-        max_length=10,
-        choices=[("hours", "Hours"), ("days", "Days"), ("months", "Months")],
-        default="hours",
-        verbose_name="Lottery Duration Unit",
     )
     winner_count = models.PositiveIntegerField(
         default=1, verbose_name="Number of Winners"
@@ -99,14 +82,6 @@ class Lottery(models.Model):
     def __str__(self) -> str:
         return f"Lottery {self.lottery_reference} [{self.status}]"
 
-    @property
-    def is_active(self) -> bool:
-        return self.status == "active"
-
-    @property
-    def next_drawing_date(self):
-        return self.end_date
-
     @staticmethod
     def generate_unique_reference() -> str:
         while True:
@@ -114,58 +89,31 @@ class Lottery(models.Model):
             if not Lottery.objects.filter(lottery_reference=reference).exists():
                 return reference
 
+    def clean(self):
+        """
+        Ensure the winners_distribution is valid.
+        """
+        if self.winners_distribution:
+            if len(self.winners_distribution) != self.winner_count:
+                raise ValueError(
+                    "Mismatch between winners_distribution and winner_count."
+                )
+            if round(sum(self.winners_distribution), 2) != 100.0:
+                raise ValueError("Sum of winners_distribution must equal 100.")
+
     def save(self, *args, **kwargs) -> None:
+        self.clean()
+        if not self.lottery_reference:
+            self.lottery_reference = self.generate_unique_reference()
         super().save(*args, **kwargs)
-        # Additional logic for notifications or signals can happen via signals.py
 
-    def notify_discord(self, embed: dict) -> None:
-        # fortunaisk
-        from fortunaisk.notifications import send_discord_notification
-
-        send_discord_notification(embed=embed)
-        logger.info(f"Discord notification sent: {embed}")
-
-    def complete_lottery(self) -> None:
+    def complete_lottery(self):
         if self.status != "active":
             return
 
         self.status = "completed"
         winners = self.select_winners()
-        if winners:
-            embed = {
-                "title": "Lottery Completed!",
-                "color": 15158332,  # red color
-                "fields": [
-                    {
-                        "name": "Reference",
-                        "value": self.lottery_reference,
-                        "inline": False,
-                    },
-                    {"name": "Status", "value": "Completed", "inline": False},
-                    {
-                        "name": "Winners",
-                        "value": "\n".join(
-                            w.character.character_name for w in winners if w.character
-                        ),
-                        "inline": False,
-                    },
-                ],
-            }
-        else:
-            embed = {
-                "title": "Lottery Completed!",
-                "color": 15158332,
-                "fields": [
-                    {
-                        "name": "Reference",
-                        "value": self.lottery_reference,
-                        "inline": False,
-                    },
-                    {"name": "Status", "value": "Completed", "inline": False},
-                    {"name": "Winners", "value": "No winners", "inline": False},
-                ],
-            }
-        self.notify_discord(embed)
+        self.notify_discord(winners)
         self.save()
 
     def select_winners(self):
@@ -174,21 +122,32 @@ class Lottery(models.Model):
             return []
 
         winners = []
-        distributions = self.winners_distribution
-        for idx, percentage in enumerate(distributions):
+        for idx, percentage in enumerate(self.winners_distribution):
             if idx >= self.winner_count:
                 break
             random_ticket = tickets.order_by("?").first()
             if random_ticket and all(w.ticket != random_ticket for w in winners):
-                new_winner = Winner.objects.create(
+                prize_amount = self.total_pot * (percentage / 100.0)
+                winner = Winner.objects.create(
                     character=random_ticket.character,
                     ticket=random_ticket,
-                    prize_amount=self.total_pot * (percentage / 100.0),
+                    prize_amount=prize_amount,
                 )
-                winners.append(new_winner)
+                winners.append(winner)
 
                 profile, _ = UserProfile.objects.get_or_create(user=random_ticket.user)
-                profile.points += int(new_winner.prize_amount / 1000)
+                profile.points += int(prize_amount / 1000)
                 profile.save()
-                profile.check_rewards()
         return winners
+
+    def notify_discord(self, winners):
+        # fortunaisk
+        from fortunaisk.notifications import send_discord_notification
+
+        embed = {
+            "title": "Lottery Completed!",
+            "fields": [
+                {"name": "Winners", "value": ", ".join(str(w) for w in winners)}
+            ],
+        }
+        send_discord_notification(embed=embed)

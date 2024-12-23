@@ -195,12 +195,12 @@
                                                 {% trans "Winner" %} {{ idx|add:"1" }}%
                                             </span>
                                             <input type="number"
-                                                   name="winners_distribution_entry"
-                                                   class="form-control prize-distribution"
-                                                   value="{{ form.instance.winners_distribution|index:idx }}"
-                                                   min="0"
-                                                   max="100"
-                                                   required>
+                                                    name="winners_distribution_entry"
+                                                    class="form-control prize-distribution"
+                                                    value="{{ form.instance.winners_distribution|index:idx }}"
+                                                    min="0"
+                                                    max="100"
+                                                    required>
                                             <span class="input-group-text">%</span>
                                         </div>
                                         {% endfor %}
@@ -243,7 +243,7 @@
                         <!-- Actions -->
                         <div class="d-flex justify-content-between align-items-center mt-4">
                             <a href="{% if is_auto_lottery %}{% url 'fortunaisk:auto_lottery_list' %}{% else %}{% url 'fortunaisk:lottery' %}{% endif %}"
-                               class="btn btn-outline-secondary">
+                                class="btn btn-outline-secondary">
                                 <i class="fas fa-arrow-left me-2"></i>
                                 {% trans "Back" %}
                             </a>
@@ -272,20 +272,21 @@ document.addEventListener('DOMContentLoaded', function() {
         form: document.querySelector('form'),
         winnerCount: document.getElementById('id_winner_count'),
         distributionContainer: document.getElementById('prize-distribution-container'),
-        distributionInputs: document.querySelectorAll('.prize-distribution'),
+        distributionInputs: () => document.querySelectorAll('.prize-distribution'),
+        hiddenDistributionInput: document.getElementById('id_winners_distribution'),
     };
 
     // Error messages
     const ERROR_MESSAGES = {
         distribution: 'La somme des pourcentages doit être égale à 100',
-        required: 'Ce champ est obligatoire'
+        required: 'Ce champ est obligatoire',
+        range: 'Veuillez entrer une valeur entre 0 et 100.'
     };
 
     class FormValidator {
         static validateDistribution(distributions) {
-            if (!distributions || distributions.length === 0) return false;
-            const numbers = distributions.map(n => parseFloat(n.value.trim())).filter(n => !isNaN(n));
-            const total = numbers.reduce((a, b) => a + b, 0);
+            const values = Array.from(distributions).map(input => parseFloat(input.value.trim())).filter(val => !isNaN(val));
+            const total = values.reduce((a, b) => a + b, 0);
             return total === 100;
         }
 
@@ -315,13 +316,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const prepend = document.createElement('span');
             prepend.className = 'input-group-text';
-            prepend.textContent = `Gagnant ${index + 1} %`;
+            prepend.textContent = `Gagnant ${index + 1}`;
 
             const input = document.createElement('input');
             input.type = 'number';
             input.min = '0';
             input.max = '100';
-            input.step = '0.01';  // Permettre deux décimales
+            input.step = '0.01';
             input.className = 'form-control prize-distribution';
             input.value = value.toFixed(2);
             input.required = true;
@@ -341,13 +342,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const container = FORM_ELEMENTS.distributionContainer;
             container.innerHTML = '';
 
-            let usedSum = 0;
+            let remaining = 100;
             for (let i = 0; i < count; i++) {
-                let value = parseFloat((100 / count).toFixed(2));
-                if (i === count - 1) {
-                    value = parseFloat((100 - usedSum).toFixed(2));
-                }
-                usedSum += value;
+                const value = i === count - 1 ? remaining : parseFloat((100 / count).toFixed(2));
+                remaining -= value;
                 const field = this.createDistributionField(i, value);
                 container.appendChild(field);
             }
@@ -364,7 +362,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function initializeEventListeners() {
-        // Si l'utilisateur change le nombre de gagnants, mettre à jour les champs de distribution
+        // Update distribution fields when winner count changes
         FORM_ELEMENTS.winnerCount?.addEventListener('input', function(e) {
             const count = parseInt(e.target.value);
             if (!isNaN(count) && count > 0) {
@@ -374,33 +372,34 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        // Initialiser les champs de distribution au chargement
+        // Initialize distribution fields on page load
         const initialCount = parseInt(FORM_ELEMENTS.winnerCount?.value) || 1;
         PrizeDistributionHandler.updateDistributionFields(initialCount);
 
-        // Formater le prix du ticket au blur
+        // Format ticket price on blur
         const priceInput = document.getElementById('id_ticket_price');
         priceInput?.addEventListener('blur', PriceFormatter.handleBlur);
 
-        // Valider la distribution au submit du formulaire
+        // Validate the form on submit
         FORM_ELEMENTS.form?.addEventListener('submit', function(event) {
             let isValid = true;
 
-            // Collecter toutes les entrées de distribution
-            const distributionElems = FORM_ELEMENTS.distributionContainer.querySelectorAll('.prize-distribution');
+            // Validate each prize distribution input
+            const distributionElems = FORM_ELEMENTS.distributionInputs();
+            const distributionValues = [];
 
-            let distributionValues = [];
             distributionElems.forEach(input => {
-                const val = parseFloat(input.value.trim());
-                if (isNaN(val) || val < 0 || val > 100) {
-                    FormValidator.showError(input, 'Veuillez entrer une valeur entre 0 et 100.');
+                const value = parseFloat(input.value.trim());
+                if (isNaN(value) || value < 0 || value > 100) {
+                    FormValidator.showError(input, ERROR_MESSAGES.range);
                     isValid = false;
                 } else {
                     FormValidator.removeError(input);
-                    distributionValues.push(val);
+                    distributionValues.push(value);
                 }
             });
 
+            // Validate total distribution percentage
             const total = distributionValues.reduce((a, b) => a + b, 0);
             if (total !== 100) {
                 alert(ERROR_MESSAGES.distribution);
@@ -410,14 +409,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             }
 
-            // Définir la valeur du champ caché
-            const distributionStr = distributionValues.join(',');
-            const distributionInput = document.getElementById('id_winners_distribution');
-            if (distributionInput) {
-                distributionInput.value = distributionStr;
-            }
-
-            if (!isValid) {
+            // Set the hidden input value
+            if (isValid) {
+                FORM_ELEMENTS.hiddenDistributionInput.value = distributionValues.join(',');
+            } else {
                 event.preventDefault();
                 event.stopPropagation();
             }
@@ -426,5 +421,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     initializeEventListeners();
 });
+
 </script>
 {% endblock details %}
