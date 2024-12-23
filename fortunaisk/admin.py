@@ -59,7 +59,12 @@ class LotteryAdmin(ExportCSVMixin, admin.ModelAdmin):
         "total_pot",
     )
     search_fields = ("lottery_reference",)
-    actions = ["mark_completed", "mark_cancelled", "export_as_csv", "terminate_lottery"]
+    actions = [
+        "mark_completed",
+        "mark_cancelled",
+        "export_as_csv",
+        "terminate_lottery",
+    ]
     readonly_fields = (
         "id",
         "lottery_reference",
@@ -102,7 +107,7 @@ class LotteryAdmin(ExportCSVMixin, admin.ModelAdmin):
     ]
 
     def has_add_permission(self, request):
-        return False  # disallow creation via admin
+        return False  # Disallow creation via admin
 
     def save_model(self, request, obj, form, change):
         if change:
@@ -125,7 +130,10 @@ class LotteryAdmin(ExportCSVMixin, admin.ModelAdmin):
 
     @admin.action(description="Mark selected lotteries as completed")
     def mark_completed(self, request, queryset):
-        updated = queryset.filter(status="active").update(status="completed")
+        updated = 0
+        for lottery in queryset.filter(status="active"):
+            lottery.complete_lottery()
+            updated += 1
         self.message_user(request, f"{updated} lottery(ies) marked as completed.")
         send_discord_notification(
             message=f"{updated} lottery(ies) have been completed."
@@ -141,7 +149,10 @@ class LotteryAdmin(ExportCSVMixin, admin.ModelAdmin):
 
     @admin.action(description="Terminate selected lotteries prematurely")
     def terminate_lottery(self, request, queryset):
-        updated = queryset.filter(status="active").update(status="completed")
+        updated = 0
+        for lottery in queryset.filter(status="active"):
+            lottery.complete_lottery()
+            updated += 1
         self.message_user(request, f"{updated} lottery(ies) terminated prematurely.")
         send_discord_notification(
             message=f"{updated} lottery(ies) terminated prematurely by {request.user.username}."
