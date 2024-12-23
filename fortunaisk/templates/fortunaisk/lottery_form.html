@@ -200,6 +200,7 @@
                                                     value="{{ form.instance.winners_distribution|index:idx }}"
                                                     min="0"
                                                     max="100"
+                                                    step="0.01"
                                                     required>
                                             <span class="input-group-text">%</span>
                                         </div>
@@ -363,12 +364,30 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // After setting the distribution fields, set the hidden input
             this.updateHiddenDistribution();
+
+            // Add event listeners to the new distribution inputs
+            this.addInputListeners();
         }
 
         static updateHiddenDistribution() {
             const distributionElems = FORM_ELEMENTS.distributionInputs();
             const distributionValues = Array.from(distributionElems).map(input => parseFloat(input.value.trim()).toFixed(2));
-            FORM_ELEMENTS.hiddenDistributionInput.value = distributionValues.join(',');
+            const distributionStr = distributionValues.join(',');
+            FORM_ELEMENTS.hiddenDistributionInput.value = distributionStr;
+            console.log('Updated winners_distribution:', distributionStr); // Debug
+        }
+
+        static addInputListeners() {
+            const distributionElems = FORM_ELEMENTS.distributionInputs();
+            distributionElems.forEach(input => {
+                input.addEventListener('input', () => {
+                    // Remove existing error messages on input
+                    FormValidator.removeError(input);
+                    // Update the hidden field whenever an input changes
+                    this.updateHiddenDistribution();
+                    console.log(`Winner distribution updated: ${FORM_ELEMENTS.hiddenDistributionInput.value}`); // Debug
+                });
+            });
         }
     }
 
@@ -433,6 +452,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Set the hidden input value if valid
             if (isValid) {
                 PrizeDistributionHandler.updateHiddenDistribution();
+                console.log('Final winners_distribution:', FORM_ELEMENTS.hiddenDistributionInput.value); // Debug
             } else {
                 event.preventDefault();
                 event.stopPropagation();
