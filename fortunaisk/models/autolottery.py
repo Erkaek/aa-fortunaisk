@@ -5,10 +5,6 @@ from django.db import models
 
 
 class AutoLottery(models.Model):
-    """
-    Represents a recurring lottery configuration.
-    """
-
     FREQUENCY_UNITS = ["minutes", "hours", "days"]
     DURATION_UNITS = ["hours", "days", "months"]
 
@@ -26,13 +22,27 @@ class AutoLottery(models.Model):
     ticket_price = models.DecimalField(
         max_digits=20, decimal_places=2, verbose_name="Ticket Price (ISK)"
     )
+    duration_value = models.PositiveIntegerField(
+        verbose_name="Lottery Duration Value",
+        help_text="Duration of the lottery (numeric part).",
+    )
+    duration_unit = models.CharField(
+        max_length=10,
+        choices=[(unit, unit.capitalize()) for unit in DURATION_UNITS],
+        default="hours",
+        verbose_name="Lottery Duration Unit",
+    )
     winner_count = models.PositiveIntegerField(
         default=1, verbose_name="Number of Winners"
     )
     winners_distribution = models.JSONField(
         default=list, blank=True, verbose_name="Winners Distribution"
     )
+    max_tickets_per_user = models.PositiveIntegerField(
+        default=1, verbose_name="Max Tickets Per User"
+    )
     payment_receiver = models.IntegerField(verbose_name="Payment Receiver ID")
+
 
     def clean(self):
         if self.winners_distribution:
