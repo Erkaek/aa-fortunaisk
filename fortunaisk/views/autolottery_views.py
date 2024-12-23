@@ -38,7 +38,7 @@ def create_auto_lottery(request):
     else:
         form = AutoLotteryForm()
 
-    # Déterminer la plage de distribution basée sur le nombre de gagnants
+    # Determine the distribution range based on the number of winners
     if request.method == "POST":
         winner_count = request.POST.get("winner_count", 1)
     else:
@@ -59,7 +59,7 @@ def create_auto_lottery(request):
         {
             "form": form,
             "is_auto_lottery": True,
-            "distribution_range": distribution_range,  # Passer la variable
+            "distribution_range": distribution_range,  # Pass the variable
         },
     )
 
