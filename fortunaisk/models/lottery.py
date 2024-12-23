@@ -1,6 +1,7 @@
 # fortunaisk/models/lottery.py
 
 # Standard Library
+import logging
 import random
 import string
 from datetime import timedelta  # Assurez-vous que cette importation est en place
@@ -8,9 +9,12 @@ from decimal import Decimal
 
 # Django
 from django.db import models
+from django.db.models import Sum
 
 # fortunaisk
 from fortunaisk.models.ticket import TicketPurchase, Winner
+
+logger = logging.getLogger(__name__)
 
 
 class Lottery(models.Model):
@@ -109,18 +113,20 @@ class Lottery(models.Model):
                 return reference
 
     def clean(self):
-    """
-    Assure que la distribution des gagnants est valide.
-    """
-    if self.winners_distribution:
-        if len(self.winners_distribution) != self.winner_count:
-            logger.error("Mismatch between winners_distribution and winner_count.")
-            raise ValueError("Mismatch between winners_distribution and winner_count.")
-        total_percentage = sum(self.winners_distribution)
-        logger.debug(f"Sum of winners_distribution: {total_percentage}")
-        if round(total_percentage, 2) != 100.0:
-            logger.error("Sum of winners_distribution must equal 100.")
-            raise ValueError("Sum of winners_distribution must equal 100.")
+        """
+        Assure que la distribution des gagnants est valide.
+        """
+        if self.winners_distribution:
+            if len(self.winners_distribution) != self.winner_count:
+                logger.error("Mismatch between winners_distribution and winner_count.")
+                raise ValueError(
+                    "Mismatch between winners_distribution and winner_count."
+                )
+            total_percentage = sum(self.winners_distribution)
+            logger.debug(f"Sum of winners_distribution: {total_percentage}")
+            if round(total_percentage, 2) != 100.0:
+                logger.error("Sum of winners_distribution must equal 100.")
+                raise ValueError("Sum of winners_distribution must equal 100.")
 
     def save(self, *args, **kwargs) -> None:
         self.clean()
@@ -144,17 +150,23 @@ class Lottery(models.Model):
 
     def complete_lottery(self):
         if self.status != "active":
-            logger.info(f"Loterie {self.lottery_reference} n'est pas active. Statut actuel: {self.status}")
+            logger.info(
+                f"Loterie {self.lottery_reference} n'est pas active. Statut actuel: {self.status}"
+            )
             return
 
         # Recalculer total_pot avant de sélectionner les gagnants
         self.total_pot = TicketPurchase.objects.filter(lottery=self).aggregate(
-            total=models.Sum('amount')
-        )['total'] or Decimal('0')
-        logger.debug(f"Loterie {self.lottery_reference} - Total Pot recalculé: {self.total_pot} ISK")
+            total=Sum("amount")
+        )["total"] or Decimal("0")
+        logger.debug(
+            f"Loterie {self.lottery_reference} - Total Pot recalculé: {self.total_pot} ISK"
+        )
 
-        if self.total_pot <= Decimal('0'):
-            logger.error(f"Loterie {self.lottery_reference} a un pot total de {self.total_pot} ISK. Abandon de la distribution des prix.")
+        if self.total_pot <= Decimal("0"):
+            logger.error(
+                f"Loterie {self.lottery_reference} a un pot total de {self.total_pot} ISK. Abandon de la distribution des prix."
+            )
             self.status = "completed"
             self.save()
             return
@@ -165,41 +177,52 @@ class Lottery(models.Model):
         self.save()
 
     def select_winners(self):
-    tickets = TicketPurchase.objects.filter(lottery=self)
-    if not tickets.exists():
-        logger.info(f"Aucun ticket trouvé pour la loterie {self.lottery_reference}.")
-        return []
-
-    winners = []
-    selected_ticket_ids = set()
-    for idx, percentage in enumerate(self.winners_distribution):
-        if idx >= self.winner_count:
-            break
-        # Assurer des gagnants uniques
-        available_tickets = tickets.exclude(id__in=selected_ticket_ids)
-        if not available_tickets.exists():
-            logger.warning(f"Plus de tickets disponibles pour la loterie {self.lottery_reference}.")
-            break
-        random_ticket = available_tickets.order_by("?").first()
-        if random_ticket:
-            selected_ticket_ids.add(random_ticket.id)
-            # Conversion de percentage en Decimal
-            percentage_decimal = Decimal(str(percentage))
-            prize_amount = self.total_pot * (percentage_decimal / Decimal('100'))
-            logger.debug(f"Calculé prize_amount: {prize_amount} ISK pour le gagnant: {random_ticket.user.username}")
-            winner = Winner.objects.create(
-                character=random_ticket.character,
-                ticket=random_ticket,
-                prize_amount=prize_amount,
+        tickets = TicketPurchase.objects.filter(lottery=self)
+        if not tickets.exists():
+            logger.info(
+                f"Aucun ticket trouvé pour la loterie {self.lottery_reference}."
             )
-            winners.append(winner)
-            logger.info(f"Gagnant créé: {winner.ticket.user.username} - {winner.prize_amount} ISK")
+            return []
 
-    return winners
+        winners = []
+        selected_ticket_ids = set()
+        for idx, percentage in enumerate(self.winners_distribution):
+            if idx >= self.winner_count:
+                break
+            # Assurer des gagnants uniques
+            available_tickets = tickets.exclude(id__in=selected_ticket_ids)
+            if not available_tickets.exists():
+                logger.warning(
+                    f"Plus de tickets disponibles pour la loterie {self.lottery_reference}."
+                )
+                break
+            random_ticket = available_tickets.order_by("?").first()
+            if random_ticket:
+                selected_ticket_ids.add(random_ticket.id)
+                # Conversion de percentage en Decimal
+                percentage_decimal = Decimal(str(percentage))
+                prize_amount = self.total_pot * (percentage_decimal / Decimal("100"))
+                logger.debug(
+                    f"Calculé prize_amount: {prize_amount} ISK pour le gagnant: {random_ticket.user.username}"
+                )
+                winner = Winner.objects.create(
+                    character=random_ticket.character,
+                    ticket=random_ticket,
+                    prize_amount=prize_amount,
+                )
+                winners.append(winner)
+                logger.info(
+                    f"Gagnant créé: {winner.ticket.user.username} - {winner.prize_amount} ISK"
+                )
+
+        return winners
 
     def notify_discord(self, winners):
         if not winners:
             # Ne rien faire ici, la notification est gérée par le signal
+            logger.info(
+                f"Aucun gagnant à notifier pour la loterie {self.lottery_reference}."
+            )
             return
 
         # Import local pour éviter l'import circulaire
