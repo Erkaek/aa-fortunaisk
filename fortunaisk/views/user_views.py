@@ -8,7 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
 # fortunaisk
-from fortunaisk.models import TicketPurchase, UserProfile, Winner
+from fortunaisk.models import TicketPurchase, Winner
 
 logger = logging.getLogger(__name__)
 
@@ -26,9 +26,6 @@ def user_dashboard(request):
         .select_related("ticket__lottery", "character")
         .order_by("-won_at")
     )
-    # Accéder au profil via 'fortunaisk_profile', créer si n'existe pas
-    fortunaisk_profile, created = UserProfile.objects.get_or_create(user=user)
-    rewards = fortunaisk_profile.rewards.all()
 
     return render(
         request,
@@ -36,6 +33,5 @@ def user_dashboard(request):
         {
             "ticket_purchases": ticket_purchases,
             "winnings": winnings,
-            "rewards": rewards,
         },
     )

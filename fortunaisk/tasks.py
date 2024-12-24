@@ -20,31 +20,23 @@ from fortunaisk.models import AutoLottery, Lottery, TicketAnomaly, TicketPurchas
 logger = logging.getLogger(__name__)
 
 
-def send_discord_dm(user, message: str) -> None:
-    """
-    Sends a DM to the user on Discord.
-    TODO: Implement actual logic if the user's Discord ID is known.
-    """
-    pass
-
-
 @shared_task
 def check_lotteries() -> str:
     """
-    Checks all active lotteries that have passed their end date and completes them.
+    Vérifie toutes les loteries actives dont la date de fin est dépassée et les termine.
     """
     now = timezone.now()
     active_lotteries = Lottery.objects.filter(status="active", end_date__lte=now)
     count = active_lotteries.count()
     for lottery in active_lotteries:
         lottery.complete_lottery()
-    return f"Checked {count} lotteries."
+    return f"Vérifiées {count} loterie(s)."
 
 
 @shared_task
 def create_lottery_from_auto(auto_lottery_id: int) -> int | None:
     """
-    Creates a new Lottery from an AutoLottery (Celery scheduled).
+    Crée une nouvelle Loterie à partir d'une AutoLoterie (planifiée avec Celery).
     """
     try:
         auto_lottery = AutoLottery.objects.get(id=auto_lottery_id)
@@ -65,67 +57,93 @@ def create_lottery_from_auto(auto_lottery_id: int) -> int | None:
             duration_unit=auto_lottery.duration_unit,
         )
         logger.info(
-            f"Created new Lottery '{new_lottery.lottery_reference}' "
-            f"from AutoLottery '{auto_lottery.name}' (ID: {auto_lottery_id})"
+            f"Créée nouvelle Loterie '{new_lottery.lottery_reference}' "
+            f"à partir de l'AutoLoterie '{auto_lottery.name}' (ID: {auto_lottery_id})"
         )
         return new_lottery.id
 
     except AutoLottery.DoesNotExist:
-        logger.error(f"AutoLottery with ID {auto_lottery_id} does not exist.")
+        logger.error(f"AutoLoterie avec ID {auto_lottery_id} n'existe pas.")
     except Exception as e:
         logger.error(
-            f"Error creating Lottery from AutoLottery {auto_lottery_id}: {str(e)}"
+            f"Erreur lors de la création de la Loterie à partir de l'AutoLoterie {auto_lottery_id} : {str(e)}"
         )
     return None
 
 
 @shared_task
+def finalize_lottery(lottery_id: int) -> str:
+    """
+    Finalise la loterie en sélectionnant les gagnants et en envoyant les notifications.
+    """
+    try:
+        lottery = Lottery.objects.get(id=lottery_id)
+        if lottery.status != "active":
+            return f"Loterie {lottery.lottery_reference} n'est pas active."
+
+        # Sélection des gagnants
+        winners = lottery.select_winners()
+        # Envoi des notifications Discord
+        lottery.notify_discord(winners)
+
+        return f"Loterie {lottery.lottery_reference} finalisée avec succès."
+    except Lottery.DoesNotExist:
+        logger.error(f"Loterie avec ID {lottery_id} n'existe pas.")
+        return f"Loterie avec ID {lottery_id} n'existe pas."
+    except Exception as e:
+        logger.exception(
+            f"Erreur lors de la finalisation de la loterie {lottery_id} : {e}"
+        )
+        return f"Erreur lors de la finalisation de la loterie {lottery_id}."
+
+
+@shared_task
 def process_wallet_tickets() -> str:
     """
-    Processes wallet entries for all active lotteries.
-    Matches CorporationWalletJournalEntry entries to create TicketPurchase or anomalies.
+    Traite les entrées de portefeuille pour toutes les loteries actives.
+    Correspond les entrées de CorporationWalletJournalEntry pour créer des TicketPurchase ou des anomalies.
     """
-    logger.info("Processing wallet entries for active lotteries.")
+    logger.info("Traitement des entrées de portefeuille pour les loteries actives.")
     active_lotteries = Lottery.objects.filter(status="active")
     total_processed = 0
 
     if not active_lotteries.exists():
-        return "No active lotteries to process."
+        return "Aucune loterie active à traiter."
 
     for lottery in active_lotteries:
         reason_filter = ""
         if lottery.lottery_reference:
-            # e.g. "LOTTERY-123456" => reason might contain "123456"
+            # Par exemple, "LOTTERY-123456" => raison pourrait contenir "123456"
             reason_filter = lottery.lottery_reference.replace("LOTTERY-", "")
 
-        # Strict match on amount and partial match on reason
+        # Correspondance stricte sur le montant et correspondance partielle sur la raison
         payments = CorporationWalletJournalEntry.objects.filter(
             second_party_name_id=lottery.payment_receiver,
-            amount=lottery.ticket_price,  # Ensure amount matches ticket_price
+            amount=lottery.ticket_price,  # Assure que le montant correspond au prix du ticket
             reason__icontains=reason_filter,
         ).select_related("first_party_name")
 
         for payment in payments:
-            # Identify potential anomalies
+            # Identifier les anomalies potentielles
             anomaly_reason = None
             eve_character = None
             user = None
             payment_id_str = str(payment.id)
 
-            # Check if anomaly is already recorded
+            # Vérifier si une anomalie est déjà enregistrée
             if TicketAnomaly.objects.filter(
                 lottery=lottery, payment_id=payment_id_str
             ).exists():
                 logger.info(
-                    f"Anomaly already recorded for payment {payment_id_str}, skipping."
+                    f"Anomalie déjà enregistrée pour le paiement {payment_id_str}, passage."
                 )
                 continue
 
-            # Check date range
+            # Vérifier la plage de dates
             if not (lottery.start_date <= payment.date <= lottery.end_date):
-                anomaly_reason = "Payment date outside lottery period."
+                anomaly_reason = "Date de paiement en dehors de la période de loterie."
 
-            # Identify character
+            # Identifier le personnage
             try:
                 eve_character = EveCharacter.objects.get(
                     character_id=payment.first_party_name_id
@@ -133,10 +151,12 @@ def process_wallet_tickets() -> str:
                 ownership = eve_character.character_ownership
                 if not ownership or not ownership.user:
                     if anomaly_reason is None:
-                        anomaly_reason = "No primary user for the character."
+                        anomaly_reason = (
+                            "Aucun utilisateur principal pour le personnage."
+                        )
                 else:
                     user = ownership.user
-                    # Check max tickets per user
+                    # Vérifier le nombre maximum de tickets par utilisateur
                     user_ticket_count = TicketPurchase.objects.filter(
                         user=user, lottery=lottery
                     ).count()
@@ -144,16 +164,16 @@ def process_wallet_tickets() -> str:
                         if user_ticket_count >= lottery.max_tickets_per_user:
                             if anomaly_reason is None:
                                 anomaly_reason = (
-                                    f"User '{user.username}' exceeded the max tickets "
+                                    f"L'utilisateur '{user.username}' a dépassé le nombre maximum de tickets "
                                     f"({lottery.max_tickets_per_user})."
                                 )
             except EveCharacter.DoesNotExist:
                 if anomaly_reason is None:
                     anomaly_reason = (
-                        f"EveCharacter {payment.first_party_name_id} not found."
+                        f"EveCharacter {payment.first_party_name_id} non trouvé."
                     )
 
-            # Record anomaly if found
+            # Enregistrer l'anomalie si trouvée
             if anomaly_reason:
                 TicketAnomaly.objects.create(
                     lottery=lottery,
@@ -164,47 +184,49 @@ def process_wallet_tickets() -> str:
                     amount=payment.amount,
                     payment_id=payment_id_str,
                 )
-                logger.info(f"Anomaly detected: {anomaly_reason}")
+                logger.info(f"Anomalie détectée : {anomaly_reason}")
                 continue
 
-            # Otherwise, create the TicketPurchase with correct amount
+            # Sinon, créer le TicketPurchase avec le montant correct
             try:
                 with transaction.atomic():
                     TicketPurchase.objects.create(
                         user=user,
                         lottery=lottery,
                         character=eve_character,
-                        amount=lottery.ticket_price,  # Set amount to ticket_price
+                        amount=lottery.ticket_price,  # Fixe le montant au prix du ticket
                         purchase_date=timezone.now(),
                         payment_id=payment_id_str,
                     )
-                    logger.info(f"Ticket recorded for user '{user.username}'.")
+                    logger.info(
+                        f"Ticket enregistré pour l'utilisateur '{user.username}'."
+                    )
                 total_processed += 1
             except IntegrityError as e:
                 TicketAnomaly.objects.create(
                     lottery=lottery,
                     character=eve_character,
                     user=user,
-                    reason=f"Integrity error: {e}",
+                    reason=f"Erreur d'intégrité : {e}",
                     payment_date=payment.date,
                     amount=payment.amount,
                     payment_id=payment_id_str,
                 )
                 logger.error(
-                    f"Integrity error while processing payment {payment_id_str}: {e}"
+                    f"Erreur d'intégrité lors du traitement du paiement {payment_id_str} : {e}"
                 )
             except Exception as e:
                 TicketAnomaly.objects.create(
                     lottery=lottery,
                     character=eve_character,
                     user=user,
-                    reason=f"Unexpected error: {e}",
+                    reason=f"Erreur inattendue : {e}",
                     payment_date=payment.date,
                     amount=payment.amount,
                     payment_id=payment_id_str,
                 )
                 logger.exception(
-                    f"Unexpected error while processing payment {payment_id_str}: {e}"
+                    f"Erreur inattendue lors du traitement du paiement {payment_id_str} : {e}"
                 )
 
-    return f"{total_processed} tickets processed for all active lotteries."
+    return f"{total_processed} ticket(s) traité(s) pour toutes les loteries actives."

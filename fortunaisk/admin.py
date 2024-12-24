@@ -12,14 +12,7 @@ from django.contrib import admin
 from django.http import HttpResponse
 
 # fortunaisk
-from fortunaisk.models import (
-    AutoLottery,
-    Lottery,
-    Reward,
-    TicketAnomaly,
-    UserProfile,
-    WebhookConfiguration,
-)
+from fortunaisk.models import AutoLottery, Lottery, TicketAnomaly, WebhookConfiguration
 from fortunaisk.notifications import send_discord_notification
 
 logger = logging.getLogger(__name__)
@@ -27,12 +20,12 @@ logger = logging.getLogger(__name__)
 
 class ExportCSVMixin:
     """
-    Mixin to add CSV export action in ModelAdmin.
+    Mixin pour ajouter une action d'exportation CSV dans ModelAdmin.
     """
 
     export_fields = []
 
-    @admin.action(description="Export selected as CSV")
+    @admin.action(description="Exporter les éléments sélectionnés au format CSV")
     def export_as_csv(self, request, queryset):
         meta = self.model._meta
         field_names = self.export_fields or [field.name for field in meta.fields]
@@ -107,7 +100,7 @@ class LotteryAdmin(ExportCSVMixin, admin.ModelAdmin):
     ]
 
     def has_add_permission(self, request):
-        return False  # Disallow creation via admin
+        return False  # Désactiver la création via l'admin
 
     def save_model(self, request, obj, form, change):
         if change:
@@ -120,42 +113,40 @@ class LotteryAdmin(ExportCSVMixin, admin.ModelAdmin):
         if change and old_obj:
             if old_obj.status != obj.status:
                 if obj.status == "completed":
-                    message = f"Lottery {obj.lottery_reference} completed."
+                    message = f"Loterie {obj.lottery_reference} terminée."
                 elif obj.status == "cancelled":
-                    message = f"Lottery {obj.lottery_reference} cancelled."
+                    message = f"Loterie {obj.lottery_reference} annulée."
                 else:
-                    message = f"Lottery {obj.lottery_reference} updated."
+                    message = f"Loterie {obj.lottery_reference} mise à jour."
 
                 send_discord_notification(message=message)
 
-    @admin.action(description="Mark selected lotteries as completed")
+    @admin.action(description="Marquer les loteries sélectionnées comme terminées")
     def mark_completed(self, request, queryset):
         updated = 0
         for lottery in queryset.filter(status="active"):
             lottery.complete_lottery()
             updated += 1
-        self.message_user(request, f"{updated} lottery(ies) marked as completed.")
-        send_discord_notification(
-            message=f"{updated} lottery(ies) have been completed."
+        self.message_user(
+            request, f"{updated} loterie(s) marquée(s) comme terminée(s)."
         )
+        send_discord_notification(message=f"{updated} loterie(s) ont été terminée(s).")
 
-    @admin.action(description="Mark selected lotteries as cancelled")
+    @admin.action(description="Marquer les loteries sélectionnées comme annulées")
     def mark_cancelled(self, request, queryset):
         updated = queryset.filter(status="active").update(status="cancelled")
-        self.message_user(request, f"{updated} lottery(ies) cancelled.")
-        send_discord_notification(
-            message=f"{updated} lottery(ies) have been cancelled."
-        )
+        self.message_user(request, f"{updated} loterie(s) annulée(s).")
+        send_discord_notification(message=f"{updated} loterie(s) ont été annulée(s).")
 
-    @admin.action(description="Terminate selected lotteries prematurely")
+    @admin.action(description="Terminer prématurément les loteries sélectionnées")
     def terminate_lottery(self, request, queryset):
         updated = 0
         for lottery in queryset.filter(status="active"):
             lottery.complete_lottery()
             updated += 1
-        self.message_user(request, f"{updated} lottery(ies) terminated prematurely.")
+        self.message_user(request, f"{updated} loterie(s) terminée(s) prématurément.")
         send_discord_notification(
-            message=f"{updated} lottery(ies) terminated prematurely by {request.user.username}."
+            message=f"{updated} loterie(s) ont été terminée(s) prématurément par {request.user.username}."
         )
 
 
@@ -207,23 +198,9 @@ class TicketAnomalyAdmin(ExportCSVMixin, admin.ModelAdmin):
         "payment_id",
     ]
 
-    @admin.action(description="Export selected anomalies as CSV")
+    @admin.action(description="Exporter les anomalies sélectionnées au format CSV")
     def export_anomalies_as_csv(self, request, queryset):
         return self.export_as_csv(request, queryset)
-
-
-@admin.register(Reward)
-class RewardAdmin(admin.ModelAdmin):
-    list_display = ("name", "points_required")
-    search_fields = ("name",)
-    fields = ("name", "description", "points_required")
-
-
-@admin.register(UserProfile)
-class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ("user",)
-    search_fields = ("user__username",)
-    fields = ("user", "rewards")
 
 
 @admin.register(AutoLottery)
@@ -273,9 +250,9 @@ class AutoLotteryAdmin(ExportCSVMixin, admin.ModelAdmin):
         super().save_model(request, obj, form, change)
         if change:
             if obj.is_active:
-                message = f"AutoLottery {obj.name} is now active."
+                message = f"AutoLoterie {obj.name} est maintenant active."
             else:
-                message = f"AutoLottery {obj.name} has been deactivated."
+                message = f"AutoLoterie {obj.name} a été désactivée."
             send_discord_notification(message=message)
 
 

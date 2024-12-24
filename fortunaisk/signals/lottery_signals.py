@@ -4,11 +4,14 @@
 import logging
 
 # Django
-from django.db.models.signals import post_delete, post_save, pre_save
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 
+# Alliance Auth
+from allianceauth.eveonline.models import EveCorporationInfo
+
 # fortunaisk
-from fortunaisk.models import Lottery, TicketPurchase, Winner
+from fortunaisk.models import Lottery, Winner
 from fortunaisk.notifications import send_discord_notification
 
 logger = logging.getLogger(__name__)
@@ -36,6 +39,14 @@ def lottery_post_save(sender, instance, created, **kwargs):
     """
     if created:
         # Notification de création
+        try:
+            corporation = EveCorporationInfo.objects.get(
+                corporation_id=instance.payment_receiver
+            )
+            corp_name = corporation.corporation_name
+        except EveCorporationInfo.DoesNotExist:
+            corp_name = "Corporation Inconnue"
+
         embed = {
             "title": "✨ **Nouvelle Loterie Créée!** ✨",
             "color": 3066993,  # Vert
@@ -57,7 +68,7 @@ def lottery_post_save(sender, instance, created, **kwargs):
                 },
                 {
                     "name": "🔑 **Récepteur de Paiement**",
-                    "value": str(instance.payment_receiver),
+                    "value": corp_name,
                     "inline": False,
                 },
             ],
@@ -77,6 +88,14 @@ def lottery_post_save(sender, instance, created, **kwargs):
                 winners = Winner.objects.filter(ticket__lottery=instance)
                 if winners.exists():
                     # Regrouper tous les gagnants dans un seul embed
+                    try:
+                        corporation = EveCorporationInfo.objects.get(
+                            corporation_id=instance.payment_receiver
+                        )
+                        corp_name = corporation.corporation_name
+                    except EveCorporationInfo.DoesNotExist:
+                        corp_name = "Corporation Inconnue"
+
                     winners_list = "\n".join(
                         [
                             f"**{winner.ticket.user.username}** ({winner.character.character_name}) - **{winner.prize_amount:,.2f} ISK**"
@@ -110,6 +129,11 @@ def lottery_post_save(sender, instance, created, **kwargs):
                                 ),
                                 "inline": False,
                             },
+                            {
+                                "name": "🔑 **Récepteur de Paiement**",
+                                "value": corp_name,
+                                "inline": False,
+                            },
                         ],
                         "footer": {
                             "text": "Bonne chance à tous! 🍀",
@@ -121,6 +145,14 @@ def lottery_post_save(sender, instance, created, **kwargs):
                     send_discord_notification(embed=embed)
                 else:
                     # Envoyer un embed indiquant qu'il n'y a pas eu de gagnant
+                    try:
+                        corporation = EveCorporationInfo.objects.get(
+                            corporation_id=instance.payment_receiver
+                        )
+                        corp_name = corporation.corporation_name
+                    except EveCorporationInfo.DoesNotExist:
+                        corp_name = "Corporation Inconnue"
+
                     embed = {
                         "title": "🎉 **Loterie Terminée sans Gagnant** 🎉",
                         "description": f"La loterie **{instance.lottery_reference}** a été terminée, mais aucun gagnant n'a été tiré. 😞",
@@ -143,6 +175,11 @@ def lottery_post_save(sender, instance, created, **kwargs):
                                 ),
                                 "inline": False,
                             },
+                            {
+                                "name": "🔑 **Récepteur de Paiement**",
+                                "value": corp_name,
+                                "inline": False,
+                            },
                         ],
                         "footer": {
                             "text": "Bonne chance pour la prochaine fois! 🍀",
@@ -156,6 +193,14 @@ def lottery_post_save(sender, instance, created, **kwargs):
                     send_discord_notification(embed=embed)
             elif instance.status == "cancelled":
                 # Envoyer un embed indiquant que la loterie a été annulée
+                try:
+                    corporation = EveCorporationInfo.objects.get(
+                        corporation_id=instance.payment_receiver
+                    )
+                    corp_name = corporation.corporation_name
+                except EveCorporationInfo.DoesNotExist:
+                    corp_name = "Corporation Inconnue"
+
                 embed = {
                     "title": "🚫 **Loterie Annulée** 🚫",
                     "description": f"La loterie **{instance.lottery_reference}** a été annulée. 🛑",
@@ -169,6 +214,11 @@ def lottery_post_save(sender, instance, created, **kwargs):
                         {
                             "name": "🔄 **Statut**",
                             "value": "Annulée",
+                            "inline": False,
+                        },
+                        {
+                            "name": "🔑 **Récepteur de Paiement**",
+                            "value": corp_name,
                             "inline": False,
                         },
                     ],
@@ -187,22 +237,3 @@ def lottery_post_save(sender, instance, created, **kwargs):
                 )
                 logger.debug(f"Envoi du message de mise à jour: {message}")
                 send_discord_notification(message=message)
-
-
-@receiver(post_save, sender=TicketPurchase)
-def update_total_pot_on_ticket_purchase(sender, instance, created, **kwargs):
-    if created:
-        lottery = instance.lottery
-        lottery.update_total_pot()
-        logger.info(
-            f"Signal post_save: Updated total_pot for Lottery {lottery.lottery_reference} after ticket purchase."
-        )
-
-
-@receiver(post_delete, sender=TicketPurchase)
-def update_total_pot_on_ticket_delete(sender, instance, **kwargs):
-    lottery = instance.lottery
-    lottery.update_total_pot()
-    logger.info(
-        f"Signal post_delete: Updated total_pot for Lottery {lottery.lottery_reference} after ticket deletion."
-    )

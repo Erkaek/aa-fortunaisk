@@ -4,9 +4,10 @@
 import logging
 
 # Django
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.db.models import Avg, Count, Sum
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, redirect, render
 
 # fortunaisk
 from fortunaisk.models import Lottery, TicketAnomaly, TicketPurchase, Winner
@@ -18,8 +19,8 @@ logger = logging.getLogger(__name__)
 @permission_required("fortunaisk.admin_dashboard", raise_exception=True)
 def admin_dashboard(request):
     """
-    Custom admin dashboard for FortunaIsk.
-    Shows overall statistics, active lotteries, purchases, winners, anomalies.
+    Tableau de bord admin personnalisé pour FortunaIsk.
+    Affiche les statistiques globales, les loteries actives, les achats, les gagnants, les anomalies.
     """
     lotteries = Lottery.objects.all().select_related()
     active_lotteries = lotteries.filter(status="active").annotate(
@@ -38,7 +39,7 @@ def admin_dashboard(request):
         "avg_participation": active_lotteries.aggregate(avg=Avg("tickets"))["avg"] or 0,
     }
 
-    # Anomalies per lottery
+    # Anomalies par loterie
     anomaly_data = (
         anomalies.values("lottery__lottery_reference")
         .annotate(count=Count("id"))
@@ -49,17 +50,17 @@ def admin_dashboard(request):
     ]
     anomalies_per_lottery = [item["count"] for item in anomaly_data[:10]]
 
-    # Top Active Users
+    # Top Utilisateurs Actifs
     top_users = (
         TicketPurchase.objects.values("user__username")
         .annotate(ticket_count=Count("id"))
         .order_by("-ticket_count")[:10]
     )
-    # Retrieve two distinct lists
+    # Récupérer deux listes distinctes
     top_users_names = [item["user__username"] for item in top_users]
     top_users_tickets = [item["ticket_count"] for item in top_users]
 
-    # ZIP the two lists in Python
+    # Zipper les deux listes en Python
     top_active_users = zip(top_users_names, top_users_tickets)
 
     context = {
@@ -79,3 +80,21 @@ def admin_dashboard(request):
     }
 
     return render(request, "fortunaisk/admin.html", context)
+
+
+@login_required
+@permission_required("fortunaisk.terminate_lottery", raise_exception=True)
+def terminate_lottery(request, lottery_id):
+    lottery_obj = get_object_or_404(Lottery, id=lottery_id)
+    if lottery_obj.status == "active":
+        lottery_obj.complete_lottery()
+        messages.success(
+            request,
+            f"La loterie '{lottery_obj.lottery_reference}' a été terminée prématurément et les tâches de finalisation ont été lancées.",
+        )
+    else:
+        messages.info(
+            request,
+            f"La loterie '{lottery_obj.lottery_reference}' n'est pas active et ne peut pas être terminée.",
+        )
+    return redirect("fortunaisk:admin_dashboard")

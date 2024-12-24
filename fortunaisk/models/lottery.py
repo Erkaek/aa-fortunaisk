@@ -7,46 +7,53 @@ import string
 from datetime import timedelta
 from decimal import Decimal
 
+# Third Party
+from celery import chain
+
 # Django
 from django.db import models
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
+# Alliance Auth
+from allianceauth.eveonline.models import EveCorporationInfo
+
 # fortunaisk
 from fortunaisk.models.ticket import TicketPurchase, Winner
+from fortunaisk.tasks import finalize_lottery, process_wallet_tickets
 
 logger = logging.getLogger(__name__)
 
 
 class Lottery(models.Model):
     """
-    Represents a single lottery instance.
-    Supports multiple winners based on a distribution.
+    Représente une instance unique de loterie.
+    Supporte plusieurs gagnants basés sur une distribution.
     """
 
     DURATION_UNITS = [
-        ("hours", "Hours"),
-        ("days", "Days"),
-        ("months", "Months"),
+        ("hours", "Heures"),
+        ("days", "Jours"),
+        ("months", "Mois"),
     ]
     STATUS_CHOICES = [
         ("active", "Active"),
-        ("completed", "Completed"),
-        ("cancelled", "Cancelled"),
+        ("completed", "Terminée"),
+        ("cancelled", "Annulée"),
     ]
 
     ticket_price = models.DecimalField(
         max_digits=20,
         decimal_places=2,
-        verbose_name="Ticket Price (ISK)",
-        help_text="Price of a single lottery ticket in ISK.",
+        verbose_name="Prix du Ticket (ISK)",
+        help_text="Prix d'un ticket de loterie en ISK.",
     )
-    start_date = models.DateTimeField(verbose_name="Start Date")
-    end_date = models.DateTimeField(db_index=True, verbose_name="End Date")
+    start_date = models.DateTimeField(verbose_name="Date de Début")
+    end_date = models.DateTimeField(db_index=True, verbose_name="Date de Fin")
     payment_receiver = models.IntegerField(
         db_index=True,
-        verbose_name="Payment Receiver ID",
-        help_text="Corporation or character ID that receives ISK payments.",
+        verbose_name="ID du Récepteur de Paiement",
+        help_text="ID de la corporation ou du personnage qui reçoit les paiements en ISK.",
     )
     lottery_reference = models.CharField(
         max_length=20,
@@ -54,57 +61,57 @@ class Lottery(models.Model):
         blank=True,
         null=True,
         db_index=True,
-        verbose_name="Lottery Reference",
+        verbose_name="Référence de la Loterie",
     )
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
         default="active",
         db_index=True,
-        verbose_name="Lottery Status",
+        verbose_name="Statut de la Loterie",
     )
     winners_distribution = models.JSONField(
         default=list,
         blank=True,
-        verbose_name="Winners Distribution",
-        help_text="List of percentage splits for winners (sum must be 100).",
+        verbose_name="Distribution des Gagnants",
+        help_text="Liste des répartitions en pourcentage pour les gagnants (la somme doit être 100).",
     )
     max_tickets_per_user = models.PositiveIntegerField(
-        null=True, blank=True, verbose_name="Max Tickets Per User"
+        null=True, blank=True, verbose_name="Tickets Maximum par Utilisateur"
     )
     total_pot = models.DecimalField(
         max_digits=25,
         decimal_places=2,
         default=0,
         verbose_name="Total Pot (ISK)",
-        help_text="Cumulative ISK pot from ticket purchases.",
+        help_text="Pot cumulatif en ISK provenant des achats de tickets.",
     )
     duration_value = models.PositiveIntegerField(
         default=24,
-        verbose_name="Duration Value",
-        help_text="Numeric value of the lottery duration.",
+        verbose_name="Valeur de Durée",
+        help_text="Valeur numérique de la durée de la loterie.",
     )
     duration_unit = models.CharField(
         max_length=10,
         choices=DURATION_UNITS,
         default="hours",
-        verbose_name="Duration Unit",
-        help_text="Unit of time for the lottery duration.",
+        verbose_name="Unité de Durée",
+        help_text="Unité de temps pour la durée de la loterie.",
     )
     winner_count = models.PositiveIntegerField(
-        default=1, verbose_name="Number of Winners"
+        default=1, verbose_name="Nombre de Gagnants"
     )
 
     class Meta:
         ordering = ["-start_date"]
         permissions = [
-            ("view_lotteryhistory", "Can view lottery history"),
-            ("terminate_lottery", "Can terminate lottery"),
-            ("admin_dashboard", "Can access admin dashboard"),
+            ("view_lotteryhistory", "Peut voir l'historique des loteries"),
+            ("terminate_lottery", "Peut terminer une loterie"),
+            ("admin_dashboard", "Peut accéder au tableau de bord admin"),
         ]
 
     def __str__(self) -> str:
-        return f"Lottery {self.lottery_reference} [{self.status}]"
+        return f"Loterie {self.lottery_reference} [{self.status}]"
 
     @staticmethod
     def generate_unique_reference() -> str:
@@ -115,7 +122,7 @@ class Lottery(models.Model):
 
     def clean(self):
         """
-        Ensures that the winners_distribution is valid.
+        Assure que la distribution des gagnants est valide.
         """
         if self.winners_distribution:
             if len(self.winners_distribution) != self.winner_count:
@@ -137,7 +144,7 @@ class Lottery(models.Model):
 
     def get_duration_timedelta(self) -> timedelta:
         """
-        Calculate the duration of the lottery as a timedelta.
+        Calcule la durée de la loterie sous forme de timedelta.
         """
         if self.duration_unit == "hours":
             return timedelta(hours=self.duration_value)
@@ -146,14 +153,17 @@ class Lottery(models.Model):
         elif self.duration_unit == "months":
             return timedelta(
                 days=30 * self.duration_value
-            )  # Approximate 30 days per month.
+            )  # Approximation de 30 jours par mois.
         return timedelta(hours=self.duration_value)
 
     def update_total_pot(self):
         """
-        Update the total_pot based on the number of tickets and ticket price.
+        Met à jour le total_pot basé sur le nombre de tickets et le prix du ticket.
         """
         ticket_count = self.ticket_purchases.count()
+        logger.debug(
+            f"Loterie {self.lottery_reference} - Nombre de tickets: {ticket_count}"
+        )
         self.total_pot = self.ticket_price * Decimal(ticket_count)
         self.save(update_fields=["total_pot"])
         logger.debug(
@@ -167,7 +177,7 @@ class Lottery(models.Model):
             )
             return
 
-        # Recalculer total_pot avant de sélectionner les gagnants
+        # Mettre à jour le pot total
         self.update_total_pot()
         logger.debug(
             f"Loterie {self.lottery_reference} - Total Pot recalculé: {self.total_pot} ISK"
@@ -181,11 +191,12 @@ class Lottery(models.Model):
             self.save(update_fields=["status"])
             return
 
-        self.status = "completed"
-        self.save(update_fields=["status"])
-        winners = self.select_winners()
-        self.notify_discord(winners)
-        self.save()
+        # Créer une chaîne de tâches : d'abord traiter les tickets, puis finaliser la loterie
+        task_chain = chain(process_wallet_tickets.s(), finalize_lottery.s(self.id))
+        task_chain.apply_async()
+        logger.info(
+            f"Chaîne de tâches lancée pour la loterie {self.lottery_reference}."
+        )
 
     def select_winners(self):
         tickets = TicketPurchase.objects.filter(lottery=self)
@@ -215,7 +226,7 @@ class Lottery(models.Model):
                 prize_amount = (self.ticket_price * percentage_decimal) / Decimal("100")
                 prize_amount = prize_amount.quantize(
                     Decimal("0.01")
-                )  # Ensure two decimal places
+                )  # Assure deux décimales
                 logger.debug(
                     f"Calculé prize_amount: {prize_amount} ISK pour le gagnant: {random_ticket.user.username}"
                 )
@@ -238,6 +249,14 @@ class Lottery(models.Model):
                 f"Aucun gagnant à notifier pour la loterie {self.lottery_reference}."
             )
             return
+
+        try:
+            corporation = EveCorporationInfo.objects.get(
+                corporation_id=self.payment_receiver
+            )
+            corp_name = corporation.corporation_name
+        except EveCorporationInfo.DoesNotExist:
+            corp_name = "Corporation Inconnue"
 
         # Import local pour éviter l'import circulaire
         # fortunaisk
@@ -272,6 +291,11 @@ class Lottery(models.Model):
                         "value": f"{winner.won_at.strftime('%Y-%m-%d %H:%M')}",
                         "inline": False,
                     },
+                    {
+                        "name": "🔑 **Récepteur de Paiement**",
+                        "value": corp_name,
+                        "inline": False,
+                    },
                 ],
                 "footer": {
                     "text": "Bonne chance à tous! 🍀",
@@ -283,7 +307,7 @@ class Lottery(models.Model):
 
     @property
     def participant_count(self):
-        """Returns the number of participants in the lottery."""
+        """Retourne le nombre de participants dans la loterie."""
         return self.ticket_purchases.count()
 
 
@@ -291,9 +315,12 @@ class Lottery(models.Model):
 def update_total_pot_on_ticket_purchase(sender, instance, created, **kwargs):
     if created:
         lottery = instance.lottery
+        logger.debug(
+            f"Signal post_save: Création de TicketPurchase pour la loterie {lottery.lottery_reference}"
+        )
         lottery.update_total_pot()
         logger.info(
-            f"Signal post_save: Updated total_pot for Lottery {lottery.lottery_reference} after ticket purchase."
+            f"Signal post_save: Total pot mis à jour pour la loterie {lottery.lottery_reference} après achat de ticket."
         )
 
 
@@ -301,3 +328,6 @@ def update_total_pot_on_ticket_purchase(sender, instance, created, **kwargs):
 def update_total_pot_on_ticket_delete(sender, instance, **kwargs):
     lottery = instance.lottery
     lottery.update_total_pot()
+    logger.info(
+        f"Signal post_delete: Total pot mis à jour pour la loterie {lottery.lottery_reference} après suppression de ticket."
+    )
