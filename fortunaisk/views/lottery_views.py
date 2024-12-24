@@ -81,7 +81,7 @@ def ticket_purchases(request):
 
 
 @login_required
-@permission_required("fortunaisk.view_ticketpurchase", raise_exception=True)
+@permission_required("fortunaisk.view_winner", raise_exception=True)
 def winner_list(request):
     winners = Winner.objects.select_related("character", "ticket__lottery").order_by(
         "-won_at"
@@ -149,11 +149,10 @@ def create_lottery(request):
 def terminate_lottery(request, lottery_id):
     lottery_obj = get_object_or_404(Lottery, id=lottery_id)
     if lottery_obj.status == "active":
-        lottery_obj.status = "completed"
-        lottery_obj.save()
+        lottery_obj.complete_lottery()
         messages.success(
             request,
-            f"La loterie '{lottery_obj.lottery_reference}' a été terminée prématurément.",
+            f"La loterie '{lottery_obj.lottery_reference}' a été terminée prématurément et les tâches de finalisation ont été lancées.",
         )
     else:
         messages.info(

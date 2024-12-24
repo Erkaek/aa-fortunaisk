@@ -1,0 +1,29 @@
+<!-- fortunaisk/templates/fortunaisk/resolve_anomaly_confirm.html -->
+{% extends "fortunaisk/base.html" %}
+{% load i18n %}
+
+{% block page_title %}
+    {% trans "Resolve Anomaly" %}
+{% endblock page_title %}
+
+{% block details %}
+<div class="container mt-4">
+    <h2 class="text-center mb-4">{% trans "Resolve Anomaly" %}</h2>
+    <div class="card">
+        <div class="card-body">
+            <p><strong>{% trans "Lottery Reference:" %}</strong> {{ anomaly.lottery.lottery_reference }}</p>
+            <p><strong>{% trans "User:" %}</strong> {{ anomaly.user.username if anomaly.user else "N/A" }}</p>
+            <p><strong>{% trans "Character:" %}</strong> {{ anomaly.character if anomaly.character else "N/A" }}</p>
+            <p><strong>{% trans "Reason:" %}</strong> {{ anomaly.reason }}</p>
+            <p><strong>{% trans "Payment Date:" %}</strong> {{ anomaly.payment_date|date:"Y-m-d H:i" }}</p>
+            <p><strong>{% trans "Amount (ISK):" %}</strong> {{ anomaly.amount|floatformat:2 }}</p>
+            <p><strong>{% trans "Payment ID:" %}</strong> {{ anomaly.payment_id }}</p>
+        </div>
+    </div>
+    <form method="post" class="mt-3">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-success">{% trans "Resolve Anomaly" %}</button>
+        <a href="{% url 'fortunaisk:admin_dashboard' %}" class="btn btn-secondary">{% trans "Cancel" %}</a>
+    </form>
+</div>
+{% endblock details %}

@@ -12,8 +12,17 @@ from django.contrib import admin
 from django.http import HttpResponse
 
 # fortunaisk
-from fortunaisk.models import AutoLottery, Lottery, TicketAnomaly, WebhookConfiguration
-from fortunaisk.notifications import send_discord_notification
+from fortunaisk.models import (
+    AutoLottery,
+    Lottery,
+    TicketAnomaly,
+    WebhookConfiguration,
+    Winner,
+)
+from fortunaisk.notifications import (
+    send_alliance_auth_notification,
+    send_discord_notification,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -52,12 +61,7 @@ class LotteryAdmin(ExportCSVMixin, admin.ModelAdmin):
         "total_pot",
     )
     search_fields = ("lottery_reference",)
-    actions = [
-        "mark_completed",
-        "mark_cancelled",
-        "export_as_csv",
-        "terminate_lottery",
-    ]
+    actions = ["mark_completed", "mark_cancelled", "export_as_csv", "terminate_lottery"]
     readonly_fields = (
         "id",
         "lottery_reference",
@@ -119,6 +123,17 @@ class LotteryAdmin(ExportCSVMixin, admin.ModelAdmin):
                 else:
                     message = f"Loterie {obj.lottery_reference} mise à jour."
 
+                # Envoyer une notification via Alliance Auth
+                send_alliance_auth_notification(
+                    event_type="lottery_status_changed",
+                    user=request.user,
+                    context={
+                        "lottery_reference": obj.lottery_reference,
+                        "new_status": obj.status,
+                    },
+                )
+
+                # Envoyer une notification Discord
                 send_discord_notification(message=message)
 
     @admin.action(description="Marquer les loteries sélectionnées comme terminées")
@@ -131,12 +146,22 @@ class LotteryAdmin(ExportCSVMixin, admin.ModelAdmin):
             request, f"{updated} loterie(s) marquée(s) comme terminée(s)."
         )
         send_discord_notification(message=f"{updated} loterie(s) ont été terminée(s).")
+        send_alliance_auth_notification(
+            event_type="lotteries_marked_completed",
+            user=request.user,
+            context={"count": updated},
+        )
 
     @admin.action(description="Marquer les loteries sélectionnées comme annulées")
     def mark_cancelled(self, request, queryset):
         updated = queryset.filter(status="active").update(status="cancelled")
         self.message_user(request, f"{updated} loterie(s) annulée(s).")
         send_discord_notification(message=f"{updated} loterie(s) ont été annulée(s).")
+        send_alliance_auth_notification(
+            event_type="lotteries_marked_cancelled",
+            user=request.user,
+            context={"count": updated},
+        )
 
     @admin.action(description="Terminer prématurément les loteries sélectionnées")
     def terminate_lottery(self, request, queryset):
@@ -147,6 +172,11 @@ class LotteryAdmin(ExportCSVMixin, admin.ModelAdmin):
         self.message_user(request, f"{updated} loterie(s) terminée(s) prématurément.")
         send_discord_notification(
             message=f"{updated} loterie(s) ont été terminée(s) prématurément par {request.user.username}."
+        )
+        send_alliance_auth_notification(
+            event_type="lotteries_terminated_prematurely",
+            user=request.user,
+            context={"count": updated, "admin": request.user.username},
         )
 
 
@@ -186,7 +216,7 @@ class TicketAnomalyAdmin(ExportCSVMixin, admin.ModelAdmin):
         "recorded_at",
         "payment_id",
     )
-    actions = ["export_anomalies_as_csv"]
+    actions = ["export_as_csv"]
     export_fields = [
         "lottery",
         "user",
@@ -197,10 +227,6 @@ class TicketAnomalyAdmin(ExportCSVMixin, admin.ModelAdmin):
         "recorded_at",
         "payment_id",
     ]
-
-    @admin.action(description="Exporter les anomalies sélectionnées au format CSV")
-    def export_anomalies_as_csv(self, request, queryset):
-        return self.export_as_csv(request, queryset)
 
 
 @admin.register(AutoLottery)
@@ -254,6 +280,56 @@ class AutoLotteryAdmin(ExportCSVMixin, admin.ModelAdmin):
             else:
                 message = f"AutoLoterie {obj.name} a été désactivée."
             send_discord_notification(message=message)
+            send_alliance_auth_notification(
+                event_type="autolottery_status_changed",
+                user=request.user,
+                context={"autolottery_name": obj.name, "new_status": obj.is_active},
+            )
+
+
+@admin.register(Winner)
+class WinnerAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "ticket",
+        "character",
+        "prize_amount",
+        "won_at",
+        "distributed",
+    )
+    search_fields = (
+        "ticket__user__username",
+        "character__character_name",
+        "ticket__lottery__lottery_reference",
+    )
+    readonly_fields = (
+        "ticket",
+        "character",
+        "prize_amount",
+        "won_at",
+    )
+    fields = (
+        "ticket",
+        "character",
+        "prize_amount",
+        "won_at",
+        "distributed",
+    )
+    list_filter = ("distributed",)
+    actions = ["mark_as_distributed"]
+
+    @admin.action(description="Marquer les gains sélectionnés comme distribués")
+    def mark_as_distributed(self, request, queryset):
+        updated = queryset.filter(distributed=False).update(distributed=True)
+        self.message_user(request, f"{updated} gain(s) marqué(s) comme distribués.")
+        send_discord_notification(
+            message=f"{updated} gain(s) ont été marqué(s) comme distribués."
+        )
+        send_alliance_auth_notification(
+            event_type="prizes_marked_distributed",
+            user=request.user,
+            context={"count": updated},
+        )
 
 
 @admin.register(WebhookConfiguration)

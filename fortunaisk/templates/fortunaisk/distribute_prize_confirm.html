@@ -1,0 +1,27 @@
+<!-- fortunaisk/templates/fortunaisk/distribute_prize_confirm.html -->
+{% extends "fortunaisk/base.html" %}
+{% load i18n %}
+
+{% block page_title %}
+    {% trans "Distribute Prize" %}
+{% endblock page_title %}
+
+{% block details %}
+<div class="container mt-4">
+    <h2 class="text-center mb-4">{% trans "Distribute Prize" %}</h2>
+    <div class="card">
+        <div class="card-body">
+            <p><strong>{% trans "Lottery Reference:" %}</strong> {{ winner.ticket.lottery.lottery_reference }}</p>
+            <p><strong>{% trans "User:" %}</strong> {{ winner.ticket.user.username }}</p>
+            <p><strong>{% trans "Character:" %}</strong> {{ winner.character if winner.character else "N/A" }}</p>
+            <p><strong>{% trans "Prize Amount (ISK):" %}</strong> {{ winner.prize_amount|floatformat:2 }}</p>
+            <p><strong>{% trans "Won At:" %}</strong> {{ winner.won_at|date:"Y-m-d H:i" }}</p>
+        </div>
+    </div>
+    <form method="post" class="mt-3">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary">{% trans "Mark as Distributed" %}</button>
+        <a href="{% url 'fortunaisk:admin_dashboard' %}" class="btn btn-secondary">{% trans "Cancel" %}</a>
+    </form>
+</div>
+{% endblock details %}
