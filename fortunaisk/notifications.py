@@ -10,18 +10,14 @@ import requests
 from django.core.cache import cache
 
 # Alliance Auth
-from allianceauth.services.modules.notifications import trigger
+from allianceauth.notifications import notify  # Correct
 
-# fortunaisk
-from fortunaisk.models import WebhookConfiguration  # Assurez-vous que ce modèle existe
+from .models import WebhookConfiguration
 
 logger = logging.getLogger(__name__)
 
 
 def get_webhook_url() -> str:
-    """
-    Récupère l'URL du webhook Discord depuis la configuration, avec mise en cache de 5 minutes.
-    """
     webhook_url = cache.get("discord_webhook_url")
     if webhook_url is None:
         try:
@@ -30,24 +26,19 @@ def get_webhook_url() -> str:
                 webhook_url = webhook_config.webhook_url
                 cache.set("discord_webhook_url", webhook_url, 300)
             else:
-                logger.warning("Aucun webhook configuré.")
+                logger.warning("No webhook configured.")
                 webhook_url = ""
         except Exception as e:
-            logger.exception(
-                f"Erreur lors de la récupération de la configuration du webhook : {e}"
-            )
+            logger.exception(f"Error retrieving webhook configuration: {e}")
             webhook_url = ""
     return webhook_url
 
 
 def send_discord_notification(embed=None, message: str = None) -> None:
-    """
-    Envoie une notification à Discord via le webhook configuré.
-    """
     try:
         webhook_url = get_webhook_url()
         if not webhook_url:
-            logger.warning("URL du webhook non configurée. Notification non envoyée.")
+            logger.warning("Webhook URL is not configured. Notification not sent.")
             return
 
         data = {}
@@ -56,35 +47,32 @@ def send_discord_notification(embed=None, message: str = None) -> None:
         if message:
             data["content"] = message
 
-        logger.debug(f"Envoi de la notification Discord avec les données : {data}")
+        logger.debug(f"Envoi de la notification Discord avec les données: {data}")
 
         response = requests.post(webhook_url, json=data)
         if response.status_code not in (200, 204):
             logger.error(
-                f"Échec de l'envoi du message Discord (HTTP {response.status_code}) : {response.text}"
+                f"Failed to send Discord message (HTTP {response.status_code}): {response.text}"
             )
         else:
-            logger.info("Notification Discord envoyée avec succès.")
+            logger.info("Discord notification sent successfully.")
     except Exception as e:
-        logger.exception(f"Erreur lors de l'envoi de la notification Discord : {e}")
+        logger.exception(f"Error sending Discord notification: {e}")
 
 
-def send_alliance_auth_notification(event_type, user, context):
+def send_alliance_auth_notification(user, title, message, level="info") -> None:
     """
     Envoie une notification via le système de notification d’Alliance Auth.
-    :param event_type: Type d’événement (string)
+
     :param user: Utilisateur destinataire de la notification
-    :param context: Dictionnaire contenant les informations supplémentaires
+    :param title: Titre de la notification
+    :param message: Message de la notification
+    :param level: Niveau de la notification ('danger', 'warning', 'info', 'success')
     """
     try:
-        trigger(
-            module_name="fortunaisk",
-            notification_type=event_type,
-            user=user,
-            extra=context,
-        )
-        logger.info(f"Notification '{event_type}' envoyée à {user.username}.")
+        notify(user=user, title=title, message=message, level=level)
+        logger.info(f"Notification '{title}' envoyée à {user.username}.")
     except Exception as e:
         logger.exception(
-            f"Erreur lors de l'envoi de la notification d'Alliance Auth : {e}"
+            f"Erreur lors de l'envoi de la notification d'Alliance Auth: {e}"
         )

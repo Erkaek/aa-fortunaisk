@@ -9,12 +9,8 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.db.models import Avg, Count, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 
-# fortunaisk
-from fortunaisk.models import Lottery, TicketAnomaly, Winner
-from fortunaisk.notifications import (
-    send_alliance_auth_notification,
-    send_discord_notification,
-)
+from .models import Lottery, TicketAnomaly, Winner
+from .notifications import send_alliance_auth_notification, send_discord_notification
 
 logger = logging.getLogger(__name__)
 
@@ -22,27 +18,23 @@ logger = logging.getLogger(__name__)
 @login_required
 @permission_required("fortunaisk.admin_dashboard", raise_exception=True)
 def admin_dashboard(request):
-    """
-    Tableau de bord admin personnalisé pour FortunaIsk.
-    Affiche les statistiques globales, les loteries actives, les achats, les gagnants, les anomalies.
-    """
-    lotteries = Lottery.objects.all()
+    lotteries = Lottery.objects.all().select_related()
     active_lotteries = lotteries.filter(status="active").annotate(
-        tickets=Count("ticket_purchase")
+        tickets=Count("ticket_purchases")
     )
-    winners = Winner.objects.select_related("ticket__lottery", "character").order_by(
+    ticket_purchases = (
+        active_lotteries.aggregate(total=Sum("ticket_purchases__amount"))["total"] or 0
+    )
+    winners = Winner.objects.select_related("ticket__user", "ticket__lottery").order_by(
         "-won_at"
     )
-    anomalies = TicketAnomaly.objects.select_related(
-        "lottery", "user", "character"
-    ).order_by("-recorded_at")
+    anomalies = TicketAnomaly.objects.select_related("lottery", "user").order_by(
+        "-recorded_at"
+    )
 
     stats = {
         "total_lotteries": lotteries.count(),
-        "total_tickets": lotteries.aggregate(total=Sum("ticket_purchase__amount"))[
-            "total"
-        ]
-        or 0,
+        "total_tickets": ticket_purchases,
         "total_anomalies": anomalies.count(),
         "avg_participation": active_lotteries.aggregate(avg=Avg("tickets"))["avg"] or 0,
     }
@@ -60,13 +52,14 @@ def admin_dashboard(request):
 
     # Top Utilisateurs Actifs
     top_users = (
-        Lottery.objects.values("ticket_purchase__user__username")
-        .annotate(ticket_count=Count("ticket_purchase"))
-        .order_by("-ticket_count")[:10]
+        TicketAnomaly.objects.values("user__username")
+        .annotate(anomaly_count=Count("id"))
+        .order_by("-anomaly_count")[:10]
     )
-    top_users_names = [item["ticket_purchase__user__username"] for item in top_users]
-    top_users_tickets = [item["ticket_count"] for item in top_users]
-    top_active_users = zip(top_users_names, top_users_tickets)
+    top_users_names = [item["user__username"] for item in top_users]
+    top_users_anomalies = [item["anomaly_count"] for item in top_users]
+
+    top_active_users = zip(top_users_names, top_users_anomalies)
 
     context = {
         "active_lotteries": active_lotteries,
@@ -84,9 +77,6 @@ def admin_dashboard(request):
 @login_required
 @permission_required("fortunaisk.change_ticketanomaly", raise_exception=True)
 def resolve_anomaly(request, anomaly_id):
-    """
-    Vue pour résoudre une anomalie spécifique.
-    """
     anomaly = get_object_or_404(TicketAnomaly, id=anomaly_id)
     if request.method == "POST":
         try:
@@ -95,12 +85,10 @@ def resolve_anomaly(request, anomaly_id):
 
             # Envoyer une notification via Alliance Auth
             send_alliance_auth_notification(
-                event_type="anomaly_resolved",
                 user=request.user,
-                context={
-                    "anomaly_id": anomaly_id,
-                    "lottery_reference": anomaly.lottery.lottery_reference,
-                },
+                title="Anomalie Résolue",
+                message=f"Anomalie {anomaly_id} résolue pour la loterie {anomaly.lottery.lottery_reference}.",
+                level="info",
             )
 
             # Envoyer une notification Discord
@@ -123,9 +111,6 @@ def resolve_anomaly(request, anomaly_id):
 @login_required
 @permission_required("fortunaisk.change_winner", raise_exception=True)
 def distribute_prize(request, winner_id):
-    """
-    Vue pour marquer un gain comme distribué.
-    """
     winner = get_object_or_404(Winner, id=winner_id)
     if request.method == "POST":
         try:
@@ -139,13 +124,10 @@ def distribute_prize(request, winner_id):
 
                 # Envoyer une notification via Alliance Auth
                 send_alliance_auth_notification(
-                    event_type="prize_distributed",
                     user=request.user,
-                    context={
-                        "winner_id": winner_id,
-                        "user": winner.ticket.user.username,
-                        "prize_amount": winner.prize_amount,
-                    },
+                    title="Gain Distribué",
+                    message=f"Gains de {winner.prize_amount} ISK distribués à {winner.ticket.user.username} pour la loterie {winner.ticket.lottery.lottery_reference}.",
+                    level="success",
                 )
 
                 # Envoyer une notification Discord
@@ -168,17 +150,11 @@ def distribute_prize(request, winner_id):
 @login_required
 @permission_required("fortunaisk.view_lotteryhistory", raise_exception=True)
 def lottery_detail(request, lottery_id):
-    """
-    Vue détaillée pour une loterie spécifique.
-    Affiche les participants, anomalies et gagnants.
-    """
     lottery = get_object_or_404(Lottery, id=lottery_id)
-    participants = lottery.ticket_purchase.select_related("user", "character").all()
-    anomalies = TicketAnomaly.objects.filter(lottery=lottery).select_related(
-        "user", "character"
-    )
+    participants = lottery.ticket_purchases.select_related("user").all()
+    anomalies = TicketAnomaly.objects.filter(lottery=lottery).select_related("user")
     winners = Winner.objects.filter(ticket__lottery=lottery).select_related(
-        "ticket__user", "character"
+        "ticket__user"
     )
 
     context = {

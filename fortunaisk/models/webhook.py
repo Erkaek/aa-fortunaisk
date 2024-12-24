@@ -29,3 +29,4 @@ class WebhookConfiguration(SingletonModel):
 
     class Meta:
         verbose_name = "Webhook Configuration"
+        verbose_name_plural = "Webhook Configuration"
