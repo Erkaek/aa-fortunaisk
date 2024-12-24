@@ -20,7 +20,6 @@ from allianceauth.eveonline.models import EveCorporationInfo
 
 # fortunaisk
 from fortunaisk.models.ticket import TicketPurchase, Winner
-from fortunaisk.tasks import finalize_lottery, process_wallet_tickets
 
 logger = logging.getLogger(__name__)
 
@@ -192,6 +191,9 @@ class Lottery(models.Model):
             return
 
         # Créer une chaîne de tâches : d'abord traiter les tickets, puis finaliser la loterie
+        # fortunaisk
+        from fortunaisk.tasks import finalize_lottery, process_wallet_tickets
+
         task_chain = chain(process_wallet_tickets.s(), finalize_lottery.s(self.id))
         task_chain.apply_async()
         logger.info(

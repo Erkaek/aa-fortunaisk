@@ -5,17 +5,14 @@ import logging
 
 # Third Party
 from celery import shared_task
-from corptools.models import CorporationWalletJournalEntry
 
 # Django
-from django.db import IntegrityError, transaction
+from django.apps import apps
+from django.db import IntegrityError
 from django.utils import timezone
 
-# Alliance Auth
-from allianceauth.eveonline.models import EveCharacter
-
 # fortunaisk
-from fortunaisk.models import AutoLottery, Lottery, TicketAnomaly, TicketPurchase
+from fortunaisk.models import TicketAnomaly, TicketPurchase
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +22,7 @@ def check_lotteries() -> str:
     """
     Vérifie toutes les loteries actives dont la date de fin est dépassée et les termine.
     """
+    Lottery = apps.get_model("fortunaisk", "Lottery")
     now = timezone.now()
     active_lotteries = Lottery.objects.filter(status="active", end_date__lte=now)
     count = active_lotteries.count()
@@ -38,8 +36,10 @@ def create_lottery_from_auto(auto_lottery_id: int) -> int | None:
     """
     Crée une nouvelle Loterie à partir d'une AutoLoterie (planifiée avec Celery).
     """
+    Lottery = apps.get_model("fortunaisk", "Lottery")
+    AutoLotteryModel = apps.get_model("fortunaisk", "AutoLottery")
     try:
-        auto_lottery = AutoLottery.objects.get(id=auto_lottery_id)
+        auto_lottery = AutoLotteryModel.objects.get(id=auto_lottery_id)
 
         start_date = timezone.now()
         end_date = start_date + auto_lottery.get_duration_timedelta()
@@ -62,7 +62,7 @@ def create_lottery_from_auto(auto_lottery_id: int) -> int | None:
         )
         return new_lottery.id
 
-    except AutoLottery.DoesNotExist:
+    except AutoLotteryModel.DoesNotExist:
         logger.error(f"AutoLoterie avec ID {auto_lottery_id} n'existe pas.")
     except Exception as e:
         logger.error(
@@ -76,6 +76,7 @@ def finalize_lottery(lottery_id: int) -> str:
     """
     Finalise la loterie en sélectionnant les gagnants et en envoyant les notifications.
     """
+    Lottery = apps.get_model("fortunaisk", "Lottery")
     try:
         lottery = Lottery.objects.get(id=lottery_id)
         if lottery.status != "active":
@@ -103,6 +104,12 @@ def process_wallet_tickets() -> str:
     Traite les entrées de portefeuille pour toutes les loteries actives.
     Correspond les entrées de CorporationWalletJournalEntry pour créer des TicketPurchase ou des anomalies.
     """
+    Lottery = apps.get_model("fortunaisk", "Lottery")
+    EveCharacter = apps.get_model("allianceauth.eveonline", "EveCharacter")
+    CorporationWalletJournalEntry = apps.get_model(
+        "corptools", "CorporationWalletJournalEntry"
+    )
+
     logger.info("Traitement des entrées de portefeuille pour les loteries actives.")
     active_lotteries = Lottery.objects.filter(status="active")
     total_processed = 0
@@ -189,18 +196,15 @@ def process_wallet_tickets() -> str:
 
             # Sinon, créer le TicketPurchase avec le montant correct
             try:
-                with transaction.atomic():
-                    TicketPurchase.objects.create(
-                        user=user,
-                        lottery=lottery,
-                        character=eve_character,
-                        amount=lottery.ticket_price,  # Fixe le montant au prix du ticket
-                        purchase_date=timezone.now(),
-                        payment_id=payment_id_str,
-                    )
-                    logger.info(
-                        f"Ticket enregistré pour l'utilisateur '{user.username}'."
-                    )
+                TicketPurchase.objects.create(
+                    user=user,
+                    lottery=lottery,
+                    character=eve_character,
+                    amount=lottery.ticket_price,  # Fixe le montant au prix du ticket
+                    purchase_date=timezone.now(),
+                    payment_id=payment_id_str,
+                )
+                logger.info(f"Ticket enregistré pour l'utilisateur '{user.username}'.")
                 total_processed += 1
             except IntegrityError as e:
                 TicketAnomaly.objects.create(
