@@ -11,8 +11,10 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 # fortunaisk
 from fortunaisk.models import Lottery, TicketAnomaly, Winner
-
-from .notifications import send_alliance_auth_notification, send_discord_notification
+from fortunaisk.notifications import (
+    send_alliance_auth_notification,
+    send_discord_notification,
+)
 
 logger = logging.getLogger(__name__)
 
