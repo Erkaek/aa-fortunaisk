@@ -16,7 +16,7 @@ from allianceauth.eveonline.models import EveCorporationInfo
 
 # fortunaisk
 from fortunaisk.forms import LotteryCreateForm
-from fortunaisk.models import Lottery, TicketPurchase, Winner
+from fortunaisk.models import Lottery, TicketAnomaly, TicketPurchase, Winner
 
 logger = logging.getLogger(__name__)
 
@@ -177,3 +177,23 @@ def lottery_participants(request, lottery_id):
         "fortunaisk/lottery_participants.html",
         {"lottery": lottery_obj, "participants": participants},
     )
+
+
+@login_required
+@permission_required("fortunaisk.view_lotteryhistory", raise_exception=True)
+def lottery_detail(request, lottery_id):
+    lottery = get_object_or_404(Lottery, id=lottery_id)
+    participants = lottery.ticket_purchases.select_related("user").all()
+    anomalies = TicketAnomaly.objects.filter(lottery=lottery).select_related("user")
+    winners = Winner.objects.filter(ticket__lottery=lottery).select_related(
+        "ticket__user"
+    )
+
+    context = {
+        "lottery": lottery,
+        "participants": participants,
+        "anomalies": anomalies,
+        "winners": winners,
+    }
+
+    return render(request, "fortunaisk/lottery_detail.html", context)
