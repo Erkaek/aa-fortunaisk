@@ -9,8 +9,14 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.db.models import Avg, Count, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 
-from .models import Lottery, TicketAnomaly, Winner
-from .notifications import send_alliance_auth_notification, send_discord_notification
+# Alliance Auth
+from allianceauth.notifications import (
+    send_alliance_auth_notification,
+    send_discord_notification,
+)
+
+# fortunaisk
+from fortunaisk.models import Lottery, TicketAnomaly, Winner
 
 logger = logging.getLogger(__name__)
 
