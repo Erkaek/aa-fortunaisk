@@ -194,7 +194,8 @@ class Lottery(models.Model):
         # fortunaisk
         from fortunaisk.tasks import finalize_lottery, process_wallet_tickets
 
-        task_chain = chain(process_wallet_tickets.s(), finalize_lottery.s(self.id))
+        # Utiliser 'si' pour empêcher le passage du résultat de process_wallet_tickets
+        task_chain = chain(process_wallet_tickets.s(), finalize_lottery.si(self.id))
         task_chain.apply_async()
         logger.info(
             f"Chaîne de tâches lancée pour la loterie {self.lottery_reference}."
