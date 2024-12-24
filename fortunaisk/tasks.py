@@ -105,7 +105,7 @@ def process_wallet_tickets() -> str:
     Correspond les entrées de CorporationWalletJournalEntry pour créer des TicketPurchase ou des anomalies.
     """
     Lottery = apps.get_model("fortunaisk", "Lottery")
-    EveCharacter = apps.get_model("allianceauth.eveonline", "EveCharacter")
+    EveCharacter = apps.get_model("eveonline", "EveCharacter")  # Correction ici
     CorporationWalletJournalEntry = apps.get_model(
         "corptools", "CorporationWalletJournalEntry"
     )
