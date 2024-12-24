@@ -1,6 +1,6 @@
 # fortunaisk/views/__init__.py
 
-from .admin_views import admin_dashboard
+from .admin_views import admin_dashboard, distribute_prize  # Ajout de distribute_prize
 from .autolottery_views import (
     create_auto_lottery,
     delete_auto_lottery,
@@ -20,6 +20,7 @@ from .user_views import user_dashboard
 
 __all__ = [
     "admin_dashboard",
+    "distribute_prize",  # Ajout de distribute_prize à __all__
     "list_auto_lotteries",
     "create_auto_lottery",
     "edit_auto_lottery",

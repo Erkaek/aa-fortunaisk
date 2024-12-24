@@ -113,8 +113,10 @@ def resolve_anomaly(request, anomaly_id):
 
 
 @login_required
-@permission_required("fortunaisk.change_winner", raise_exception=True)
+@permission_required("fortunaisk.change_ticketanomaly", raise_exception=True)
 def distribute_prize(request, winner_id):
+    from fortunaisk.notifications import send_alliance_auth_notification, send_discord_notification  # Importation locale
+
     winner = get_object_or_404(Winner, id=winner_id)
     if request.method == "POST":
         try:
