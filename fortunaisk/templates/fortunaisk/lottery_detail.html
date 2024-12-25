@@ -15,7 +15,7 @@
 
     <!-- Boutons d'Actions -->
     <div class="mb-4 text-end">
-        {% if user.has_perm('fortunaisk.terminate_lottery') and lottery.status == "active" %}
+        {% if user.has_perm "fortunaisk.terminate_lottery" and lottery.status == "active" %}
         <form action="{% url 'fortunaisk:terminate_lottery' lottery.id %}" method="post" style="display:inline;">
             {% csrf_token %}
             <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('{% trans "Are you sure you want to terminate this lottery prematurely?" %}');">
