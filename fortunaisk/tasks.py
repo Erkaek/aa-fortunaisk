@@ -74,18 +74,39 @@ def create_lottery_from_auto(auto_lottery_id: int) -> int | None:
 @shared_task
 def finalize_lottery(lottery_id: int) -> str:
     """
-    Finalise la loterie en sélectionnant les gagnants et en envoyant les notifications.
+    Finalise la loterie en sélectionnant les gagnants, en envoyant les notifications,
+    et en mettant à jour le statut de la loterie.
     """
     Lottery = apps.get_model("fortunaisk", "Lottery")
     try:
         lottery = Lottery.objects.get(id=lottery_id)
         if lottery.status != "active":
+            logger.warning(
+                f"Loterie {lottery.lottery_reference} n'est pas active. Statut actuel: {lottery.status}"
+            )
             return f"Loterie {lottery.lottery_reference} n'est pas active."
 
         # Sélection des gagnants
         winners = lottery.select_winners()
+        if not winners:
+            logger.warning(
+                f"Aucun gagnant sélectionné pour la loterie {lottery.lottery_reference}."
+            )
+        else:
+            logger.info(
+                f"{len(winners)} gagnant(s) sélectionné(s) pour la loterie {lottery.lottery_reference}."
+            )
+
         # Envoi des notifications Discord
         lottery.notify_discord(winners)
+        logger.info(
+            f"Notifications Discord envoyées pour la loterie {lottery.lottery_reference}."
+        )
+
+        # Mettre à jour le statut de la loterie à "completed"
+        lottery.status = "completed"
+        lottery.save(update_fields=["status"])
+        logger.info(f"Loterie {lottery.lottery_reference} marquée comme 'completed'.")
 
         return f"Loterie {lottery.lottery_reference} finalisée avec succès."
     except Lottery.DoesNotExist:
