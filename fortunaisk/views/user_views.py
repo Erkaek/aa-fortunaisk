@@ -4,8 +4,8 @@
 import logging
 
 # Django
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
+from django.contrib.auth.decorators import login_required  # type: ignore
+from django.shortcuts import render  # type: ignore
 
 # fortunaisk
 from fortunaisk.models import TicketPurchase, Winner

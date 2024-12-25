@@ -4,9 +4,12 @@
 import logging
 
 # Django
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required, permission_required
-from django.shortcuts import get_object_or_404, redirect, render
+from django.contrib import messages  # type: ignore
+from django.contrib.auth.decorators import (  # type: ignore
+    login_required,
+    permission_required,
+)
+from django.shortcuts import get_object_or_404, redirect, render  # type: ignore
 
 # fortunaisk
 from fortunaisk.forms import AutoLotteryForm

@@ -7,10 +7,10 @@ import logging
 import requests
 
 # Django
-from django.core.cache import cache
+from django.core.cache import cache  # type: ignore
 
 # Alliance Auth
-from allianceauth.notifications import notify  # Correct
+from allianceauth.notifications import notify  # type: ignore
 
 from .models import WebhookConfiguration
 

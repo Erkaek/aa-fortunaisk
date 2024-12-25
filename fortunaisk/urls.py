@@ -1,7 +1,7 @@
 # fortunaisk/urls.py
 
 # Django
-from django.urls import path
+from django.urls import path  # type: ignore
 
 from .views import resolve_anomaly  # Assurez-vous que resolve_anomaly est importé
 from .views import (

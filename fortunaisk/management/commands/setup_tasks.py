@@ -5,10 +5,10 @@ import json
 import logging
 
 # Third Party
-from django_celery_beat.models import IntervalSchedule, PeriodicTask
+from django_celery_beat.models import IntervalSchedule, PeriodicTask  # type: ignore
 
 # Django
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand  # type: ignore
 
 logger = logging.getLogger(__name__)
 

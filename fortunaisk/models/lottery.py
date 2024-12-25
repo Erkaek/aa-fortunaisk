@@ -8,15 +8,15 @@ from datetime import timedelta
 from decimal import Decimal
 
 # Third Party
-from celery import chain
+from celery import chain  # type: ignore
 
 # Django
-from django.db import models
-from django.db.models.signals import post_delete, post_save
-from django.dispatch import receiver
+from django.db import models  # type: ignore
+from django.db.models.signals import post_delete, post_save  # type: ignore
+from django.dispatch import receiver  # type: ignore
 
 # Alliance Auth
-from allianceauth.eveonline.models import EveCorporationInfo
+from allianceauth.eveonline.models import EveCorporationInfo  # type: ignore
 
 # fortunaisk
 from fortunaisk.models.ticket import TicketPurchase, Winner

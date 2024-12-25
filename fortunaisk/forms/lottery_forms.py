@@ -1,9 +1,9 @@
 # fortunaisk/forms/lottery_forms.py
 
 # Django
-from django import forms
-from django.core.exceptions import ValidationError
-from django.utils import timezone
+from django import forms  # type: ignore
+from django.core.exceptions import ValidationError  # type: ignore
+from django.utils import timezone  # type: ignore
 
 # fortunaisk
 from fortunaisk.models import Lottery, LotterySettings

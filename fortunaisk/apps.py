@@ -4,7 +4,7 @@
 import logging
 
 # Django
-from django.apps import AppConfig
+from django.apps import AppConfig  # type: ignore
 
 logger = logging.getLogger(__name__)
 

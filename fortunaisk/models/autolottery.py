@@ -1,7 +1,7 @@
 # fortunaisk/models/autolottery.py
 
 # Django
-from django.db import models
+from django.db import models  # type: ignore
 
 
 class AutoLottery(models.Model):

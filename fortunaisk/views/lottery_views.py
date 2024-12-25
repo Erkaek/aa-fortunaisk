@@ -4,15 +4,18 @@
 import logging
 
 # Django
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required, permission_required
-from django.core.paginator import Paginator
-from django.shortcuts import get_object_or_404, redirect, render
-from django.utils.translation import gettext as _
-from django.views.decorators.http import require_POST
+from django.contrib import messages  # type: ignore
+from django.contrib.auth.decorators import (  # type: ignore
+    login_required,
+    permission_required,
+)
+from django.core.paginator import Paginator  # type: ignore
+from django.shortcuts import get_object_or_404, redirect, render  # type: ignore
+from django.utils.translation import gettext as _  # type: ignore
+from django.views.decorators.http import require_POST  # type: ignore
 
 # Alliance Auth
-from allianceauth.eveonline.models import EveCorporationInfo
+from allianceauth.eveonline.models import EveCorporationInfo  # type: ignore
 
 # fortunaisk
 from fortunaisk.forms import LotteryCreateForm

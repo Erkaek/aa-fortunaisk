@@ -4,8 +4,8 @@
 import logging
 
 # Django
-from django import forms
-from django.core.exceptions import ValidationError
+from django import forms  # type: ignore
+from django.core.exceptions import ValidationError  # type: ignore
 
 # fortunaisk
 from fortunaisk.models import AutoLottery, LotterySettings

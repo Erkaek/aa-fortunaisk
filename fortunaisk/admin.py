@@ -5,11 +5,11 @@ import csv
 import logging
 
 # Third Party
-from solo.admin import SingletonModelAdmin
+from solo.admin import SingletonModelAdmin  # type: ignore
 
 # Django
-from django.contrib import admin
-from django.http import HttpResponse
+from django.contrib import admin  # type: ignore
+from django.http import HttpResponse  # type: ignore
 
 from .models import AutoLottery, Lottery, TicketAnomaly, WebhookConfiguration, Winner
 from .notifications import send_alliance_auth_notification, send_discord_notification

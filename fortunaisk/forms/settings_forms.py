@@ -1,7 +1,7 @@
 # fortunaisk/forms/settings_forms.py
 
 # Django
-from django import forms
+from django import forms  # type: ignore
 
 # fortunaisk
 from fortunaisk.models import AutoLottery, LotterySettings

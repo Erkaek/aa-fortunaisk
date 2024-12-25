@@ -5,11 +5,11 @@ import json
 import logging
 
 # Third Party
-from django_celery_beat.models import IntervalSchedule, PeriodicTask
+from django_celery_beat.models import IntervalSchedule, PeriodicTask  # type: ignore
 
 # Django
-from django.db.models.signals import post_delete, post_save
-from django.dispatch import receiver
+from django.db.models.signals import post_delete, post_save  # type: ignore
+from django.dispatch import receiver  # type: ignore
 
 # fortunaisk
 from fortunaisk.models import AutoLottery

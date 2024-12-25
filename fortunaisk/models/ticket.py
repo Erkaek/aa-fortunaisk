@@ -5,11 +5,11 @@ import logging
 from decimal import Decimal
 
 # Django
-from django.contrib.auth.models import User
-from django.db import models
+from django.contrib.auth.models import User  # type: ignore
+from django.db import models  # type: ignore
 
 # Alliance Auth
-from allianceauth.eveonline.models import EveCharacter
+from allianceauth.eveonline.models import EveCharacter  # type: ignore
 
 logger = logging.getLogger(__name__)
 

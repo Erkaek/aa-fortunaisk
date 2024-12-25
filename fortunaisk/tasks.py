@@ -7,9 +7,9 @@ import logging
 from celery import shared_task
 
 # Django
-from django.apps import apps
-from django.db import IntegrityError
-from django.utils import timezone
+from django.apps import apps  # type: ignore
+from django.db import IntegrityError  # type: ignore
+from django.utils import timezone  # type: ignore
 
 # fortunaisk
 from fortunaisk.models import TicketAnomaly, TicketPurchase
