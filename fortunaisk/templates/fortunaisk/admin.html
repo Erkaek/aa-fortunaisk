@@ -161,8 +161,20 @@
                         {% for anomaly in anomalies %}
                         <tr>
                             <td>{{ anomaly.lottery.lottery_reference }}</td>
-                            <td>{{ anomaly.user.username if anomaly.user else "N/A" }}</td>
-                            <td>{{ anomaly.character if anomaly.character else "N/A" }}</td>
+                            <td>
+                                {% if anomaly.user %}
+                                    {{ anomaly.user.username }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if anomaly.character %}
+                                    {{ anomaly.character }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
                             <td>{{ anomaly.reason }}</td>
                             <td>{{ anomaly.payment_date|date:"Y-m-d H:i" }}</td>
                             <td>{{ anomaly.amount|floatformat:2 }}</td>
@@ -213,7 +225,13 @@
                         <tr>
                             <td>{{ winner.ticket.lottery.lottery_reference }}</td>
                             <td>{{ winner.ticket.user.username }}</td>
-                            <td>{{ winner.character if winner.character else "N/A" }}</td>
+                            <td>
+                                {% if winner.character %}
+                                    {{ winner.character }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
                             <td>{{ winner.prize_amount|floatformat:2 }}</td>
                             <td>{{ winner.won_at|date:"Y-m-d H:i" }}</td>
                             <td>
