@@ -1,13 +1,17 @@
 # fortunaisk/views/__init__.py
 
-from .admin_views import admin_dashboard, distribute_prize
+from .admin_views import (  # Ajouté resolve_anomaly
+    admin_dashboard,
+    distribute_prize,
+    resolve_anomaly,
+)
 from .autolottery_views import (
     create_auto_lottery,
     delete_auto_lottery,
     edit_auto_lottery,
     list_auto_lotteries,
 )
-from .lottery_views import lottery_detail  # Maintenant correct
+from .lottery_views import lottery_detail  # Ajouté ici
 from .lottery_views import (
     create_lottery,
     lottery,
@@ -22,6 +26,7 @@ from .user_views import user_dashboard
 __all__ = [
     "admin_dashboard",
     "distribute_prize",
+    "resolve_anomaly",  # Ajouté ici
     "list_auto_lotteries",
     "create_auto_lottery",
     "edit_auto_lottery",
@@ -34,5 +39,5 @@ __all__ = [
     "terminate_lottery",
     "user_dashboard",
     "create_lottery",
-    "lottery_detail",  # Ajouté ici
+    "lottery_detail",
 ]
