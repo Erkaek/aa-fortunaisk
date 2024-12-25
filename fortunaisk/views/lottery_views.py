@@ -12,7 +12,6 @@ from django.contrib.auth.decorators import (  # type: ignore
 from django.core.paginator import Paginator  # type: ignore
 from django.shortcuts import get_object_or_404, redirect, render  # type: ignore
 from django.utils.translation import gettext as _  # type: ignore
-from django.views.decorators.http import require_POST  # type: ignore
 
 # Alliance Auth
 from allianceauth.eveonline.models import EveCorporationInfo  # type: ignore
@@ -143,42 +142,6 @@ def create_lottery(request):
             "is_auto_lottery": False,
             "distribution_range": distribution_range,
         },
-    )
-
-
-@require_POST
-@login_required
-@permission_required("fortunaisk.terminate_lottery", raise_exception=True)
-def terminate_lottery(request, lottery_id):
-    lottery_obj = get_object_or_404(Lottery, id=lottery_id)
-    if lottery_obj.status == "active":
-        lottery_obj.complete_lottery()
-        messages.success(
-            request,
-            f"La loterie '{lottery_obj.lottery_reference}' a été terminée prématurément et les tâches de finalisation ont été lancées.",
-        )
-    else:
-        messages.info(
-            request,
-            f"La loterie '{lottery_obj.lottery_reference}' n'est pas active et ne peut pas être terminée.",
-        )
-    return redirect("fortunaisk:admin_dashboard")
-
-
-@login_required
-@permission_required("fortunaisk.view_lotteryhistory", raise_exception=True)
-def lottery_participants(request, lottery_id):
-    lottery_obj = get_object_or_404(Lottery, id=lottery_id)
-    participants = (
-        TicketPurchase.objects.filter(lottery=lottery_obj)
-        .select_related("user", "character")
-        .order_by("-purchase_date")
-    )
-
-    return render(
-        request,
-        "fortunaisk/lottery_participants.html",
-        {"lottery": lottery_obj, "participants": participants},
     )
 
 
