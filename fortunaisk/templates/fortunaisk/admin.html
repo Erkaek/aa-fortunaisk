@@ -75,65 +75,67 @@
     </div>
 
     <!-- Loteries Actives avec Actions Rapides -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <h4>{% trans "Active Lotteries" %}</h4>
-            {% if active_lotteries %}
-            <div class="table-responsive">
-                <table class="table table-striped table-hover">
-                    <thead class="table-dark">
-                        <tr>
-                            <th scope="col">{% trans "Reference" %}</th>
-                            <th scope="col">{% trans "Status" %}</th>
-                            <th scope="col">{% trans "Ticket Price (ISK)" %}</th>
-                            <th scope="col">{% trans "Total Pot (ISK)" %}</th>
-                            <th scope="col">{% trans "Participants" %}</th>
-                            <th scope="col">{% trans "Actions" %}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for lottery in active_lotteries %}
-                        <tr>
-                            <td>{{ lottery.lottery_reference }}</td>
-                            <td>
-                                {% if lottery.status == "active" %}
-                                    <span class="badge bg-success">{% trans "Active" %}</span>
-                                {% elif lottery.status == "completed" %}
-                                    <span class="badge bg-secondary">{% trans "Completed" %}</span>
-                                {% elif lottery.status == "cancelled" %}
-                                    <span class="badge bg-danger">{% trans "Cancelled" %}</span>
-                                {% else %}
-                                    {{ lottery.status }}
-                                {% endif %}
-                            </td>
-                            <td>{{ lottery.ticket_price|floatformat:2 }}</td>
-                            <td>{{ lottery.total_pot|intcomma }}</td>
-                            <td>{{ lottery.participant_count }}</td>
-                            <td>
-                                <!-- Formulaire pour Terminer la Lottery -->
-                                <form action="{% url 'fortunaisk:terminate_lottery' lottery.id %}" method="post" style="display:inline;">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('{% trans "Are you sure you want to terminate this lottery prematurely?" %}');">
-                                        <i class="fas fa-stop-circle"></i> {% trans "Terminate" %}
-                                    </button>
-                                </form>
-                                <a href="{% url 'fortunaisk:lottery_participants' lottery.id %}" class="btn btn-sm btn-primary">
-                                    <i class="fas fa-users"></i> {% trans "View Participants" %}
-                                </a>
-                                <a href="{% url 'fortunaisk:lottery_detail' lottery.id %}" class="btn btn-sm btn-info">
-                                    <i class="fas fa-chart-pie"></i> {% trans "Dashboard" %}
-                                </a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% else %}
-            <div class="alert alert-info text-center">
-                <i class="fas fa-info-circle alert-icon"></i> {% trans "No active lotteries found." %}
-            </div>
-            {% endif %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h4>{% trans "Active Lotteries" %}</h4>
+        {% if active_lotteries %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th scope="col">{% trans "Reference" %}</th>
+                        <th scope="col">{% trans "Status" %}</th>
+                        <th scope="col">{% trans "Ticket Price (ISK)" %}</th>
+                        <th scope="col">{% trans "Total Pot (ISK)" %}</th>
+                        <th scope="col">{% trans "Participants" %}</th>
+                        <th scope="col">{% trans "Actions" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lottery in active_lotteries %}
+                    <tr>
+                        <td>{{ lottery.lottery_reference }}</td>
+                        <td>
+                            {% if lottery.status == "active" %}
+                                <span class="badge bg-success">{% trans "Active" %}</span>
+                            {% elif lottery.status == "completed" %}
+                                <span class="badge bg-secondary">{% trans "Completed" %}</span>
+                            {% elif lottery.status == "cancelled" %}
+                                <span class="badge bg-danger">{% trans "Cancelled" %}</span>
+                            {% else %}
+                                {{ lottery.status }}
+                            {% endif %}
+                        </td>
+                        <td>{{ lottery.ticket_price|floatformat:2 }}</td>
+                        <td>{{ lottery.total_pot|intcomma }}</td>
+                        <td>{{ lottery.participant_count }}</td>
+                        <td>
+                            <!-- Retirer ou commenter les boutons "Terminate" et "View Participants" -->
+                            <!--
+                            <form action="{% url 'fortunaisk:terminate_lottery' lottery.id %}" method="post" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('{% trans "Are you sure you want to terminate this lottery prematurely?" %}');">
+                                    <i class="fas fa-stop-circle"></i> {% trans "Terminate" %}
+                                </button>
+                            </form>
+                            <a href="{% url 'fortunaisk:lottery_participants' lottery.id %}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-users"></i> {% trans "View Participants" %}
+                            </a>
+                            -->
+                            <a href="{% url 'fortunaisk:lottery_detail' lottery.id %}" class="btn btn-sm btn-info">
+                                <i class="fas fa-chart-pie"></i> {% trans "Dashboard" %}
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info text-center">
+            <i class="fas fa-info-circle alert-icon"></i> {% trans "No active lotteries found." %}
+        </div>
+        {% endif %}
         </div>
     </div>
 

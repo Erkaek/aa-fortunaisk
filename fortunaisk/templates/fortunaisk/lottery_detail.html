@@ -13,6 +13,21 @@
 <div class="container mt-4">
     <h2 class="text-center mb-4">{% trans "Lottery Detail" %}: {{ lottery.lottery_reference }}</h2>
 
+    <!-- Boutons d'Actions -->
+    <div class="mb-4 text-end">
+        {% if user.has_perm('fortunaisk.terminate_lottery') and lottery.status == "active" %}
+        <form action="{% url 'fortunaisk:terminate_lottery' lottery.id %}" method="post" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('{% trans "Are you sure you want to terminate this lottery prematurely?" %}');">
+                <i class="fas fa-stop-circle"></i> {% trans "Terminate" %}
+            </button>
+        </form>
+        {% endif %}
+        <a href="{% url 'fortunaisk:lottery_participants' lottery.id %}" class="btn btn-sm btn-primary">
+            <i class="fas fa-users"></i> {% trans "View Participants" %}
+        </a>
+    </div>
+
     <!-- Informations sur la Loterie -->
     <div class="row mb-4">
         <div class="col-md-6">
@@ -166,7 +181,7 @@
     <!-- Gagnants -->
     <div class="row mb-4">
         <div class="col-md-12">
-            <h4>{% trans "Winners and Prizes" %} ({{ winners.count }})</h4>
+            <h4>{% trans "Winners and Prizes" %}</h4>
             {% if winners %}
             <div class="table-responsive">
                 <table class="table table-bordered table-hover">
