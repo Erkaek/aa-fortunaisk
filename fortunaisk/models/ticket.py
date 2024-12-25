@@ -47,8 +47,8 @@ class TicketPurchase(models.Model):
         auto_now_add=True, verbose_name="Purchase Date"
     )
     payment_id = models.CharField(
-        max_length=255, null=True, blank=True, verbose_name="Payment ID"
-    )
+        max_length=255, null=True, blank=True, verbose_name="Payment ID", unique=True
+    )  # Ajout de unique=True
 
     def __str__(self) -> str:
         return (

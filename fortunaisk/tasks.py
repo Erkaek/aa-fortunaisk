@@ -158,13 +158,14 @@ def process_wallet_tickets() -> str:
             user = None
             payment_id_str = str(payment.id)
 
-            # Vérifier si une anomalie est déjà enregistrée
-            if TicketAnomaly.objects.filter(
-                lottery=lottery, payment_id=payment_id_str
-            ).exists():
-                logger.info(
-                    f"Anomalie déjà enregistrée pour le paiement {payment_id_str}, passage."
-                )
+            # Vérifier si une anomalie ou un ticket d'achat existe déjà
+            if (
+                TicketAnomaly.objects.filter(
+                    lottery=lottery, payment_id=payment_id_str
+                ).exists()
+                or TicketPurchase.objects.filter(payment_id=payment_id_str).exists()
+            ):
+                logger.info(f"Paiement {payment_id_str} déjà traité. Passage.")
                 continue
 
             # Vérifier la plage de dates
