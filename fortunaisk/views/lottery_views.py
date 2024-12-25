@@ -19,7 +19,7 @@ from allianceauth.eveonline.models import EveCorporationInfo  # type: ignore
 # fortunaisk
 from fortunaisk.forms import LotteryCreateForm
 from fortunaisk.models import Lottery, TicketAnomaly, TicketPurchase, Winner
-from fortunaisk.notifications import (
+from fortunaisk.notifications import (  # <-- Importations ajoutées
     send_alliance_auth_notification,
     send_discord_notification,
 )
