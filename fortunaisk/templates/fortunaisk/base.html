@@ -50,9 +50,6 @@
         <li class="nav-item {% navactive request 'fortunaisk:user_dashboard' %}">
             <a class="nav-link" href="{% url 'fortunaisk:user_dashboard' %}">{% trans "My Dashboard" %}</a>
         </li>
-        <li class="nav-item">
-            <a class="nav-link" href="{% url 'logout' %}">{% trans "Logout" %}</a>
-        </li>
         {% else %}
         <li class="nav-item">
             <a class="nav-link" href="{% url 'login' %}">{% trans "Login" %}</a>
