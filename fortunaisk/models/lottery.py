@@ -226,7 +226,8 @@ class Lottery(models.Model):
                 selected_ticket_ids.add(random_ticket.id)
                 # Conversion de percentage en Decimal
                 percentage_decimal = Decimal(str(percentage))
-                prize_amount = (self.ticket_price * percentage_decimal) / Decimal("100")
+                # Correction : Utiliser total_pot au lieu de ticket_price
+                prize_amount = (self.total_pot * percentage_decimal) / Decimal("100")
                 prize_amount = prize_amount.quantize(
                     Decimal("0.01")
                 )  # Assure deux décimales

@@ -60,13 +60,6 @@ class AutoLotteryForm(forms.ModelForm):
             logger.error("winners_distribution est vide.")
             raise ValidationError("La répartition des gagnants est requise.")
 
-        # Vérifier que distribution_str est une chaîne de caractères
-        if isinstance(distribution_str, float):
-            logger.error(
-                "winners_distribution est un float, attendu une chaîne de caractères."
-            )
-            raise ValidationError("La répartition des gagnants est requise.")
-
         # Convertir la chaîne en liste de floats
         try:
             distribution_list = [

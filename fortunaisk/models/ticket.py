@@ -85,6 +85,11 @@ class Winner(models.Model):
         help_text="ISK amount that the winner receives.",
     )
     won_at = models.DateTimeField(auto_now_add=True, verbose_name="Winning Date")
+    distributed = models.BooleanField(
+        default=False,
+        verbose_name="Prize Distributed",
+        help_text="Indicates whether the prize has been distributed to the winner.",
+    )
 
     def __str__(self) -> str:
         char_name = self.character.character_name if self.character else "Unknown"
