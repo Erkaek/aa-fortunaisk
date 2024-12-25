@@ -3,8 +3,7 @@
 # Django
 from django.urls import path  # type: ignore
 
-from .views import resolve_anomaly  # Assurez-vous que resolve_anomaly est importé
-from .views import (
+from .views import (  # Ajoutez d'autres vues si nécessaire
     admin_dashboard,
     create_auto_lottery,
     create_lottery,
@@ -16,6 +15,7 @@ from .views import (
     lottery_detail,
     lottery_history,
     lottery_participants,
+    resolve_anomaly,
     terminate_lottery,
     ticket_purchases,
     user_dashboard,

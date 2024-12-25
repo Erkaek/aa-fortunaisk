@@ -19,6 +19,10 @@ from allianceauth.eveonline.models import EveCorporationInfo  # type: ignore
 # fortunaisk
 from fortunaisk.forms import LotteryCreateForm
 from fortunaisk.models import Lottery, TicketAnomaly, TicketPurchase, Winner
+from fortunaisk.notifications import (
+    send_alliance_auth_notification,
+    send_discord_notification,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -163,3 +167,53 @@ def lottery_detail(request, lottery_id):
     }
 
     return render(request, "fortunaisk/lottery_detail.html", context)
+
+
+@login_required
+@permission_required("fortunaisk.terminate_lottery", raise_exception=True)
+def terminate_lottery(request, lottery_id):
+    lottery = get_object_or_404(Lottery, id=lottery_id, status="active")
+    if request.method == "POST":
+        try:
+            # Logique pour terminer la loterie prématurément
+            lottery.status = "cancelled"
+            lottery.save(update_fields=["status"])
+            messages.success(
+                request, f"Loterie {lottery.lottery_reference} terminée avec succès."
+            )
+
+            # Notifications si nécessaire
+            send_alliance_auth_notification(
+                user=request.user,
+                title="Loterie Terminée",
+                message=f"La loterie {lottery.lottery_reference} a été terminée prématurément par {request.user.username}.",
+                level="warning",
+            )
+            send_discord_notification(
+                message=f"Loterie {lottery.lottery_reference} terminée prématurément par {request.user.username}."
+            )
+        except Exception as e:
+            messages.error(
+                request, "Une erreur est survenue lors de la terminaison de la loterie."
+            )
+            logger.exception(
+                f"Erreur lors de la terminaison de la loterie {lottery_id}: {e}"
+            )
+        return redirect("fortunaisk:admin_dashboard")
+    return render(
+        request, "fortunaisk/terminate_lottery_confirm.html", {"lottery": lottery}
+    )
+
+
+@login_required
+@permission_required("fortunaisk.view_lotteryhistory", raise_exception=True)
+def lottery_participants(request, lottery_id):
+    lottery = get_object_or_404(Lottery, id=lottery_id)
+    participants = lottery.ticket_purchases.select_related("user", "character").all()
+
+    context = {
+        "lottery": lottery,
+        "participants": participants,
+    }
+
+    return render(request, "fortunaisk/lottery_participants.html", context)
