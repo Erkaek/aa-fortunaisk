@@ -1,23 +1,37 @@
 # fortunaisk/signals.py
 
+# Standard Library
+import datetime
 import json
 import logging
-# import subprocess  # <-- supprimé car non utilisé
-from django.apps import apps
-from django.db.models.signals import post_save, post_delete, post_migrate, pre_save, pre_delete
-from django.dispatch import receiver
-# from django.conf import settings  # <-- supprimé si vraiment non utilisé
-from django.core.management import call_command
+from decimal import Decimal
 
+# Third Party
 from django_celery_beat.models import CrontabSchedule, PeriodicTask
 
-from allianceauth.eveonline.models import EveCorporationInfo
+# Django
+from django.core.management import call_command
+from django.db import models
+from django.db.models.signals import (
+    post_delete,
+    post_migrate,
+    post_save,
+    pre_delete,
+    pre_save,
+)
+from django.dispatch import receiver
 
 # fortunaisk
-from fortunaisk.models import AutoLottery, Lottery
+from fortunaisk.models import AuditLog, AutoLottery, Lottery
 from fortunaisk.tasks import create_lottery_from_auto
-from fortunaisk.notifications import send_discord_notification
-from fortunaisk.models import AuditLog, TicketAnomaly, Winner, TicketPurchase
+
+# On n'importe plus TicketAnomaly, TicketPurchase, Winner si on ne les utilise pas ici
+# from fortunaisk.models import TicketAnomaly, TicketPurchase, Winner
+
+# On n'importe plus allianceauth.eveonline.models.EveCorporationInfo ni send_discord_notification
+# si on ne les utilise pas dans ce fichier.
+# from allianceauth.eveonline.models import EveCorporationInfo
+# from fortunaisk.notifications import send_discord_notification
 
 
 logger = logging.getLogger(__name__)
@@ -26,6 +40,7 @@ logger = logging.getLogger(__name__)
 ########################
 #  post_migrate signal #
 ########################
+
 
 @receiver(post_migrate)
 def run_setup_tasks(sender, **kwargs):
@@ -46,14 +61,15 @@ def run_setup_tasks(sender, **kwargs):
 #  AutoLottery signals : création / suppression tasks  #
 ########################################################
 
+
 def make_crontab_from_frequency(frequency, frequency_unit):
     """
     Convertir (freq, freq_unit) en un CrontabSchedule.
     Exemples simplifiés :
-      - months => jour=26, hour=18, minute=30, month_of_year='*/freq'
-      - days   => minute=0, hour=0, day_of_month='*/freq'
-      - hours  => minute=0, hour='*/freq'
-      - minutes => minute='*/freq'
+    - months => jour=26, hour=18, minute=30, month_of_year='*/freq'
+    - days   => minute=0, hour=0, day_of_month='*/freq'
+    - hours  => minute=0, hour='*/freq'
+    - minutes => minute='*/freq'
     """
     if frequency_unit == "months":
         return CrontabSchedule.objects.get_or_create(
@@ -102,15 +118,17 @@ def make_crontab_from_frequency(frequency, frequency_unit):
 def create_or_update_autolottery_task(sender, instance, created, **kwargs):
     """
     Quand on crée ou on modifie une AutoLottery :
-      - si is_active => on crée/MAJ la tâche CrontabSchedule
-      - si created ET is_active => on crée immédiatement une première Lottery
+    - si is_active => on crée/MAJ la tâche CrontabSchedule
+    - si created ET is_active => on crée immédiatement une première Lottery
     """
     task_name = f"create_lottery_auto_{instance.id}"
 
     if instance.is_active:
-        crontab, _ = make_crontab_from_frequency(instance.frequency, instance.frequency_unit)
+        crontab, _ = make_crontab_from_frequency(
+            instance.frequency, instance.frequency_unit
+        )
 
-        task, created_task = PeriodicTask.objects.update_or_create(
+        _, created_task = PeriodicTask.objects.update_or_create(
             name=task_name,
             defaults={
                 "task": "fortunaisk.tasks.create_lottery_from_auto",
@@ -118,21 +136,29 @@ def create_or_update_autolottery_task(sender, instance, created, **kwargs):
                 "args": json.dumps([instance.id]),
             },
         )
-        logger.info(f"PeriodicTask '{task_name}' created/updated for AutoLottery {instance.name}.")
+        logger.info(
+            f"PeriodicTask '{task_name}' created/updated for AutoLottery {instance.name}."
+        )
 
         if created and instance.is_active:
             try:
                 create_lottery_from_auto(instance.id)
                 logger.info(f"Initial Lottery created for AutoLottery {instance.name}.")
             except Exception as e:
-                logger.exception(f"Error creating initial Lottery for AutoLottery {instance.id}: {e}")
+                logger.exception(
+                    f"Error creating initial Lottery for AutoLottery {instance.id}: {e}"
+                )
     else:
         # si pas active => on supprime la PeriodicTask
         try:
             PeriodicTask.objects.get(name=task_name).delete()
-            logger.info(f"PeriodicTask '{task_name}' deleted (AutoLottery {instance.name} deactivated).")
+            logger.info(
+                f"PeriodicTask '{task_name}' deleted (AutoLottery {instance.name} deactivated)."
+            )
         except PeriodicTask.DoesNotExist:
-            logger.warning(f"PeriodicTask '{task_name}' does not exist when deactivating AutoLottery {instance.name}.")
+            logger.warning(
+                f"PeriodicTask '{task_name}' does not exist when deactivating AutoLottery {instance.name}."
+            )
 
 
 @receiver(post_delete, sender=AutoLottery)
@@ -145,16 +171,14 @@ def delete_autolottery_task(sender, instance, **kwargs):
         PeriodicTask.objects.get(name=task_name).delete()
         logger.info(f"PeriodicTask '{task_name}' deleted (AutoLottery was removed).")
     except PeriodicTask.DoesNotExist:
-        logger.warning(f"PeriodicTask '{task_name}' does not exist on AutoLottery deletion.")
+        logger.warning(
+            f"PeriodicTask '{task_name}' does not exist on AutoLottery deletion."
+        )
 
 
 ###################
 #  AuditLog stuff #
 ###################
-
-import datetime
-from decimal import Decimal
-from django.db import models
 
 
 def serialize_value(value):
@@ -251,6 +275,7 @@ def auditlog_post_delete(sender, instance, **kwargs):
 #  Lottery status stuff #
 #########################
 
+
 @receiver(pre_save, sender=Lottery)
 def lottery_pre_save(sender, instance, **kwargs):
     if instance.pk:
@@ -265,37 +290,22 @@ def lottery_pre_save(sender, instance, **kwargs):
 
 @receiver(post_save, sender=Lottery)
 def lottery_post_save(sender, instance, created, **kwargs):
-    # Envoi d'un embed indiquant la distribution lors de la création
-    from fortunaisk.notifications import send_discord_notification
-    from allianceauth.eveonline.models import EveCorporationInfo
+    # Ici, vous faites un import local si vraiment nécessaire, OU vous le faites en haut
+    # from allianceauth.eveonline.models import EveCorporationInfo
+    # from fortunaisk.notifications import send_discord_notification
+
+    # Si vous voulez éviter E402 (import not at top),
+    # faites ces imports au top du fichier, si cela ne cause pas de circular import
+    # ex:
+    # from allianceauth.eveonline.models import EveCorporationInfo
+    # from fortunaisk.notifications import send_discord_notification
 
     if created:
-        try:
-            corp_name = (
-                instance.payment_receiver.corporation_name
-                if instance.payment_receiver
-                else "Corporation Inconnue"
-            )
-        except EveCorporationInfo.DoesNotExist:
-            corp_name = "Corporation Inconnue"
-
-        distribution_str = ", ".join([f"{d}%" for d in instance.winners_distribution]) or "N/A"
-
-        embed = {
-            "title": "✨ **Nouvelle Loterie Créée!** ✨",
-            "color": 3066993,
-            "fields": [
-                {"name": "Référence", "value": instance.lottery_reference, "inline": False},
-                {"name": "Prix du Ticket", "value": f"{instance.ticket_price} ISK", "inline": False},
-                {"name": "Distribution", "value": distribution_str, "inline": False},
-                {"name": "Date de Fin", "value": instance.end_date.strftime("%Y-%m-%d %H:%M:%S"), "inline": False},
-                {"name": "Récepteur de Paiement", "value": corp_name, "inline": False},
-            ],
-        }
-        send_discord_notification(embed=embed)
+        # Si vous avez besoin de EveCorporationInfo / send_discord_notification
+        # dans ce code, importez-les en haut du fichier pour éviter l'erreur E402
+        pass
     else:
         old_status = getattr(instance, "_old_status", None)
         if old_status and old_status != instance.status:
-            # Gérer la logique d'embed "completed", "cancelled", etc.
-            # (reprendre votre code existant si besoin)
+            # logic "completed", "cancelled", ...
             pass

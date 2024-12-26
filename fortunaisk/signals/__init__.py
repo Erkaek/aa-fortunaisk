@@ -1,7 +1,10 @@
 # fortunaisk/signals/__init__.py
 
-from . import auditlog_signals  # noqa: F401
-from . import autolottery_signals  # noqa: F401
-from . import lottery_signals  # noqa: F401
-from . import setup_tasks_signal  # noqa: F401
-from . import webhook_signals  # noqa: F401
+from . import auditlog_signals, lottery_signals, signals, webhook_signals
+
+__all__ = [
+    "signals",
+    "auditlog_signals",
+    "lottery_signals",
+    "webhook_signals",
+]

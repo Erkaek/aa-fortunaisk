@@ -17,13 +17,17 @@ logger = logging.getLogger(__name__)
 
 
 class AutoLotteryForm(forms.ModelForm):
+    """
+    Form to create or edit an AutoLottery (recurring lottery).
+    """
+
     winners_distribution = forms.CharField(
         widget=forms.HiddenInput(),
         required=True,
         help_text="List of winner distributions separated by commas.",
     )
 
-    # On utilise un ModelChoiceField pour payment_receiver
+    # ModelChoiceField => liste déroulante de corporations
     payment_receiver = forms.ModelChoiceField(
         queryset=EveCorporationInfo.objects.all(),
         required=False,
@@ -71,7 +75,6 @@ class AutoLotteryForm(forms.ModelForm):
             logger.error("winners_distribution est vide.")
             raise ValidationError("La répartition des gagnants est requise.")
 
-        # Convertir la chaîne en liste de floats
         try:
             distribution_list = [
                 float(x.strip()) for x in distribution_str.split(",") if x.strip()
@@ -83,7 +86,6 @@ class AutoLotteryForm(forms.ModelForm):
                 "Veuillez entrer des nombres valides séparés par des virgules."
             )
 
-        # Vérifier longueur
         if len(distribution_list) != winner_count:
             logger.error(
                 f"Longueur de la répartition ({len(distribution_list)}) != {winner_count}"
@@ -92,7 +94,6 @@ class AutoLotteryForm(forms.ModelForm):
                 "La longueur de la répartition ne correspond pas au nombre de gagnants."
             )
 
-        # Vérifier la somme ~ 100
         total = sum(distribution_list)
         if abs(total - 100.0) > 0.001:
             logger.error(f"La somme de la répartition est {total}, doit être ~100.")
@@ -106,11 +107,11 @@ class AutoLotteryForm(forms.ModelForm):
     def save(self, commit=True):
         instance = super().save(commit=False)
 
-        # si max_tickets_per_user non renseigné => illimité => None
+        # si max_tickets_per_user < 1 => forçons à 1
+        # ou si c'est None, alors c'est illimité => on ne touche pas
         if instance.max_tickets_per_user and instance.max_tickets_per_user < 1:
             instance.max_tickets_per_user = 1
 
-        # winners_distribution
         instance.winners_distribution = self.cleaned_data["winners_distribution"]
 
         if commit:
