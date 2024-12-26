@@ -20,7 +20,7 @@ from allianceauth.eveonline.models import EveCorporationInfo  # type: ignore
 # fortunaisk
 from fortunaisk.forms import LotteryCreateForm
 from fortunaisk.models import Lottery, TicketAnomaly, TicketPurchase, Winner
-from fortunaisk.notifications import (  # <-- Importations ajoutées
+from fortunaisk.notifications import (  # Importations ajoutées
     send_alliance_auth_notification,
     send_discord_notification,
 )
@@ -37,12 +37,12 @@ def lottery(request):
     )
     lotteries_info = []
 
-    # Pre-fetch corporation names to minimize queries
+    # Précharger les noms des corporations pour minimiser les requêtes
     corp_ids = active_lotteries.values_list("payment_receiver", flat=True)
     corporations = EveCorporationInfo.objects.filter(corporation_id__in=corp_ids)
     corp_map = {corp.corporation_id: corp.corporation_name for corp in corporations}
 
-    # Pre-count user tickets
+    # Précompter les tickets de l'utilisateur
     user_ticket_counts = (
         TicketPurchase.objects.filter(user=request.user, lottery__in=active_lotteries)
         .values("lottery")
@@ -112,13 +112,13 @@ def winner_list(request):
 
 @login_required
 def lottery_history(request):
-    # Example: all completed or cancelled lotteries
+    # Exemple : toutes les loteries complétées ou annulées
     past_lotteries = (
         Lottery.objects.exclude(status="active")
         .select_related("payment_receiver")
         .prefetch_related("winners")
     )
-    paginator = Paginator(past_lotteries, 6)  # 6 per page
+    paginator = Paginator(past_lotteries, 6)  # 6 par page
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
@@ -130,7 +130,7 @@ def lottery_history(request):
     return render(
         request,
         "fortunaisk/lottery_history.html",
-        context,  # Use context variable
+        context,  # Utilisation de la variable context
     )
 
 
@@ -140,7 +140,9 @@ def create_lottery(request):
     if request.method == "POST":
         form = LotteryCreateForm(request.POST)
         if form.is_valid():
-            form.save()
+            lottery = form.save(commit=False)
+            lottery.modified_by = request.user  # Définir l'utilisateur actuel
+            lottery.save()
             messages.success(request, "Lottery created successfully.")
             return redirect("fortunaisk:lottery")
         else:
@@ -199,14 +201,14 @@ def terminate_lottery(request, lottery_id):
     lottery = get_object_or_404(Lottery, id=lottery_id, status="active")
     if request.method == "POST":
         try:
-            # Logic to terminate the lottery prematurely
+            # Logique pour terminer la loterie prématurément
             lottery.status = "cancelled"
             lottery.save(update_fields=["status"])
             messages.success(
                 request, f"Lottery {lottery.lottery_reference} terminated successfully."
             )
 
-            # Notifications if necessary
+            # Notifications si nécessaire
             send_alliance_auth_notification(
                 user=request.user,
                 title="Lottery Terminated",

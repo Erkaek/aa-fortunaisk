@@ -1,9 +1,12 @@
 # fortunaisk/signals/auditlog_signals.py
 
 # Standard Library
+import datetime
 import logging
+from decimal import Decimal
 
 # Django
+from django.db import models  # Importation ajoutée
 from django.db.models.signals import post_delete, post_save, pre_delete, pre_save
 from django.dispatch import receiver
 
@@ -11,6 +14,24 @@ from django.dispatch import receiver
 from fortunaisk.models.auditlog import AuditLog
 
 logger = logging.getLogger(__name__)
+
+
+def serialize_value(value):
+    """
+    Serialize values to ensure JSON compatibility.
+    """
+    if isinstance(value, datetime.datetime):
+        return value.isoformat()
+    elif isinstance(value, datetime.date):
+        return value.isoformat()
+    elif isinstance(value, datetime.time):
+        return value.isoformat()
+    elif isinstance(value, Decimal):
+        return str(value)
+    elif isinstance(value, models.Model):
+        return str(value)
+    else:
+        return value
 
 
 def get_changes(old_instance, new_instance):
@@ -23,7 +44,10 @@ def get_changes(old_instance, new_instance):
         old_value = getattr(old_instance, field_name, None)
         new_value = getattr(new_instance, field_name, None)
         if old_value != new_value:
-            changes[field_name] = {"old": old_value, "new": new_value}
+            changes[field_name] = {
+                "old": serialize_value(old_value),
+                "new": serialize_value(new_value),
+            }
     return changes
 
 
@@ -57,26 +81,22 @@ def auditlog_post_save(sender, instance, created, **kwargs):
     if created:
         # Log creation
         AuditLog.objects.create(
-            user=getattr(
-                instance, "modified_by", None
-            ),  # Assuming 'modified_by' is set
+            user=None,  # Aucun utilisateur défini sans middleware
             action_type="create",
             model=sender.__name__,
             object_id=instance.pk,
-            changes=None,  # No changes on creation
+            changes=None,  # Pas de changements lors de la création
         )
     else:
         # Log update
         old_instance = getattr(instance, "_pre_save_instance", None)
         if not old_instance:
-            return  # Unable to retrieve old instance, skip logging
+            return  # Impossible de récupérer l'ancienne instance, sauter le logging
 
         changes = get_changes(old_instance, instance)
         if changes:
             AuditLog.objects.create(
-                user=getattr(
-                    instance, "modified_by", None
-                ),  # Assuming 'modified_by' is set
+                user=None,  # Aucun utilisateur défini sans middleware
                 action_type="update",
                 model=sender.__name__,
                 object_id=instance.pk,
@@ -104,9 +124,9 @@ def auditlog_post_delete(sender, instance, **kwargs):
         return  # Avoid logging AuditLog actions
 
     AuditLog.objects.create(
-        user=getattr(instance, "modified_by", None),  # Assuming 'modified_by' is set
+        user=None,  # Aucun utilisateur défini sans middleware
         action_type="delete",
         model=sender.__name__,
         object_id=instance.pk,
-        changes=None,  # No changes on deletion
+        changes=None,  # Pas de changements lors de la suppression
     )
