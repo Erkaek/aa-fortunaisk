@@ -25,7 +25,12 @@ logger = logging.getLogger(__name__)
 @login_required
 @permission_required("fortunaisk.admin_dashboard", raise_exception=True)
 def admin_dashboard(request):
-    lotteries = Lottery.objects.all().select_related()
+    # Optimized queries with select_related and prefetch_related
+    lotteries = (
+        Lottery.objects.all()
+        .select_related("payment_receiver")
+        .prefetch_related("ticket_purchases")
+    )
     active_lotteries = lotteries.filter(status="active").annotate(
         tickets=Count("ticket_purchases")
     )
@@ -46,7 +51,7 @@ def admin_dashboard(request):
         "avg_participation": active_lotteries.aggregate(avg=Avg("tickets"))["avg"] or 0,
     }
 
-    # Anomalies par loterie
+    # Anomalies per lottery
     anomaly_data = (
         anomalies.values("lottery__lottery_reference")
         .annotate(count=Count("id"))
@@ -57,7 +62,7 @@ def admin_dashboard(request):
     ]
     anomalies_per_lottery = [item["count"] for item in anomaly_data[:10]]
 
-    # Top Utilisateurs Actifs
+    # Top Active Users
     top_users = (
         TicketAnomaly.objects.values("user__username")
         .annotate(anomaly_count=Count("id"))
@@ -88,27 +93,23 @@ def resolve_anomaly(request, anomaly_id):
     if request.method == "POST":
         try:
             anomaly.delete()
-            messages.success(request, "Anomalie résolue avec succès.")
+            messages.success(request, "Anomaly resolved successfully.")
 
-            # Envoyer une notification via Alliance Auth
+            # Send notification via Alliance Auth
             send_alliance_auth_notification(
                 user=request.user,
-                title="Anomalie Résolue",
-                message=f"Anomalie {anomaly_id} résolue pour la loterie {anomaly.lottery.lottery_reference}.",
+                title="Anomaly Resolved",
+                message=f"Anomaly {anomaly_id} resolved for lottery {anomaly.lottery.lottery_reference}.",
                 level="info",
             )
 
-            # Envoyer une notification Discord
+            # Send Discord notification
             send_discord_notification(
-                message=f"Anomalie résolue : {anomaly.reason} pour la loterie {anomaly.lottery.lottery_reference} par {request.user.username}."
+                message=f"Anomaly resolved: {anomaly.reason} for lottery {anomaly.lottery.lottery_reference} by {request.user.username}."
             )
         except Exception as e:
-            messages.error(
-                request, "Une erreur est survenue lors de la résolution de l'anomalie."
-            )
-            logger.exception(
-                f"Erreur lors de la résolution de l'anomalie {anomaly_id}: {e}"
-            )
+            messages.error(request, "An error occurred while resolving the anomaly.")
+            logger.exception(f"Error resolving anomaly {anomaly_id}: {e}")
         return redirect("fortunaisk:admin_dashboard")
     return render(
         request, "fortunaisk/resolve_anomaly_confirm.html", {"anomaly": anomaly}
@@ -119,7 +120,7 @@ def resolve_anomaly(request, anomaly_id):
 @permission_required("fortunaisk.change_ticketanomaly", raise_exception=True)
 def distribute_prize(request, winner_id):
     # fortunaisk
-    from fortunaisk.notifications import (  # Importation locale
+    from fortunaisk.notifications import (  # Local import
         send_alliance_auth_notification,
         send_discord_notification,
     )
@@ -132,28 +133,26 @@ def distribute_prize(request, winner_id):
                 winner.save()
 
                 messages.success(
-                    request, f"Gain distribué à {winner.ticket.user.username}."
+                    request, f"Prize distributed to {winner.ticket.user.username}."
                 )
 
-                # Envoyer une notification via Alliance Auth
+                # Send notification via Alliance Auth
                 send_alliance_auth_notification(
                     user=request.user,
-                    title="Gain Distribué",
-                    message=f"Gains de {winner.prize_amount} ISK distribués à {winner.ticket.user.username} pour la loterie {winner.ticket.lottery.lottery_reference}.",
+                    title="Prize Distributed",
+                    message=f"Prizes of {winner.prize_amount} ISK distributed to {winner.ticket.user.username} for lottery {winner.ticket.lottery.lottery_reference}.",
                     level="success",
                 )
 
-                # Envoyer une notification Discord
+                # Send Discord notification
                 send_discord_notification(
-                    message=f"Gain distribué : {winner.prize_amount} ISK à {winner.ticket.user.username} pour la loterie {winner.ticket.lottery.lottery_reference}."
+                    message=f"Prize distributed: {winner.prize_amount} ISK to {winner.ticket.user.username} for lottery {winner.ticket.lottery.lottery_reference}."
                 )
             else:
-                messages.info(request, "Ce gain a déjà été distribué.")
+                messages.info(request, "This prize has already been distributed.")
         except Exception as e:
-            messages.error(
-                request, "Une erreur est survenue lors de la distribution du gain."
-            )
-            logger.exception(f"Erreur lors de la distribution du gain {winner_id}: {e}")
+            messages.error(request, "An error occurred while distributing the prize.")
+            logger.exception(f"Error distributing prize {winner_id}: {e}")
         return redirect("fortunaisk:admin_dashboard")
     return render(
         request, "fortunaisk/distribute_prize_confirm.html", {"winner": winner}

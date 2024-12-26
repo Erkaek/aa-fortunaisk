@@ -11,7 +11,14 @@ from solo.admin import SingletonModelAdmin  # type: ignore
 from django.contrib import admin  # type: ignore
 from django.http import HttpResponse  # type: ignore
 
-from .models import AutoLottery, Lottery, TicketAnomaly, WebhookConfiguration, Winner
+from .models import (
+    AuditLog,
+    AutoLottery,
+    Lottery,
+    TicketAnomaly,
+    WebhookConfiguration,
+    Winner,
+)
 from .notifications import send_alliance_auth_notification, send_discord_notification
 
 logger = logging.getLogger(__name__)
@@ -342,3 +349,24 @@ class WebhookConfigurationAdmin(SingletonModelAdmin):
             },
         ),
     )
+
+
+@admin.register(AuditLog)
+class AuditLogAdmin(admin.ModelAdmin):
+    list_display = ("timestamp", "user", "action_type", "model", "object_id")
+    list_filter = ("action_type", "model", "user")
+    search_fields = ("user__username", "model", "object_id")
+    readonly_fields = (
+        "user",
+        "action_type",
+        "timestamp",
+        "model",
+        "object_id",
+        "changes",
+    )
+
+    def has_add_permission(self, request):
+        return False  # Prevent manual addition of audit logs
+
+    def has_change_permission(self, request, obj=None):
+        return False  # Prevent modification of audit logs

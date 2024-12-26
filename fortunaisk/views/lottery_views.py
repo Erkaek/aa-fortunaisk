@@ -29,24 +29,34 @@ logger = logging.getLogger(__name__)
 
 @login_required
 def lottery(request):
-    active_lotteries = Lottery.objects.filter(status="active").select_related()
+    active_lotteries = (
+        Lottery.objects.filter(status="active")
+        .select_related("payment_receiver")
+        .prefetch_related("ticket_purchases")
+    )
     lotteries_info = []
 
-    for lot in active_lotteries:
-        corp_name = (
-            EveCorporationInfo.objects.filter(corporation_id=lot.payment_receiver)
-            .values_list("corporation_name", flat=True)
-            .first()
-            or "Corporation Inconnue"
-        )
+    # Pre-fetch corporation names to minimize queries
+    corp_ids = active_lotteries.values_list("payment_receiver", flat=True)
+    corporations = EveCorporationInfo.objects.filter(corporation_id__in=corp_ids)
+    corp_map = {corp.corporation_id: corp.corporation_name for corp in corporations}
 
-        user_ticket_count = TicketPurchase.objects.filter(
-            user=request.user, lottery=lot
-        ).count()
+    # Pre-count user tickets
+    user_ticket_counts = (
+        TicketPurchase.objects.filter(user=request.user, lottery__in=active_lotteries)
+        .values("lottery")
+        .annotate(count=Count("id"))
+    )
+    user_ticket_map = {item["lottery"]: item["count"] for item in user_ticket_counts}
+
+    for lot in active_lotteries:
+        corp_name = corp_map.get(lot.payment_receiver, "Unknown Corporation")
+
+        user_ticket_count = user_ticket_map.get(lot.id, 0)
         has_ticket = user_ticket_count > 0
 
         instructions = _(
-            "Pour participer, envoyez {ticket_price} ISK à {corp_name} avec la référence '{lottery_reference}' dans le motif de paiement."
+            "To participate, send {ticket_price} ISK to {corp_name} with the reference '{lottery_reference}' in the payment description."
         ).format(
             ticket_price=lot.ticket_price,
             corp_name=corp_name,
@@ -89,9 +99,9 @@ def ticket_purchases(request):
 @login_required
 @permission_required("fortunaisk.view_winner", raise_exception=True)
 def winner_list(request):
-    winners = Winner.objects.select_related("character", "ticket__lottery").order_by(
-        "-won_at"
-    )
+    winners = Winner.objects.select_related(
+        "character", "ticket__user", "ticket__lottery"
+    ).order_by("-won_at")
     paginator = Paginator(winners, 25)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
@@ -101,11 +111,25 @@ def winner_list(request):
 
 @login_required
 def lottery_history(request):
-    # Exemple: toutes les loteries complétées ou annulées
-    past_lotteries = Lottery.objects.exclude(status="active").select_related()
-    paginator = Paginator(past_lotteries, 6)  # 6 par page
+    # Example: all completed or cancelled lotteries
+    past_lotteries = (
+        Lottery.objects.exclude(status="active")
+        .select_related("payment_receiver")
+        .prefetch_related("winners")
+    )
+    paginator = Paginator(past_lotteries, 6)  # 6 per page
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
+
+    # Prefetch related winners to minimize queries
+    winners = Winner.objects.filter(ticket__lottery__in=past_lotteries).select_related(
+        "character", "ticket__user"
+    )
+
+    context = {
+        "past_lotteries": page_obj,
+        "page_obj": page_obj,
+    }
 
     return render(
         request,
@@ -121,10 +145,10 @@ def create_lottery(request):
         form = LotteryCreateForm(request.POST)
         if form.is_valid():
             form.save()
-            messages.success(request, "Loterie créée avec succès.")
+            messages.success(request, "Lottery created successfully.")
             return redirect("fortunaisk:lottery")
         else:
-            messages.error(request, "Veuillez corriger les erreurs ci-dessous.")
+            messages.error(request, "Please correct the errors below.")
     else:
         form = LotteryCreateForm()
 
@@ -153,10 +177,14 @@ def create_lottery(request):
 @permission_required("fortunaisk.view_lotteryhistory", raise_exception=True)
 def lottery_detail(request, lottery_id):
     lottery = get_object_or_404(Lottery, id=lottery_id)
-    participants = lottery.ticket_purchases.select_related("user").all()
-    anomalies = TicketAnomaly.objects.filter(lottery=lottery).select_related("user")
-    winners = Winner.objects.filter(ticket__lottery=lottery).select_related(
-        "ticket__user"
+    participants = lottery.ticket_purchases.select_related("user", "character").all()
+    anomalies = (
+        TicketAnomaly.objects.filter(lottery=lottery).select_related("user").all()
+    )
+    winners = (
+        Winner.objects.filter(ticket__lottery=lottery)
+        .select_related("ticket__user", "character")
+        .all()
     )
 
     context = {
@@ -175,30 +203,26 @@ def terminate_lottery(request, lottery_id):
     lottery = get_object_or_404(Lottery, id=lottery_id, status="active")
     if request.method == "POST":
         try:
-            # Logique pour terminer la loterie prématurément
+            # Logic to terminate the lottery prematurely
             lottery.status = "cancelled"
             lottery.save(update_fields=["status"])
             messages.success(
-                request, f"Loterie {lottery.lottery_reference} terminée avec succès."
+                request, f"Lottery {lottery.lottery_reference} terminated successfully."
             )
 
-            # Notifications si nécessaire
+            # Notifications if necessary
             send_alliance_auth_notification(
                 user=request.user,
-                title="Loterie Terminée",
-                message=f"La loterie {lottery.lottery_reference} a été terminée prématurément par {request.user.username}.",
+                title="Lottery Terminated",
+                message=f"Lottery {lottery.lottery_reference} was terminated prematurely by {request.user.username}.",
                 level="warning",
             )
             send_discord_notification(
-                message=f"Loterie {lottery.lottery_reference} terminée prématurément par {request.user.username}."
+                message=f"Lottery {lottery.lottery_reference} terminated prematurely by {request.user.username}."
             )
         except Exception as e:
-            messages.error(
-                request, "Une erreur est survenue lors de la terminaison de la loterie."
-            )
-            logger.exception(
-                f"Erreur lors de la terminaison de la loterie {lottery_id}: {e}"
-            )
+            messages.error(request, "An error occurred while terminating the lottery.")
+            logger.exception(f"Error terminating lottery {lottery_id}: {e}")
         return redirect("fortunaisk:admin_dashboard")
     return render(
         request, "fortunaisk/terminate_lottery_confirm.html", {"lottery": lottery}

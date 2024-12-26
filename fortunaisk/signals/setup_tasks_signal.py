@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 def setup_periodic_tasks(sender, **kwargs):
     """
     Sets up periodic Celery tasks after migrations.
-    This includes the default tasks and those for AutoLotteries.
+    This includes the default tasks only.
     """
     if sender.name != "fortunaisk":
         return  # Avoid multiple executions
@@ -58,51 +58,11 @@ def setup_periodic_tasks(sender, **kwargs):
 
         logger.info("Default periodic tasks have been set up successfully.")
 
-        # 2. Configure tasks for active AutoLotteries
-        active_autolotteries = AutoLottery.objects.filter(is_active=True)
-        for autolottery in active_autolotteries:
-            task_name = f"create_lottery_auto_{autolottery.id}"
-            # Convert frequency_unit to IntervalSchedule.period
-            period_map = {
-                "minutes": IntervalSchedule.MINUTES,
-                "hours": IntervalSchedule.HOURS,
-                "days": IntervalSchedule.DAYS,
-                "months": IntervalSchedule.DAYS,  # Approximation
-            }
-            period_type = period_map.get(autolottery.frequency_unit)
-            if not period_type:
-                logger.error(
-                    f"Unsupported frequency_unit: {autolottery.frequency_unit}"
-                )
-                continue
-
-            # For months, approximate to 30 days
-            if autolottery.frequency_unit == "months":
-                every = autolottery.frequency * 30
-            else:
-                every = autolottery.frequency
-
-            interval, created = IntervalSchedule.objects.get_or_create(
-                every=every,
-                period=period_type,
-            )
-
-            # Avoid creating multiple tasks
-            PeriodicTask.objects.update_or_create(
-                name=task_name,
-                defaults={
-                    "task": "fortunaisk.tasks.create_lottery_from_auto",
-                    "interval": interval,
-                    "args": json.dumps([autolottery.id]),
-                },
-            )
-            if created:
-                logger.info(f"Periodic task '{task_name}' created.")
-            else:
-                logger.info(f"Periodic task '{task_name}' updated.")
+        # 2. Configure tasks for active AutoLotteries is handled by signals/autolottery_signals.py
+        # No longer set up AutoLottery tasks here to avoid duplication
 
         logger.info(
-            "All periodic tasks for AutoLotteries have been set up successfully."
+            "All periodic tasks for AutoLotteries are handled by autolottery_signals.py."
         )
 
     except Exception as e:
