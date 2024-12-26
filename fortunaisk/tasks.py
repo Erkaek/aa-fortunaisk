@@ -50,7 +50,7 @@ def create_lottery_from_auto(auto_lottery_id: int) -> int | None:
             payment_receiver=auto_lottery.payment_receiver,
             winner_count=auto_lottery.winner_count,
             winners_distribution=auto_lottery.winners_distribution,
-            max_tickets_per_user=auto_lottery.max_tickets_per_user,  # None => illimité
+            max_tickets_per_user=auto_lottery.max_tickets_per_user,
             lottery_reference=Lottery.generate_unique_reference(),
             duration_value=auto_lottery.duration_value,
             duration_unit=auto_lottery.duration_unit,
@@ -77,7 +77,6 @@ def finalize_lottery(lottery_id: int) -> str:
             logger.warning(
                 f"Lottery {lottery.lottery_reference} not active. Status: {lottery.status}"
             )
-            # On retire le `f` pour éviter F541
             return "Lottery not active"
 
         winners = lottery.select_winners()
@@ -116,7 +115,6 @@ def process_wallet_tickets() -> str:
         if lottery.lottery_reference:
             reason_filter = lottery.lottery_reference.replace("LOTTERY-", "")
 
-        # Filtrage approximatif
         payments = CorporationWalletJournalEntry.objects.filter(
             second_party_name_id=(
                 lottery.payment_receiver.corporation_id
@@ -130,7 +128,7 @@ def process_wallet_tickets() -> str:
         for payment in payments:
             payment_id_str = str(payment.id)
 
-            # Déjà traité ?
+            # Vérifier si déjà traité
             if (
                 TicketAnomaly.objects.filter(
                     lottery=lottery, payment_id=payment_id_str
@@ -139,7 +137,7 @@ def process_wallet_tickets() -> str:
             ):
                 continue
 
-            # check date
+            # Vérifier la date
             if not (lottery.start_date <= payment.date <= lottery.end_date):
                 TicketAnomaly.objects.create(
                     lottery=lottery,
@@ -150,7 +148,7 @@ def process_wallet_tickets() -> str:
                 )
                 continue
 
-            # identif personnage
+            # Identifier le EveCharacter
             try:
                 eve_character = EveCharacter.objects.get(
                     character_id=payment.first_party_name_id
@@ -158,7 +156,6 @@ def process_wallet_tickets() -> str:
                 ownership = eve_character.character_ownership
                 user = ownership.user if ownership else None
             except EveCharacter.DoesNotExist:
-                # Anomalie => pas de personnage
                 TicketAnomaly.objects.create(
                     lottery=lottery,
                     reason="EveCharacter introuvable",
@@ -179,7 +176,7 @@ def process_wallet_tickets() -> str:
                 )
                 continue
 
-            # check max tickets
+            # Vérifier le max de tickets
             if lottery.max_tickets_per_user is not None:
                 user_ticket_count = TicketPurchase.objects.filter(
                     user=user, lottery=lottery
@@ -196,7 +193,7 @@ def process_wallet_tickets() -> str:
                     )
                     continue
 
-            # Sinon => on crée le ticket
+            # Sinon on crée le ticket
             try:
                 TicketPurchase.objects.create(
                     user=user,

@@ -8,7 +8,7 @@ from datetime import timedelta
 from decimal import Decimal
 
 # Third Party
-from celery import chain  # <-- AJOUTÉ pour utiliser chain
+from celery import chain
 
 # Django
 from django.db import models
@@ -120,7 +120,6 @@ class Lottery(models.Model):
                 return reference
 
     def clean(self):
-        # check distribution
         if self.winners_distribution:
             if len(self.winners_distribution) != self.winner_count:
                 raise ValueError(
@@ -142,7 +141,7 @@ class Lottery(models.Model):
         elif self.duration_unit == "days":
             return timedelta(days=self.duration_value)
         elif self.duration_unit == "months":
-            return timedelta(days=30 * self.duration_value)  # Approx
+            return timedelta(days=30 * self.duration_value)
         return timedelta(hours=self.duration_value)
 
     def update_total_pot(self):
@@ -168,7 +167,6 @@ class Lottery(models.Model):
             self.save(update_fields=["status"])
             return
 
-        # create chain tasks
         # fortunaisk
         from fortunaisk.tasks import finalize_lottery, process_wallet_tickets
 
@@ -221,7 +219,6 @@ class Lottery(models.Model):
         # fortunaisk
         from fortunaisk.notifications import send_discord_notification
 
-        # On inclut la distribution dans l'embed
         distribution_str = (
             ", ".join([f"{d}%" for d in self.winners_distribution]) or "N/A"
         )

@@ -4,11 +4,11 @@
 import logging
 
 # Django
-from django.db.models.signals import post_save, pre_save  # type: ignore
-from django.dispatch import receiver  # type: ignore
+from django.db.models.signals import post_save, pre_save
+from django.dispatch import receiver
 
 # Alliance Auth
-from allianceauth.eveonline.models import EveCorporationInfo  # type: ignore
+from allianceauth.eveonline.models import EveCorporationInfo
 
 # fortunaisk
 from fortunaisk.models import Lottery, Winner
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 @receiver(pre_save, sender=Lottery)
 def lottery_pre_save(sender, instance, **kwargs):
     """
-    Avant de sauvegarder une loterie, récupérer l'ancien statut pour comparaison.
+    Avant de sauvegarder une loterie, on récupère l'ancien statut pour comparaison.
     """
     if instance.pk:
         try:
@@ -35,7 +35,8 @@ def lottery_pre_save(sender, instance, **kwargs):
 @receiver(post_save, sender=Lottery)
 def lottery_post_save(sender, instance, created, **kwargs):
     """
-    Après avoir sauvegardé une loterie, comparer l'ancien statut au nouveau et envoyer des notifications si nécessaire.
+    Après avoir sauvegardé une loterie, on compare l'ancien statut au nouveau
+    et on envoie des notifications Discord si nécessaire.
     """
     if created:
         # Notification de création
@@ -49,7 +50,7 @@ def lottery_post_save(sender, instance, created, **kwargs):
 
         embed = {
             "title": "✨ **Nouvelle Loterie Créée!** ✨",
-            "color": 3066993,  # Vert
+            "color": 3066993,  # Couleur verte
             "fields": [
                 {
                     "name": "📌 **Référence**",
@@ -74,12 +75,13 @@ def lottery_post_save(sender, instance, created, **kwargs):
             ],
             "footer": {
                 "text": "Bonne chance à tous! 🍀",
-                "icon_url": "https://i.imgur.com/4M34hi2.png",  # Icône du footer
+                "icon_url": "https://i.imgur.com/4M34hi2.png",
             },
             "timestamp": instance.start_date.isoformat(),
         }
         logger.debug(f"Envoi de l'embed de création: {embed}")
         send_discord_notification(embed=embed)
+
     else:
         old_status = getattr(instance, "_old_status", None)
         if old_status and old_status != instance.status:
@@ -98,14 +100,18 @@ def lottery_post_save(sender, instance, created, **kwargs):
 
                     winners_list = "\n".join(
                         [
-                            f"**{winner.ticket.user.username}** ({winner.character.character_name}) - **{winner.prize_amount:,.2f} ISK**"
+                            f"**{winner.ticket.user.username}** "
+                            f"({winner.character.character_name}) - "
+                            f"**{winner.prize_amount:,.2f} ISK**"
                             for winner in winners
                         ]
                     )
                     embed = {
                         "title": "🏆 **Gagnants de la Loterie!** 🏆",
-                        "description": f"Félicitations aux gagnants de la loterie **{instance.lottery_reference}**! 🎉",
-                        "color": 0x00FF00,  # Vert
+                        "description": (
+                            f"Félicitations aux gagnants de la loterie **{instance.lottery_reference}**! 🎉"
+                        ),
+                        "color": 0x00FF00,  # Couleur verte
                         "fields": [
                             {
                                 "name": "📌 **Référence**",
@@ -137,14 +143,14 @@ def lottery_post_save(sender, instance, created, **kwargs):
                         ],
                         "footer": {
                             "text": "Bonne chance à tous! 🍀",
-                            "icon_url": "https://i.imgur.com/4M34hi2.png",  # Icône du footer
+                            "icon_url": "https://i.imgur.com/4M34hi2.png",
                         },
                         "timestamp": instance.end_date.isoformat(),
                     }
                     logger.debug(f"Envoi de l'embed groupé des gagnants: {embed}")
                     send_discord_notification(embed=embed)
                 else:
-                    # Envoyer un embed indiquant qu'il n'y a pas eu de gagnant
+                    # Aucun gagnant
                     try:
                         corporation = EveCorporationInfo.objects.get(
                             corporation_id=instance.payment_receiver
@@ -155,8 +161,11 @@ def lottery_post_save(sender, instance, created, **kwargs):
 
                     embed = {
                         "title": "🎉 **Loterie Terminée sans Gagnant** 🎉",
-                        "description": f"La loterie **{instance.lottery_reference}** a été terminée, mais aucun gagnant n'a été tiré. 😞",
-                        "color": 0xFF0000,  # Rouge
+                        "description": (
+                            f"La loterie **{instance.lottery_reference}** "
+                            f"a été terminée, mais aucun gagnant n'a été tiré. 😞"
+                        ),
+                        "color": 0xFF0000,  # Couleur rouge
                         "fields": [
                             {
                                 "name": "📌 **Référence**",
@@ -183,7 +192,7 @@ def lottery_post_save(sender, instance, created, **kwargs):
                         ],
                         "footer": {
                             "text": "Bonne chance pour la prochaine fois! 🍀",
-                            "icon_url": "https://i.imgur.com/4M34hi2.png",  # Icône du footer
+                            "icon_url": "https://i.imgur.com/4M34hi2.png",
                         },
                         "timestamp": instance.end_date.isoformat(),
                     }
@@ -191,8 +200,9 @@ def lottery_post_save(sender, instance, created, **kwargs):
                         f"Envoi de l'embed de terminaison sans gagnant: {embed}"
                     )
                     send_discord_notification(embed=embed)
+
             elif instance.status == "cancelled":
-                # Envoyer un embed indiquant que la loterie a été annulée
+                # Loterie annulée
                 try:
                     corporation = EveCorporationInfo.objects.get(
                         corporation_id=instance.payment_receiver
@@ -203,8 +213,10 @@ def lottery_post_save(sender, instance, created, **kwargs):
 
                 embed = {
                     "title": "🚫 **Loterie Annulée** 🚫",
-                    "description": f"La loterie **{instance.lottery_reference}** a été annulée. 🛑",
-                    "color": 0xFF0000,  # Rouge
+                    "description": (
+                        f"La loterie **{instance.lottery_reference}** a été annulée. 🛑"
+                    ),
+                    "color": 0xFF0000,  # Couleur rouge
                     "fields": [
                         {
                             "name": "📌 **Référence**",
@@ -224,14 +236,14 @@ def lottery_post_save(sender, instance, created, **kwargs):
                     ],
                     "footer": {
                         "text": "Loterie annulée par l'administrateur.",
-                        "icon_url": "https://i.imgur.com/4M34hi2.png",  # Icône du footer
+                        "icon_url": "https://i.imgur.com/4M34hi2.png",
                     },
                     "timestamp": instance.end_date.isoformat(),
                 }
                 logger.debug(f"Envoi de l'embed d'annulation: {embed}")
                 send_discord_notification(embed=embed)
             else:
-                # Envoyer un message simple pour d'autres mises à jour
+                # Autres mises à jour du statut
                 message = (
                     f"La loterie **{instance.lottery_reference}** a été mise à jour. 📝"
                 )

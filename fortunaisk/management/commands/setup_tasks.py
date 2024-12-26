@@ -18,7 +18,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         try:
-            # check_lotteries => par exemple, tous les jours à 00h00
+            # check_lotteries => ex. toutes les 15 minutes
             schedule_check, _ = CrontabSchedule.objects.get_or_create(
                 minute="*/15",
                 hour="*",
@@ -35,7 +35,7 @@ class Command(BaseCommand):
                 },
             )
 
-            # process_wallet_tickets => toutes les 5 minutes
+            # process_wallet_tickets => ex. toutes les 5 minutes
             schedule_wallet, _ = CrontabSchedule.objects.get_or_create(
                 minute="*/5",
                 hour="*",

@@ -7,10 +7,10 @@ import logging
 import requests
 
 # Django
-from django.core.cache import cache  # type: ignore
+from django.core.cache import cache
 
 # Alliance Auth
-from allianceauth.notifications import notify  # type: ignore
+from allianceauth.notifications import notify
 
 from .models import WebhookConfiguration
 
@@ -63,11 +63,6 @@ def send_discord_notification(embed=None, message: str = None) -> None:
 def send_alliance_auth_notification(user, title, message, level="info") -> None:
     """
     Envoie une notification via le système de notification d’Alliance Auth.
-
-    :param user: Utilisateur destinataire de la notification
-    :param title: Titre de la notification
-    :param message: Message de la notification
-    :param level: Niveau de la notification ('danger', 'warning', 'info', 'success')
     """
     try:
         notify(user=user, title=title, message=message, level=level)

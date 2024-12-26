@@ -25,15 +25,6 @@ from django.dispatch import receiver
 from fortunaisk.models import AuditLog, AutoLottery, Lottery
 from fortunaisk.tasks import create_lottery_from_auto
 
-# On n'importe plus TicketAnomaly, TicketPurchase, Winner si on ne les utilise pas ici
-# from fortunaisk.models import TicketAnomaly, TicketPurchase, Winner
-
-# On n'importe plus allianceauth.eveonline.models.EveCorporationInfo ni send_discord_notification
-# si on ne les utilise pas dans ce fichier.
-# from allianceauth.eveonline.models import EveCorporationInfo
-# from fortunaisk.notifications import send_discord_notification
-
-
 logger = logging.getLogger(__name__)
 
 
@@ -65,11 +56,6 @@ def run_setup_tasks(sender, **kwargs):
 def make_crontab_from_frequency(frequency, frequency_unit):
     """
     Convertir (freq, freq_unit) en un CrontabSchedule.
-    Exemples simplifiés :
-    - months => jour=26, hour=18, minute=30, month_of_year='*/freq'
-    - days   => minute=0, hour=0, day_of_month='*/freq'
-    - hours  => minute=0, hour='*/freq'
-    - minutes => minute='*/freq'
     """
     if frequency_unit == "months":
         return CrontabSchedule.objects.get_or_create(
@@ -127,7 +113,6 @@ def create_or_update_autolottery_task(sender, instance, created, **kwargs):
         crontab, _ = make_crontab_from_frequency(
             instance.frequency, instance.frequency_unit
         )
-
         _, created_task = PeriodicTask.objects.update_or_create(
             name=task_name,
             defaults={
@@ -193,7 +178,7 @@ def serialize_value(value):
     elif isinstance(value, models.Model):
         return str(value)
     else:
-        return value
+        return str(value)
 
 
 def get_changes(old_instance, new_instance):
@@ -290,22 +275,6 @@ def lottery_pre_save(sender, instance, **kwargs):
 
 @receiver(post_save, sender=Lottery)
 def lottery_post_save(sender, instance, created, **kwargs):
-    # Ici, vous faites un import local si vraiment nécessaire, OU vous le faites en haut
-    # from allianceauth.eveonline.models import EveCorporationInfo
-    # from fortunaisk.notifications import send_discord_notification
-
-    # Si vous voulez éviter E402 (import not at top),
-    # faites ces imports au top du fichier, si cela ne cause pas de circular import
-    # ex:
-    # from allianceauth.eveonline.models import EveCorporationInfo
-    # from fortunaisk.notifications import send_discord_notification
-
-    if created:
-        # Si vous avez besoin de EveCorporationInfo / send_discord_notification
-        # dans ce code, importez-les en haut du fichier pour éviter l'erreur E402
-        pass
-    else:
-        old_status = getattr(instance, "_old_status", None)
-        if old_status and old_status != instance.status:
-            # logic "completed", "cancelled", ...
-            pass
+    # ex. envoi d'un embed indiquant la distribution, etc.
+    # ou usage d'autres signaux custom
+    pass
