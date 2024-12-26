@@ -1,7 +1,15 @@
 # fortunaisk/models/autolottery.py
 
+# Standard Library
+import logging
+
 # Django
-from django.db import models  # type: ignore
+from django.db import models
+
+# Alliance Auth
+from allianceauth.eveonline.models import EveCorporationInfo
+
+logger = logging.getLogger(__name__)
 
 
 class AutoLottery(models.Model):
@@ -13,7 +21,7 @@ class AutoLottery(models.Model):
         ("minutes", "Minutes"),
         ("hours", "Hours"),
         ("days", "Days"),
-        ("months", "Months"),  # Added months to match usage
+        ("months", "Months"),
     ]
     DURATION_UNITS = [
         ("hours", "Hours"),
@@ -52,18 +60,32 @@ class AutoLottery(models.Model):
         default=list, blank=True, verbose_name="Winners Distribution"
     )
     max_tickets_per_user = models.PositiveIntegerField(
-        default=1, verbose_name="Max Tickets Per User"
+        null=True,
+        blank=True,
+        verbose_name="Max Tickets Per User",
+        help_text="Leave blank for unlimited tickets.",
     )
-    payment_receiver = models.IntegerField(verbose_name="Payment Receiver ID")
+    # on passe en ForeignKey
+    payment_receiver = models.ForeignKey(
+        EveCorporationInfo,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="Payment Receiver",
+        help_text="The corporation receiving the payments.",
+    )
 
     def clean(self):
+        # Vérifier coherence distribution vs winner_count
         if self.winners_distribution:
             if len(self.winners_distribution) != self.winner_count:
                 raise ValueError(
                     "Mismatch between winners_distribution and winner_count."
                 )
-            if round(sum(self.winners_distribution), 2) != 100.0:
-                raise ValueError("Sum of winners_distribution must equal 100.")
+            s = sum(self.winners_distribution)
+            # tolérance +/- 0.001
+            if abs(s - 100.0) > 0.001:
+                raise ValueError("Sum of winners_distribution must be approx 100.")
 
     def save(self, *args, **kwargs):
         self.clean()
@@ -81,7 +103,6 @@ class AutoLottery(models.Model):
         elif self.duration_unit == "days":
             return timedelta(days=self.duration_value)
         elif self.duration_unit == "months":
-            return timedelta(
-                days=30 * self.duration_value
-            )  # Approximate 30 days per month.
+            # Approximation (30 jours) - on garde l'existant
+            return timedelta(days=30 * self.duration_value)
         return timedelta(hours=self.duration_value)

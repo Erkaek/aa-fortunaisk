@@ -1,10 +1,11 @@
 # fortunaisk/apps.py
 
 # Standard Library
+import importlib
 import logging
 
 # Django
-from django.apps import AppConfig  # type: ignore
+from django.apps import AppConfig
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +16,7 @@ class FortunaIskConfig(AppConfig):
 
     def ready(self) -> None:
         super().ready()
-        # fortunaisk
-        import fortunaisk.signals  # noqa: F401  # Re-import signals to register them
+        # Import dynamique des signaux
+        importlib.import_module("fortunaisk.signals")
 
         logger.info("FortunaIsk signals loaded.")

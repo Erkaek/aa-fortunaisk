@@ -1,15 +1,19 @@
 # fortunaisk/forms/lottery_forms.py
 
 # Django
-from django import forms  # type: ignore
-from django.core.exceptions import ValidationError  # type: ignore
-from django.utils import timezone  # type: ignore
+from django import forms
+from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 # fortunaisk
-from fortunaisk.models import Lottery, LotterySettings
+from fortunaisk.models import Lottery
 
 
 class LotteryCreateForm(forms.ModelForm):
+    # On remplace le "payment_receiver" (si vous voulez un menu déroulant),
+    # mais dans votre code original, c'était un ForeignKey => peut être prérempli
+    # On retire la logique LotterySettings.
+
     class Meta:
         model = Lottery
         fields = [
@@ -49,32 +53,29 @@ class LotteryCreateForm(forms.ModelForm):
                 "Veuillez entrer des pourcentages valides (séparés par des virgules)."
             )
 
-        # Check match with winner_count
+        # Check match
         if len(distribution_list) != winner_count:
             raise ValidationError(
                 "La répartition doit correspondre au nombre de gagnants."
             )
 
-        # Check that the sum of percentages is 100
-        if round(sum(distribution_list), 2) != 100.0:
+        # Check sum
+        total = sum(distribution_list)
+        if abs(total - 100.0) > 0.001:
             raise ValidationError("La somme des pourcentages doit être égale à 100.")
 
         return distribution_list
 
     def save(self, commit: bool = True) -> Lottery:
         instance = super().save(commit=False)
-        # auto-assign payment receiver from settings
-        lottery_settings = LotterySettings.objects.first()
-        if lottery_settings:
-            instance.payment_receiver = lottery_settings.default_payment_receiver
 
         # If no reference, generate one
         if not instance.lottery_reference:
             instance.lottery_reference = Lottery.generate_unique_reference()
 
-        # If max tickets was not specified, fallback to 1
-        if instance.max_tickets_per_user is None or instance.max_tickets_per_user < 1:
-            instance.max_tickets_per_user = 1
+        # If max tickets was not specified => None => illimité
+        if instance.max_tickets_per_user == 0:
+            instance.max_tickets_per_user = None
 
         # Force the start_date if blank
         if not instance.start_date:
