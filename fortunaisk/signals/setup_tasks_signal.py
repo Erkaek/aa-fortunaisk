@@ -11,9 +11,6 @@ from django_celery_beat.models import IntervalSchedule, PeriodicTask  # type: ig
 from django.db.models.signals import post_migrate  # type: ignore
 from django.dispatch import receiver  # type: ignore
 
-# fortunaisk
-from fortunaisk.models import AutoLottery
-
 logger = logging.getLogger(__name__)
 
 

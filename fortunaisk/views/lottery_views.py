@@ -10,6 +10,7 @@ from django.contrib.auth.decorators import (  # type: ignore
     permission_required,
 )
 from django.core.paginator import Paginator  # type: ignore
+from django.db.models import Count  # type: ignore
 from django.shortcuts import get_object_or_404, redirect, render  # type: ignore
 from django.utils.translation import gettext as _  # type: ignore
 
@@ -121,11 +122,6 @@ def lottery_history(request):
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
-    # Prefetch related winners to minimize queries
-    winners = Winner.objects.filter(ticket__lottery__in=past_lotteries).select_related(
-        "character", "ticket__user"
-    )
-
     context = {
         "past_lotteries": page_obj,
         "page_obj": page_obj,
@@ -134,7 +130,7 @@ def lottery_history(request):
     return render(
         request,
         "fortunaisk/lottery_history.html",
-        {"past_lotteries": page_obj, "page_obj": page_obj},
+        context,  # Use context variable
     )
 
 

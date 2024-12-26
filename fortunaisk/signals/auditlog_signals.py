@@ -2,9 +2,10 @@
 
 # Standard Library
 import logging
-from django.db.models.signals import pre_save, post_save, pre_delete, post_delete
+
+# Django
+from django.db.models.signals import post_delete, post_save, pre_delete, pre_save
 from django.dispatch import receiver
-from django.apps import apps
 
 # fortunaisk
 from fortunaisk.models.auditlog import AuditLog
@@ -22,10 +23,7 @@ def get_changes(old_instance, new_instance):
         old_value = getattr(old_instance, field_name, None)
         new_value = getattr(new_instance, field_name, None)
         if old_value != new_value:
-            changes[field_name] = {
-                'old': old_value,
-                'new': new_value
-            }
+            changes[field_name] = {"old": old_value, "new": new_value}
     return changes
 
 
@@ -59,26 +57,30 @@ def auditlog_post_save(sender, instance, created, **kwargs):
     if created:
         # Log creation
         AuditLog.objects.create(
-            user=getattr(instance, 'modified_by', None),  # Assuming 'modified_by' is set
-            action_type='create',
+            user=getattr(
+                instance, "modified_by", None
+            ),  # Assuming 'modified_by' is set
+            action_type="create",
             model=sender.__name__,
             object_id=instance.pk,
-            changes=None  # No changes on creation
+            changes=None,  # No changes on creation
         )
     else:
         # Log update
-        old_instance = getattr(instance, '_pre_save_instance', None)
+        old_instance = getattr(instance, "_pre_save_instance", None)
         if not old_instance:
             return  # Unable to retrieve old instance, skip logging
 
         changes = get_changes(old_instance, instance)
         if changes:
             AuditLog.objects.create(
-                user=getattr(instance, 'modified_by', None),  # Assuming 'modified_by' is set
-                action_type='update',
+                user=getattr(
+                    instance, "modified_by", None
+                ),  # Assuming 'modified_by' is set
+                action_type="update",
                 model=sender.__name__,
                 object_id=instance.pk,
-                changes=changes
+                changes=changes,
             )
 
 
@@ -102,9 +104,9 @@ def auditlog_post_delete(sender, instance, **kwargs):
         return  # Avoid logging AuditLog actions
 
     AuditLog.objects.create(
-        user=getattr(instance, 'modified_by', None),  # Assuming 'modified_by' is set
-        action_type='delete',
+        user=getattr(instance, "modified_by", None),  # Assuming 'modified_by' is set
+        action_type="delete",
         model=sender.__name__,
         object_id=instance.pk,
-        changes=None  # No changes on deletion
+        changes=None,  # No changes on deletion
     )

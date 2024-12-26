@@ -213,13 +213,6 @@ class Lottery(models.Model):
             selected_ids = random.sample(ticket_ids, self.winner_count)
 
         winners = []
-        try:
-            corporation = EveCorporationInfo.objects.get(
-                corporation_id=self.payment_receiver
-            )
-            corp_name = corporation.corporation_name
-        except EveCorporationInfo.DoesNotExist:
-            corp_name = "Unknown Corporation"
 
         for idx, ticket_id in enumerate(selected_ids):
             ticket = tickets.get(id=ticket_id)
