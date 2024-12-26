@@ -49,10 +49,14 @@ class Lottery(models.Model):
     )
     start_date = models.DateTimeField(verbose_name="Start Date")
     end_date = models.DateTimeField(db_index=True, verbose_name="End Date")
-    payment_receiver = models.IntegerField(
-        db_index=True,
-        verbose_name="Payment Receiver ID",
-        help_text="ID of the corporation or character receiving ISK payments.",
+    payment_receiver = models.ForeignKey(
+        EveCorporationInfo,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="lotteries",
+        verbose_name="Payment Receiver",
+        help_text="The corporation receiving the payments.",
     )
     lottery_reference = models.CharField(
         max_length=20,

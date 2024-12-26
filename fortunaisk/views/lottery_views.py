@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 def lottery(request):
     active_lotteries = (
         Lottery.objects.filter(status="active")
-        .select_related("payment_receiver")
+        # .select_related("payment_receiver")  # Suppression de cette ligne
         .prefetch_related("ticket_purchases")
     )
     lotteries_info = []
@@ -115,7 +115,7 @@ def lottery_history(request):
     # Exemple : toutes les loteries complétées ou annulées
     past_lotteries = (
         Lottery.objects.exclude(status="active")
-        .select_related("payment_receiver")
+        # .select_related("payment_receiver")  # Suppression de cette ligne
         .prefetch_related("winners")
     )
     paginator = Paginator(past_lotteries, 6)  # 6 par page

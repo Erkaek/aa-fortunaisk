@@ -25,12 +25,8 @@ logger = logging.getLogger(__name__)
 @login_required
 @permission_required("fortunaisk.admin_dashboard", raise_exception=True)
 def admin_dashboard(request):
-    # Optimized queries with select_related and prefetch_related
-    lotteries = (
-        Lottery.objects.all()
-        .select_related("payment_receiver")
-        .prefetch_related("ticket_purchases")
-    )
+    # Supprimer select_related("payment_receiver") car ce n'est pas une relation
+    lotteries = Lottery.objects.all().prefetch_related("ticket_purchases")
     active_lotteries = lotteries.filter(status="active").annotate(
         tickets=Count("ticket_purchases")
     )
