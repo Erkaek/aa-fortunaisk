@@ -73,10 +73,7 @@ class AutoLottery(models.Model):
     class Meta:
         ordering = ["name"]
         permissions = [
-            ("view_autolottery", "Can view AutoLotteries"),
-            ("add_autolottery", "Can add AutoLottery"),
-            ("change_autolottery", "Can change AutoLottery"),
-            ("delete_autolottery", "Can delete AutoLottery"),
+            
         ]
 
     def __str__(self):
