@@ -17,6 +17,7 @@ from django.db import models
 from allianceauth.eveonline.models import EveCorporationInfo
 
 # fortunaisk
+# fortunaisk.models.ticket
 from fortunaisk.models.ticket import TicketPurchase, Winner
 
 logger = logging.getLogger(__name__)
@@ -185,8 +186,7 @@ class Lottery(models.Model):
         # fortunaisk
         from fortunaisk.tasks import finalize_lottery, process_wallet_tickets
 
-        task_chain = chain(process_wallet_tickets.s(), finalize_lottery.si(self.id))
-        task_chain.apply_async()
+        chain(process_wallet_tickets.s(), finalize_lottery.si(self.id)).apply_async()
         logger.info(f"Task chain initiated for lottery {self.lottery_reference}.")
 
     def select_winners(self):

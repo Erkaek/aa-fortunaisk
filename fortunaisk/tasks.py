@@ -50,7 +50,7 @@ def create_lottery_from_auto(auto_lottery_id: int) -> int | None:
             ticket_price=auto_lottery.ticket_price,
             start_date=start_date,
             end_date=end_date,
-            payment_receiver=auto_lottery.payment_receiver,
+            payment_receiver=auto_lottery.payment_receiver,  # ForeignKey => OK
             winner_count=auto_lottery.winner_count,
             winners_distribution=auto_lottery.winners_distribution,
             max_tickets_per_user=auto_lottery.max_tickets_per_user,
@@ -118,9 +118,9 @@ def process_wallet_tickets() -> str:
         return "Aucune loterie active."
 
     for lottery in active_lotteries:
+        # On peut enlever "LOTTERY-" si on veut un reason plus court
         reason_filter = ""
         if lottery.lottery_reference:
-            # On retire le "LOTTERY-" du reason, si on veut le matcher
             reason_filter = lottery.lottery_reference.replace("LOTTERY-", "")
 
         payments = CorporationWalletJournalEntry.objects.filter(
@@ -252,7 +252,7 @@ def process_auto_lotteries() -> str:
     for auto_lottery in autos:
         # Logique simplifiée : on crée une nouvelle Lottery
         # *à chaque fois* que la tâche tourne (ex: toutes les X minutes)
-        # Idéalement : vérifier la "last_run" + "frequency" pour respecter l'intervalle
+        # Pour respecter la freq, on aurait besoin d'un champ last_run ou autre
         create_lottery_from_auto(auto_lottery.id)
         created_count += 1
 

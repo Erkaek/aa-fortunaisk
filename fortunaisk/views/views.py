@@ -24,7 +24,9 @@ from fortunaisk.notifications import (
     send_alliance_auth_notification,
     send_discord_notification,
 )
-from fortunaisk.tasks import create_lottery_from_auto  # <-- import de la task
+from fortunaisk.tasks import (
+    create_lottery_from_auto,  # <-- import de la task pour créer un Lottery
+)
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +79,7 @@ def admin_dashboard(request):
     ]
     anomalies_per_lottery = [item["count"] for item in anomaly_data[:10]]
 
-    # Top Active Users (en fait, top anomalies par user) (top 10)
+    # Top Active Users (top anomalies par user) (top 10)
     top_users = (
         TicketAnomaly.objects.values("user__username")
         .annotate(anomaly_count=Count("id"))
@@ -211,7 +213,7 @@ def create_auto_lottery(request):
         if form.is_valid():
             auto_lottery = form.save()
 
-            # Créer immédiatement la 1ère Lottery associée
+            # Créer immédiatement la 1ère Lottery associée (tâche Celery en async)
             create_lottery_from_auto.delay(auto_lottery.id)
 
             messages.success(request, "AutoLottery created, and 1st Lottery generated.")
@@ -221,7 +223,6 @@ def create_auto_lottery(request):
     else:
         form = AutoLotteryForm()
 
-    # On calcule le winner_count et distribution_range pour le template
     winner_count = form.instance.winner_count or 1
     try:
         winner_count = int(winner_count)
@@ -394,8 +395,8 @@ def winner_list(request):
 def lottery_history(request):
     """
     Vue listant toutes les loteries passées (complétées ou annulées).
-    On retire le prefetch_related('winners') car ce n'est pas un related_name direct.
     """
+    # On évite prefetch_related('winners') -> pas de related_name direct
     past_lotteries_qs = Lottery.objects.exclude(status="active").order_by("-end_date")
     paginator = Paginator(past_lotteries_qs, 6)
     page_number = request.GET.get("page")
