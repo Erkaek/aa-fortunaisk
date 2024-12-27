@@ -39,7 +39,7 @@ def finalize_lottery(lottery_id: int) -> str:
         logger.error(f"Lottery {lottery_id} n'existe pas.")
         return "Lottery not found."
     except Exception as e:
-        logger.exception(f"Erreur finalisant la lottery {lottery_id}: {e}")
+        logger.exception(f"Erreur finalisant la loterie {lottery_id}: {e}")
         return "Error finalize_lottery"
 
 
@@ -118,3 +118,67 @@ def create_lottery_from_auto(auto_lottery_id: int) -> int | None:
             f"Error creating Lottery from AutoLottery {auto_lottery_id}: {str(e)}"
         )
     return None
+
+
+def setup_periodic_tasks():
+    """
+    Configure les tâches périodiques par défaut pour FortunaIsk.
+    """
+    # Standard Library
+    import json
+
+    # Third Party
+    from django_celery_beat.models import CrontabSchedule, PeriodicTask
+
+    # check_lotteries => toutes les 15 minutes
+    schedule_check, created = CrontabSchedule.objects.get_or_create(
+        minute="*/15",
+        hour="*",
+        day_of_month="*",
+        month_of_year="*",
+        day_of_week="*",
+    )
+    PeriodicTask.objects.update_or_create(
+        name="check_lotteries",
+        defaults={
+            "task": "fortunaisk.tasks.check_lotteries",
+            "crontab": schedule_check,
+            "args": json.dumps([]),
+        },
+    )
+
+    # process_wallet_tickets => toutes les 5 minutes
+    schedule_wallet, created = CrontabSchedule.objects.get_or_create(
+        minute="*/5",
+        hour="*",
+        day_of_month="*",
+        month_of_year="*",
+        day_of_week="*",
+    )
+    PeriodicTask.objects.update_or_create(
+        name="process_wallet_tickets",
+        defaults={
+            "task": "fortunaisk.tasks.process_wallet_tickets",
+            "crontab": schedule_wallet,
+            "args": json.dumps([]),
+        },
+    )
+
+    # process_auto_lotteries => toutes les 60 minutes
+    schedule_auto, created = CrontabSchedule.objects.get_or_create(
+        minute="0",
+        hour="*",
+        day_of_month="*",
+        month_of_year="*",
+        day_of_week="*",
+    )
+    PeriodicTask.objects.update_or_create(
+        name="process_auto_lotteries",
+        defaults={
+            "task": "fortunaisk.tasks.process_auto_lotteries",
+            "crontab": schedule_auto,
+            "args": json.dumps([]),
+        },
+    )
+
+    logger.info("Periodic tasks configured successfully.")

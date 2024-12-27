@@ -6,6 +6,9 @@ import logging
 # Django
 from django.core.management.base import BaseCommand
 
+# fortunaisk
+from fortunaisk.tasks import setup_periodic_tasks
+
 logger = logging.getLogger(__name__)
 
 
@@ -14,7 +17,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         try:
-
+            setup_periodic_tasks()
             self.stdout.write(
                 self.style.SUCCESS("Default periodic tasks set up successfully.")
             )
