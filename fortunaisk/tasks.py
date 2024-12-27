@@ -4,7 +4,7 @@
 import logging
 
 # Third Party
-from celery import shared_task
+from celery import shared_task  # <-- Supprimé 'chain' de l'importation
 
 # Django
 from django.apps import apps
@@ -250,10 +250,8 @@ def process_auto_lotteries() -> str:
 
     created_count = 0
     for auto_lottery in autos:
-        # Logique simplifiée : on crée une nouvelle Lottery
-        # *à chaque fois* que la tâche tourne (ex: toutes les X minutes)
-        # Pour respecter la freq, on aurait besoin d'un champ last_run ou autre
-        create_lottery_from_auto(auto_lottery.id)
+        # Créer une Lottery de manière asynchrone
+        create_lottery_from_auto.delay(auto_lottery.id)
         created_count += 1
 
     msg = f"{created_count} lotteries créées depuis les AutoLottery."

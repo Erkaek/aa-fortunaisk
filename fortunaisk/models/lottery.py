@@ -8,7 +8,7 @@ from datetime import timedelta
 from decimal import Decimal
 
 # Third Party
-from celery import chain
+from celery import chain  # <-- Ajout de l'importation de chain
 
 # Django
 from django.db import models
@@ -164,7 +164,7 @@ class Lottery(models.Model):
         """
         Déclenche la finalisation de la loterie :
         - Met à jour la cagnotte
-        - Lance la chain de tasks Celery (process_wallet_tickets puis finalize_lottery).
+        - Lance la chaîne de tasks Celery (process_wallet_tickets puis finalize_lottery).
         """
         if self.status != "active":
             logger.info(

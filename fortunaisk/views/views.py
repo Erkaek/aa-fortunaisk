@@ -24,9 +24,7 @@ from fortunaisk.notifications import (
     send_alliance_auth_notification,
     send_discord_notification,
 )
-from fortunaisk.tasks import (
-    create_lottery_from_auto,  # <-- import de la task pour créer un Lottery
-)
+from fortunaisk.tasks import create_lottery_from_auto  # Import correct
 
 logger = logging.getLogger(__name__)
 

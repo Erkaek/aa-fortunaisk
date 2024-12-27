@@ -13,10 +13,6 @@ logger = logging.getLogger(__name__)
 
 
 class AutoLottery(models.Model):
-    """
-    Represents a recurring lottery configuration.
-    """
-
     FREQUENCY_UNITS = [
         ("minutes", "Minutes"),
         ("hours", "Hours"),
@@ -65,7 +61,6 @@ class AutoLottery(models.Model):
         verbose_name="Max Tickets Per User",
         help_text="Leave blank for unlimited tickets.",
     )
-    # on passe en ForeignKey
     payment_receiver = models.ForeignKey(
         EveCorporationInfo,
         on_delete=models.SET_NULL,
@@ -75,15 +70,25 @@ class AutoLottery(models.Model):
         help_text="The corporation receiving the payments.",
     )
 
+    class Meta:
+        ordering = ["name"]
+        permissions = [
+            ("view_autolottery", "Can view AutoLotteries"),
+            ("add_autolottery", "Can add AutoLottery"),
+            ("change_autolottery", "Can change AutoLottery"),
+            ("delete_autolottery", "Can delete AutoLottery"),
+        ]
+
+    def __str__(self):
+        return f"{self.name} (Active={self.is_active})"
+
     def clean(self):
-        # Vérifier coherence distribution vs winner_count
         if self.winners_distribution:
             if len(self.winners_distribution) != self.winner_count:
                 raise ValueError(
                     "Mismatch between winners_distribution and winner_count."
                 )
             s = sum(self.winners_distribution)
-            # tolérance +/- 0.001
             if abs(s - 100.0) > 0.001:
                 raise ValueError("Sum of winners_distribution must be approx 100.")
 
@@ -103,6 +108,5 @@ class AutoLottery(models.Model):
         elif self.duration_unit == "days":
             return timedelta(days=self.duration_value)
         elif self.duration_unit == "months":
-            # Approximation (30 jours) - on garde l'existant
             return timedelta(days=30 * self.duration_value)
         return timedelta(hours=self.duration_value)
