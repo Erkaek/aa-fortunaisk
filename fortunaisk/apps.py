@@ -16,7 +16,9 @@ class FortunaIskConfig(AppConfig):
 
     def ready(self) -> None:
         super().ready()
-        # Import dynamique des signaux
-        importlib.import_module("fortunaisk.signals")
-
-        logger.info("FortunaIsk signals loaded.")
+        try:
+            # Import dynamique de tous les signaux
+            importlib.import_module("fortunaisk.signals")
+            logger.info("FortunaIsk signals loaded.")
+        except Exception as e:
+            logger.exception(f"Failed to load FortunaIsk signals: {e}")

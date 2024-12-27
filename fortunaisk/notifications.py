@@ -24,7 +24,9 @@ def get_webhook_url() -> str:
             webhook_config = WebhookConfiguration.objects.first()
             if webhook_config and webhook_config.webhook_url:
                 webhook_url = webhook_config.webhook_url
-                cache.set("discord_webhook_url", webhook_url, 300)
+                cache.set(
+                    "discord_webhook_url", webhook_url, 300
+                )  # Cache pendant 5 minutes
             else:
                 logger.warning("No webhook configured.")
                 webhook_url = ""

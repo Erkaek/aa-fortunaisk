@@ -18,21 +18,16 @@ logger = logging.getLogger(__name__)
 
 def table_exists(table_name: str) -> bool:
     """
-    Vérifie si la table `table_name` existe déjà dans la base de données.
-    Évite les erreurs lors de la 1ʳᵉ migration si on essaye de créer un log
-    alors que la table AuditLog n'est pas encore créée.
+    Vérifie si la table existe déjà dans la base de données
+    (évite l'erreur 1146 pendant la première migration).
     """
     try:
         return table_name in connection.introspection.table_names()
     except ProgrammingError:
-        # En cas de problème d'introspection pendant la migration, on retourne False
         return False
 
 
 def serialize_value(value):
-    """
-    Serialize values to ensure JSON compatibility.
-    """
     if isinstance(value, datetime.datetime):
         return value.isoformat()
     elif isinstance(value, datetime.date):
@@ -48,9 +43,6 @@ def serialize_value(value):
 
 
 def get_changes(old_instance, new_instance):
-    """
-    Compare old and new instances and return a dictionary of changes.
-    """
     changes = {}
     for field in new_instance._meta.fields:
         field_name = field.name
@@ -66,13 +58,8 @@ def get_changes(old_instance, new_instance):
 
 @receiver(pre_save)
 def auditlog_pre_save(sender, instance, **kwargs):
-    """
-    Capture l'état de l'instance avant la sauvegarde (pour comparer ensuite).
-    """
-    # Éviter la récursion sur AuditLog lui-même
     if sender == AuditLog:
         return
-
     if not instance.pk:
         # Cas création, pas d'ancienne version
         instance._pre_save_instance = None
@@ -86,31 +73,27 @@ def auditlog_pre_save(sender, instance, **kwargs):
 
 @receiver(post_save)
 def auditlog_post_save(sender, instance, created, **kwargs):
-    """
-    Crée un AuditLog lors d'une création ou d'une mise à jour.
-    """
     if sender == AuditLog:
         return
 
-    # Vérifier que la table AuditLog existe avant d'y écrire (éviter l'erreur 1146)
+    # On vérifie l'existence de la table avant d'insérer
     if not table_exists("fortunaisk_auditlog"):
         return
 
     if created:
         # Cas création
         AuditLog.objects.create(
-            user=None,  # Pas d'utilisateur défini sans middleware
+            user=None,
             action_type="create",
             model=sender.__name__,
             object_id=instance.pk,
-            changes=None,  # Pas de changements sur une création
+            changes=None,
         )
     else:
         # Cas mise à jour
         old_instance = getattr(instance, "_pre_save_instance", None)
         if not old_instance:
             return
-
         changes = get_changes(old_instance, instance)
         if changes:
             AuditLog.objects.create(
@@ -124,9 +107,6 @@ def auditlog_post_save(sender, instance, created, **kwargs):
 
 @receiver(pre_delete)
 def auditlog_pre_delete(sender, instance, **kwargs):
-    """
-    Capture l'état de l'instance avant la suppression.
-    """
     if sender == AuditLog:
         return
     instance._pre_delete_instance = instance
@@ -134,9 +114,6 @@ def auditlog_pre_delete(sender, instance, **kwargs):
 
 @receiver(post_delete)
 def auditlog_post_delete(sender, instance, **kwargs):
-    """
-    Log la suppression d'un objet (sauf AuditLog lui-même).
-    """
     if sender == AuditLog:
         return
 

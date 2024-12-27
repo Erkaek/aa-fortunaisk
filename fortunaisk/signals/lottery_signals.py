@@ -41,10 +41,10 @@ def lottery_post_save(sender, instance, created, **kwargs):
     if created:
         # Notification de création
         try:
-            corporation = EveCorporationInfo.objects.get(
-                corporation_id=instance.payment_receiver
-            )
-            corp_name = corporation.corporation_name
+            if instance.payment_receiver:
+                corp_name = instance.payment_receiver.corporation_name
+            else:
+                corp_name = "Corporation Inconnue"
         except EveCorporationInfo.DoesNotExist:
             corp_name = "Corporation Inconnue"
 
@@ -91,10 +91,10 @@ def lottery_post_save(sender, instance, created, **kwargs):
                 if winners.exists():
                     # Regrouper tous les gagnants dans un seul embed
                     try:
-                        corporation = EveCorporationInfo.objects.get(
-                            corporation_id=instance.payment_receiver
-                        )
-                        corp_name = corporation.corporation_name
+                        if instance.payment_receiver:
+                            corp_name = instance.payment_receiver.corporation_name
+                        else:
+                            corp_name = "Corporation Inconnue"
                     except EveCorporationInfo.DoesNotExist:
                         corp_name = "Corporation Inconnue"
 
@@ -152,10 +152,10 @@ def lottery_post_save(sender, instance, created, **kwargs):
                 else:
                     # Aucun gagnant
                     try:
-                        corporation = EveCorporationInfo.objects.get(
-                            corporation_id=instance.payment_receiver
-                        )
-                        corp_name = corporation.corporation_name
+                        if instance.payment_receiver:
+                            corp_name = instance.payment_receiver.corporation_name
+                        else:
+                            corp_name = "Corporation Inconnue"
                     except EveCorporationInfo.DoesNotExist:
                         corp_name = "Corporation Inconnue"
 
@@ -204,10 +204,10 @@ def lottery_post_save(sender, instance, created, **kwargs):
             elif instance.status == "cancelled":
                 # Loterie annulée
                 try:
-                    corporation = EveCorporationInfo.objects.get(
-                        corporation_id=instance.payment_receiver
-                    )
-                    corp_name = corporation.corporation_name
+                    if instance.payment_receiver:
+                        corp_name = instance.payment_receiver.corporation_name
+                    else:
+                        corp_name = "Corporation Inconnue"
                 except EveCorporationInfo.DoesNotExist:
                     corp_name = "Corporation Inconnue"
 
@@ -242,6 +242,7 @@ def lottery_post_save(sender, instance, created, **kwargs):
                 }
                 logger.debug(f"Envoi de l'embed d'annulation: {embed}")
                 send_discord_notification(embed=embed)
+
             else:
                 # Autres mises à jour du statut
                 message = (
