@@ -52,6 +52,23 @@ class Command(BaseCommand):
                 },
             )
 
+            # Nouveau : process_auto_lotteries => ex. toutes les 60 minutes
+            schedule_auto, _ = CrontabSchedule.objects.get_or_create(
+                minute="0",
+                hour="*",
+                day_of_month="*",
+                month_of_year="*",
+                day_of_week="*",
+            )
+            PeriodicTask.objects.update_or_create(
+                name="process_auto_lotteries",
+                defaults={
+                    "task": "fortunaisk.tasks.process_auto_lotteries",
+                    "crontab": schedule_auto,
+                    "args": json.dumps([]),
+                },
+            )
+
             self.stdout.write(self.style.SUCCESS("Default tasks set up successfully."))
             logger.info("Default periodic tasks set up successfully.")
         except Exception as e:

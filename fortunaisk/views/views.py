@@ -24,6 +24,7 @@ from fortunaisk.notifications import (
     send_alliance_auth_notification,
     send_discord_notification,
 )
+from fortunaisk.tasks import create_lottery_from_auto  # <-- import de la task
 
 logger = logging.getLogger(__name__)
 
@@ -203,12 +204,17 @@ def create_auto_lottery(request):
     """
     Vue pour créer une AutoLottery.
     Gère le form AutoLotteryForm.
+    Et crée immédiatement une Lottery quand c'est validé.
     """
     if request.method == "POST":
         form = AutoLotteryForm(request.POST)
         if form.is_valid():
-            form.save()
-            messages.success(request, "Loterie automatique créée avec succès.")
+            auto_lottery = form.save()
+
+            # Créer immédiatement la 1ère Lottery associée
+            create_lottery_from_auto.delay(auto_lottery.id)
+
+            messages.success(request, "AutoLottery created, and 1st Lottery generated.")
             return redirect("fortunaisk:auto_lottery_list")
         else:
             messages.error(request, "Veuillez corriger les erreurs ci-dessous.")
@@ -388,10 +394,9 @@ def winner_list(request):
 def lottery_history(request):
     """
     Vue listant toutes les loteries passées (complétées ou annulées).
+    On retire le prefetch_related('winners') car ce n'est pas un related_name direct.
     """
-    past_lotteries_qs = Lottery.objects.exclude(status="active").prefetch_related(
-        "winners"
-    )
+    past_lotteries_qs = Lottery.objects.exclude(status="active").order_by("-end_date")
     paginator = Paginator(past_lotteries_qs, 6)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
@@ -414,8 +419,7 @@ def create_lottery(request):
         form = LotteryCreateForm(request.POST)
         if form.is_valid():
             lottery_obj = form.save(commit=False)
-            # par exemple, on veut tracer l'utilisateur modifieur
-            # lottery_obj.modified_by = request.user
+            # ex: lottery_obj.modified_by = request.user
             lottery_obj.save()
             messages.success(request, "Lottery created successfully.")
             return redirect("fortunaisk:lottery")

@@ -30,6 +30,9 @@ def check_lotteries() -> str:
 
 @shared_task
 def create_lottery_from_auto(auto_lottery_id: int) -> int | None:
+    """
+    Crée une Lottery à partir d'une AutoLottery donnée.
+    """
     Lottery = apps.get_model("fortunaisk", "Lottery")
     AutoLotteryModel = apps.get_model("fortunaisk", "AutoLottery")
     try:
@@ -97,6 +100,10 @@ def finalize_lottery(lottery_id: int) -> str:
 
 @shared_task
 def process_wallet_tickets() -> str:
+    """
+    Parcourt le wallet (CorporationWalletJournalEntry) et crée
+    TicketPurchase ou TicketAnomaly en conséquence.
+    """
     Lottery = apps.get_model("fortunaisk", "Lottery")
     EveCharacter = apps.get_model("eveonline", "EveCharacter")
     CorporationWalletJournalEntry = apps.get_model(
@@ -113,6 +120,7 @@ def process_wallet_tickets() -> str:
     for lottery in active_lotteries:
         reason_filter = ""
         if lottery.lottery_reference:
+            # On retire le "LOTTERY-" du reason, si on veut le matcher
             reason_filter = lottery.lottery_reference.replace("LOTTERY-", "")
 
         payments = CorporationWalletJournalEntry.objects.filter(
@@ -229,3 +237,25 @@ def process_wallet_tickets() -> str:
                 )
 
     return f"{total_processed} ticket(s) traités."
+
+
+@shared_task
+def process_auto_lotteries() -> str:
+    """
+    Parcourt toutes les AutoLottery actives et crée
+    une Lottery pour chacune, si on veut la créer périodiquement.
+    """
+    AutoLotteryModel = apps.get_model("fortunaisk", "AutoLottery")
+    autos = AutoLotteryModel.objects.filter(is_active=True)
+
+    created_count = 0
+    for auto_lottery in autos:
+        # Logique simplifiée : on crée une nouvelle Lottery
+        # *à chaque fois* que la tâche tourne (ex: toutes les X minutes)
+        # Idéalement : vérifier la "last_run" + "frequency" pour respecter l'intervalle
+        create_lottery_from_auto(auto_lottery.id)
+        created_count += 1
+
+    msg = f"{created_count} lotteries créées depuis les AutoLottery."
+    logger.info(msg)
+    return msg

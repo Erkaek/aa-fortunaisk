@@ -114,12 +114,18 @@ class Lottery(models.Model):
 
     @staticmethod
     def generate_unique_reference() -> str:
+        """
+        Génère un identifiant unique (ex: LOTTERY-1234567890).
+        """
         while True:
             reference = f"LOTTERY-{''.join(random.choices(string.digits, k=10))}"
             if not Lottery.objects.filter(lottery_reference=reference).exists():
                 return reference
 
     def clean(self):
+        """
+        Valide winners_distribution = 100 % et winners_distribution.length == winner_count
+        """
         if self.winners_distribution:
             if len(self.winners_distribution) != self.winner_count:
                 raise ValueError(
@@ -142,14 +148,23 @@ class Lottery(models.Model):
             return timedelta(days=self.duration_value)
         elif self.duration_unit == "months":
             return timedelta(days=30 * self.duration_value)
+        # par défaut
         return timedelta(hours=self.duration_value)
 
     def update_total_pot(self):
+        """
+        Recalcule la cagnotte en multipliant le ticket_price par le nombre de tickets vendus.
+        """
         ticket_count = self.ticket_purchases.count()
         self.total_pot = self.ticket_price * Decimal(ticket_count)
         self.save(update_fields=["total_pot"])
 
     def complete_lottery(self):
+        """
+        Déclenche la finalisation de la loterie :
+        - Met à jour la cagnotte
+        - Lance la chain de tasks Celery (process_wallet_tickets puis finalize_lottery).
+        """
         if self.status != "active":
             logger.info(
                 f"Lottery {self.lottery_reference} not active. Current status: {self.status}"
@@ -175,6 +190,10 @@ class Lottery(models.Model):
         logger.info(f"Task chain initiated for lottery {self.lottery_reference}.")
 
     def select_winners(self):
+        """
+        Choisit aléatoirement winner_count tickets (ou moins si pas assez de tickets).
+        Crée un Winner pour chaque ticket gagnant.
+        """
         tickets = TicketPurchase.objects.filter(lottery=self)
         ticket_ids = list(tickets.values_list("id", flat=True))
         if not ticket_ids:
@@ -203,6 +222,9 @@ class Lottery(models.Model):
         return winners
 
     def notify_discord(self, winners):
+        """
+        Envoie une notification Discord pour chaque gagnant.
+        """
         if not winners:
             logger.info(f"No winners to notify for lottery {self.lottery_reference}.")
             return
@@ -257,15 +279,26 @@ class Lottery(models.Model):
                         "value": f"{winner.won_at.strftime('%Y-%m-%d %H:%M')}",
                         "inline": False,
                     },
-                    {
-                        "name": "Payment Receiver",
-                        "value": corp_name,
-                        "inline": False,
-                    },
+                    {"name": "Payment Receiver", "value": corp_name, "inline": False},
                 ],
             }
             send_discord_notification(embed=embed)
 
     @property
     def participant_count(self):
+        """
+        Retourne le nombre total de TicketPurchase liés à cette loterie.
+        """
         return self.ticket_purchases.count()
+
+    @property
+    def winners(self):
+        """
+        Permet d'accéder directement à tous les Winner liés à cette loterie
+        via la relation Winner → TicketPurchase → Lottery.
+        Ex : lottery.winners.all() dans un template.
+        """
+        # fortunaisk
+        from fortunaisk.models import Winner
+
+        return Winner.objects.filter(ticket__lottery=self)
