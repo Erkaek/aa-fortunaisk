@@ -7,9 +7,6 @@ import string
 from datetime import timedelta
 from decimal import Decimal
 
-# Third Party
-from celery import chain  # <-- Ajout de l'importation de chain
-
 # Django
 from django.db import models
 
@@ -17,7 +14,6 @@ from django.db import models
 from allianceauth.eveonline.models import EveCorporationInfo
 
 # fortunaisk
-# fortunaisk.models.ticket
 from fortunaisk.models.ticket import TicketPurchase, Winner
 
 logger = logging.getLogger(__name__)
@@ -108,6 +104,7 @@ class Lottery(models.Model):
             ("view_lotteryhistory", "Can view lottery history"),
             ("terminate_lottery", "Can terminate a lottery"),
             ("admin_dashboard", "Can access the admin dashboard"),
+            # Ajouter des permissions supplémentaires ici si nécessaire
         ]
 
     def __str__(self) -> str:
@@ -137,10 +134,17 @@ class Lottery(models.Model):
                 raise ValueError("Sum of winners_distribution must be ~ 100.")
 
     def save(self, *args, **kwargs) -> None:
+        creating = self._state.adding  # Vérifie si c'est une création
         self.clean()
         if not self.lottery_reference:
             self.lottery_reference = self.generate_unique_reference()
         super().save(*args, **kwargs)
+        if creating:
+            # Planifier la finalisation de la loterie
+            # fortunaisk
+            from fortunaisk.tasks import schedule_finalization
+
+            schedule_finalization.delay(self.id)
 
     def get_duration_timedelta(self) -> timedelta:
         if self.duration_unit == "hours":
@@ -164,7 +168,7 @@ class Lottery(models.Model):
         """
         Déclenche la finalisation de la loterie :
         - Met à jour la cagnotte
-        - Lance la chaîne de tasks Celery (process_wallet_tickets puis finalize_lottery).
+        - Lance la tâche Celery de finalisation
         """
         if self.status != "active":
             logger.info(
@@ -183,11 +187,14 @@ class Lottery(models.Model):
             self.save(update_fields=["status"])
             return
 
+        # Planifier la finalisation via une tâche dédiée
         # fortunaisk
-        from fortunaisk.tasks import finalize_lottery, process_wallet_tickets
+        from fortunaisk.tasks import finalize_lottery
 
-        chain(process_wallet_tickets.s(), finalize_lottery.si(self.id)).apply_async()
-        logger.info(f"Task chain initiated for lottery {self.lottery_reference}.")
+        finalize_lottery.delay(self.id)
+        logger.info(
+            f"Task finalize_lottery initiated for lottery {self.lottery_reference}."
+        )
 
     def select_winners(self):
         """

@@ -72,9 +72,7 @@ class AutoLottery(models.Model):
 
     class Meta:
         ordering = ["name"]
-        permissions = [
-            
-        ]
+        permissions = []
 
     def __str__(self):
         return f"{self.name} (Active={self.is_active})"
@@ -94,9 +92,6 @@ class AutoLottery(models.Model):
         super().save(*args, **kwargs)
 
     def get_duration_timedelta(self):
-        """
-        Calculate the duration of the lottery as a timedelta.
-        """
         # Standard Library
         from datetime import timedelta
 
