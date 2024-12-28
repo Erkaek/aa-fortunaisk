@@ -288,7 +288,7 @@
                 const options = selectElem.querySelectorAll("option");
                 options.forEach(opt => {
                     const text = opt.textContent.toLowerCase();
-                    // on masque les options dont le texte ne matche pas le filtre
+                    // On masque les options dont le texte ne matche pas le filtre
                     if (text.includes(filter) || opt.value === "") {
                         opt.style.display = "";
                     } else {
@@ -427,7 +427,7 @@
         }
 
         function initializeEventListeners() {
-            // update distribution fields when winnerCount changes
+            // Update distribution fields when winnerCount changes
             FORM_ELEMENTS.winnerCount?.addEventListener('input', function(e) {
                 const count = parseInt(e.target.value);
                 if (!isNaN(count) && count > 0) {
@@ -438,15 +438,15 @@
                 }
             });
 
-            // init distribution fields on page load
+            // Init distribution fields on page load
             const initialCount = parseInt(FORM_ELEMENTS.winnerCount?.value) || 1;
             PrizeDistributionHandler.updateDistributionFields(initialCount);
 
-            // format ticket price on blur
+            // Format ticket price on blur
             const priceInput = document.getElementById('id_ticket_price');
             priceInput?.addEventListener('blur', PriceFormatter.handleBlur);
 
-            // hide/show fields based on is_active for AutoLottery
+            // Hide/show fields based on is_active for AutoLottery
             if (FORM_ELEMENTS.isAutoLottery) {
                 const isActiveSwitch = document.getElementById('id_is_active');
                 const nameField = document.getElementById('field-name');
@@ -469,7 +469,7 @@
                 isActiveSwitch?.addEventListener('change', toggleFields);
             }
 
-            // validate the form on submit
+            // Validate the form on submit
             FORM_ELEMENTS.form?.addEventListener('submit', function(event) {
                 let isValid = true;
 
@@ -509,6 +509,7 @@
         initializeEventListeners();
     });
     </script>
+
 </div>
 
 {% endblock details %}

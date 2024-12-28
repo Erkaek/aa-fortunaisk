@@ -429,6 +429,7 @@ def create_lottery(request):
             return redirect("fortunaisk:lottery")
         else:
             messages.error(request, "Veuillez corriger les erreurs ci-dessous.")
+            logger.error(f"Form errors in create_lottery: {form.errors}")
     else:
         form = LotteryCreateForm()
 

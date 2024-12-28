@@ -69,6 +69,9 @@ class LotteryCreateForm(forms.ModelForm):
         if abs(total - 100.0) > 0.001:
             raise ValidationError("La somme des pourcentages doit être égale à 100.")
 
+        # Arrondir chaque valeur à deux décimales
+        distribution_list = [round(x, 2) for x in distribution_list]
+
         return distribution_list
 
     def clean(self):
@@ -77,17 +80,28 @@ class LotteryCreateForm(forms.ModelForm):
         end_date = cleaned_data.get("end_date")
 
         if start_date and end_date:
+            if end_date <= start_date:
+                self.add_error(
+                    "end_date",
+                    "La date de fin doit être postérieure à la date de début.",
+                )
+                return cleaned_data
+
             delta = end_date - start_date
             # Attribuer duration_value et duration_unit en fonction de delta
             if delta <= timedelta(hours=24):
-                cleaned_data["duration_unit"] = "hours"
-                cleaned_data["duration_value"] = delta.seconds // 3600
+                duration_unit = "hours"
+                duration_value = int(delta.total_seconds() // 3600)
             elif delta <= timedelta(days=30):
-                cleaned_data["duration_unit"] = "days"
-                cleaned_data["duration_value"] = delta.days
+                duration_unit = "days"
+                duration_value = delta.days
             else:
-                cleaned_data["duration_unit"] = "months"
-                cleaned_data["duration_value"] = delta.days // 30
+                duration_unit = "months"
+                duration_value = delta.days // 30
+
+            cleaned_data["duration_unit"] = duration_unit
+            cleaned_data["duration_value"] = duration_value
+
         return cleaned_data
 
     def save(self, commit=True):
@@ -111,7 +125,7 @@ class LotteryCreateForm(forms.ModelForm):
                 delta = instance.end_date - instance.start_date
                 if delta <= timedelta(hours=24):
                     instance.duration_unit = "hours"
-                    instance.duration_value = delta.seconds // 3600
+                    instance.duration_value = int(delta.total_seconds() // 3600)
                 elif delta <= timedelta(days=30):
                     instance.duration_unit = "days"
                     instance.duration_value = delta.days
