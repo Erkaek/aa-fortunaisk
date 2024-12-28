@@ -5,7 +5,20 @@ from decimal import Decimal
 
 # Django
 import django.db.models.deletion
+import django.utils.timezone
+from django.conf import settings
 from django.db import migrations, models
+
+
+def setup_periodic_tasks_func(apps, schema_editor):
+    """
+    Executes the function to set up global periodic tasks.
+    """
+    # Importing here to ensure the apps registry is ready
+    # fortunaisk
+    from fortunaisk.tasks import setup_periodic_tasks
+
+    setup_periodic_tasks()
 
 
 class Migration(migrations.Migration):
@@ -13,14 +26,16 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         (
             "auth",
             "0012_alter_user_first_name_max_length",
-        ),  # Ajustez en fonction de votre version de Django
-        # Ajoutez d'autres dépendances si nécessaire
+        ),  # Adjust based on your Django version
+        # Add other dependencies if necessary
     ]
 
     operations = [
+        # Create Lottery Model
         migrations.CreateModel(
             name="Lottery",
             fields=[
@@ -95,7 +110,7 @@ class Migration(migrations.Migration):
                     models.DecimalField(
                         max_digits=25,
                         decimal_places=2,
-                        default=0,
+                        default=Decimal("0"),
                         verbose_name="Total Pot (ISK)",
                         help_text="Total ISK pot from ticket purchases.",
                     ),
@@ -150,6 +165,7 @@ class Migration(migrations.Migration):
                 ],
             },
         ),
+        # Create AutoLottery Model
         migrations.CreateModel(
             name="AutoLottery",
             fields=[
@@ -256,6 +272,7 @@ class Migration(migrations.Migration):
                 "permissions": [],
             },
         ),
+        # Create TicketPurchase Model
         migrations.CreateModel(
             name="TicketPurchase",
             fields=[
@@ -308,7 +325,7 @@ class Migration(migrations.Migration):
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
                         related_name="ticket_purchases",
-                        to="auth.user",
+                        to=settings.AUTH_USER_MODEL,
                         verbose_name="Django User",
                     ),
                 ),
@@ -324,8 +341,26 @@ class Migration(migrations.Migration):
                         help_text="Eve character that made the payment (if identifiable).",
                     ),
                 ),
+                # Added 'status' field
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("pending", "Pending"),
+                            ("processed", "Processed"),
+                            ("failed", "Failed"),
+                        ],
+                        default="pending",
+                        max_length=20,
+                        verbose_name="Ticket Status",
+                    ),
+                ),
             ],
+            options={
+                "ordering": ["-purchase_date"],
+            },
         ),
+        # Create Winner Model
         migrations.CreateModel(
             name="Winner",
             fields=[
@@ -364,9 +399,9 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "ticket",
-                    models.OneToOneField(
-                        on_delete=models.CASCADE,
-                        related_name="winner",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="winners",
                         to="fortunaisk.ticketpurchase",
                         verbose_name="Ticket Purchase",
                     ),
@@ -374,7 +409,7 @@ class Migration(migrations.Migration):
                 (
                     "character",
                     models.ForeignKey(
-                        on_delete=models.SET_NULL,
+                        on_delete=django.db.models.deletion.SET_NULL,
                         related_name="winners",
                         to="eveonline.evecharacter",
                         null=True,
@@ -383,7 +418,11 @@ class Migration(migrations.Migration):
                     ),
                 ),
             ],
+            options={
+                "ordering": ["-won_at"],
+            },
         ),
+        # Create TicketAnomaly Model
         migrations.CreateModel(
             name="TicketAnomaly",
             fields=[
@@ -418,7 +457,7 @@ class Migration(migrations.Migration):
                 (
                     "lottery",
                     models.ForeignKey(
-                        on_delete=models.CASCADE,
+                        on_delete=django.db.models.deletion.CASCADE,
                         related_name="anomalies",
                         to="fortunaisk.lottery",
                         verbose_name="Lottery",
@@ -427,7 +466,7 @@ class Migration(migrations.Migration):
                 (
                     "character",
                     models.ForeignKey(
-                        on_delete=models.SET_NULL,
+                        on_delete=django.db.models.deletion.SET_NULL,
                         null=True,
                         blank=True,
                         verbose_name="Eve Character",
@@ -437,15 +476,19 @@ class Migration(migrations.Migration):
                 (
                     "user",
                     models.ForeignKey(
-                        on_delete=models.SET_NULL,
+                        on_delete=django.db.models.deletion.SET_NULL,
                         null=True,
                         blank=True,
                         verbose_name="Django User",
-                        to="auth.user",
+                        to=settings.AUTH_USER_MODEL,
                     ),
                 ),
             ],
+            options={
+                "ordering": ["-recorded_at"],
+            },
         ),
+        # Create WebhookConfiguration Model
         migrations.CreateModel(
             name="WebhookConfiguration",
             fields=[
@@ -470,7 +513,126 @@ class Migration(migrations.Migration):
             ],
             options={
                 "verbose_name": "Webhook Configuration",
-                "verbose_name_plural": "Webhook Configuration",
+                "verbose_name_plural": "Webhook Configurations",
             },
+        ),
+        # Create AuditLog Model
+        migrations.CreateModel(
+            name="AuditLog",
+            fields=[
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "action_type",
+                    models.CharField(
+                        choices=[
+                            ("create", "Create"),
+                            ("update", "Update"),
+                            ("delete", "Delete"),
+                        ],
+                        help_text="The type of action performed.",
+                        max_length=10,
+                        verbose_name="Action Type",
+                    ),
+                ),
+                (
+                    "timestamp",
+                    models.DateTimeField(
+                        default=django.utils.timezone.now,
+                        help_text="The date and time when the action was performed.",
+                        verbose_name="Timestamp",
+                    ),
+                ),
+                (
+                    "model",
+                    models.CharField(
+                        help_text="The model on which the action was performed.",
+                        max_length=100,
+                        verbose_name="Model",
+                    ),
+                ),
+                (
+                    "object_id",
+                    models.PositiveIntegerField(
+                        help_text="The ID of the object on which the action was performed.",
+                        verbose_name="Object ID",
+                    ),
+                ),
+                (
+                    "changes",
+                    models.JSONField(
+                        blank=True,
+                        help_text="A JSON object detailing the changes made.",
+                        null=True,
+                        verbose_name="Changes",
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        blank=True,
+                        help_text="The user who performed the action.",
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="audit_logs",
+                        to=settings.AUTH_USER_MODEL,
+                        verbose_name="User",
+                    ),
+                ),
+            ],
+            options={
+                "verbose_name": "Audit Log",
+                "verbose_name_plural": "Audit Logs",
+                "ordering": ["-timestamp"],
+            },
+        ),
+        # Create ProcessedPayment Model
+        migrations.CreateModel(
+            name="ProcessedPayment",
+            fields=[
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "payment_id",
+                    models.CharField(
+                        help_text="Unique identifier for processed payments.",
+                        max_length=255,
+                        unique=True,
+                        verbose_name="Payment ID",
+                    ),
+                ),
+                (
+                    "processed_at",
+                    models.DateTimeField(
+                        auto_now_add=True,
+                        help_text="Timestamp when the payment was processed.",
+                        verbose_name="Processed At",
+                    ),
+                ),
+            ],
+            options={
+                "verbose_name": "Processed Payment",
+                "verbose_name_plural": "Processed Payments",
+                "ordering": ["-processed_at"],
+            },
+        ),
+        # Setup Periodic Tasks
+        migrations.RunPython(
+            setup_periodic_tasks_func,
+            reverse_code=migrations.RunPython.noop,
         ),
     ]
