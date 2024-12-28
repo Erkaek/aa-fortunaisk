@@ -11,11 +11,11 @@
 {% block details %}
 <div class="container mt-4">
     <div class="row justify-content-center">
-        <div class="col-12 col-lg-10">
+        <div class="col-12 col-lg-8">
             <!-- Main card -->
             <div class="card shadow-lg">
                 <!-- Header -->
-                <div class="card-header bg-primary text-white py-3">
+                <div class="card-header bg-primary text-white">
                     <div class="d-flex align-items-center">
                         <i class="fas fa-ticket-alt fa-2x me-3"></i>
                         <div>
@@ -28,15 +28,12 @@
                 </div>
                 <!-- Body -->
                 <div class="card-body p-4">
-                    <form method="post" class="needs-validation" novalidate>
+                    <form method="post" id="standardLotteryForm" class="needs-validation" novalidate>
                         {% csrf_token %}
 
-                        <!-- 1) Basic Information -->
+                        <!-- 1. Basic Information -->
                         <div class="mb-4">
-                            <div class="d-flex align-items-center mb-3">
-                                <i class="fas fa-info-circle text-primary me-2"></i>
-                                <h5 class="mb-0">{% trans "Basic Information" %}</h5>
-                            </div>
+                            <h5><i class="fas fa-info-circle text-primary me-2"></i>{% trans "Basic Information" %}</h5>
                             <div class="row g-3">
                                 <!-- Ticket Price -->
                                 <div class="col-md-6">
@@ -75,12 +72,9 @@
                             </div>
                         </div>
 
-                        <!-- 2) Winners Configuration -->
+                        <!-- 2. Winners Configuration -->
                         <div class="mb-4">
-                            <div class="d-flex align-items-center mb-3">
-                                <i class="fas fa-trophy text-warning me-2"></i>
-                                <h5 class="mb-0">{% trans "Winners Configuration" %}</h5>
-                            </div>
+                            <h5><i class="fas fa-trophy text-warning me-2"></i>{% trans "Winners Configuration" %}</h5>
                             <div class="row g-3">
                                 <!-- Payment Receiver -->
                                 <div class="col-md-6">
@@ -154,12 +148,9 @@
                             </div>
                         </div>
 
-                        <!-- 3) Additional Settings -->
+                        <!-- 3. Additional Settings -->
                         <div class="mb-4">
-                            <div class="d-flex align-items-center mb-3">
-                                <i class="fas fa-cog text-secondary me-2"></i>
-                                <h5 class="mb-0">{% trans "Additional Settings" %}</h5>
-                            </div>
+                            <h5><i class="fas fa-cog text-secondary me-2"></i>{% trans "Additional Settings" %}</h5>
                             <div class="row g-3">
                                 <!-- Max Tickets Per User -->
                                 <div class="col-md-6">
@@ -226,7 +217,7 @@
 
         // 2) Prize Distribution Logic
         const FORM_ELEMENTS = {
-            form: document.querySelector('form'),
+            form: document.getElementById('standardLotteryForm'),
             winnerCount: document.getElementById('id_winner_count'),
             distributionContainer: document.getElementById('prize-distribution-container'),
             distributionInputs: () => document.querySelectorAll('.prize-distribution'),
