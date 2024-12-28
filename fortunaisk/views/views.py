@@ -253,7 +253,7 @@ def create_auto_lottery(request):
     distribution_range = range(form.initial.get("winner_count", 1))
     return render(
         request,
-        "fortunaisk/autolottery_form.html",
+        "fortunaisk/auto_lottery_form.html",
         {"form": form, "distribution_range": distribution_range},
     )
 
