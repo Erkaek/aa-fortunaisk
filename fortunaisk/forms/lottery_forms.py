@@ -104,7 +104,7 @@ class LotteryCreateForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        # Add any additional cleaning if necessary
+        # Ajout d'autres nettoyages si nécessaire
         return cleaned_data
 
     def save(self, commit=True):
@@ -114,16 +114,8 @@ class LotteryCreateForm(forms.ModelForm):
         if instance.max_tickets_per_user == 0:
             instance.max_tickets_per_user = None
 
-        # S'assurer que winners_distribution est une liste de ints
-        if isinstance(instance.winners_distribution, str):
-            try:
-                instance.winners_distribution = json.loads(
-                    instance.winners_distribution
-                )
-            except json.JSONDecodeError:
-                raise ValidationError(
-                    _("La répartition des gagnants est mal formatée.")
-                )
+        # Assigner la liste directement au champ JSONField
+        instance.winners_distribution = self.cleaned_data.get("winners_distribution")
 
         if commit:
             instance.save()

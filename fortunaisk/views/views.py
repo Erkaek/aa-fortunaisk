@@ -12,8 +12,12 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext as _
 
 # fortunaisk
-from fortunaisk.forms.autolottery_forms import AutoLotteryForm
-from fortunaisk.forms.lottery_forms import LotteryCreateForm
+from fortunaisk.forms.autolottery_forms import (
+    AutoLotteryForm,  # Assurez-vous que le chemin est correct
+)
+from fortunaisk.forms.lottery_forms import (
+    LotteryCreateForm,  # Assurez-vous que le chemin est correct
+)
 from fortunaisk.models import (
     AutoLottery,
     Lottery,
@@ -255,7 +259,7 @@ def create_auto_lottery(request):
         # Passer 'distribution_range' basé sur le nombre de gagnants initial
         distribution_range = get_distribution_range(form.initial.get("winner_count", 1))
 
-    # Si instance has winners_distribution, set distribution_range accordingly
+    # Si instance a winners_distribution, ajuster distribution_range
     if form.instance.winners_distribution:
         distribution_range = range(len(form.instance.winners_distribution))
 
@@ -292,7 +296,7 @@ def edit_auto_lottery(request, autolottery_id):
         form = AutoLotteryForm(instance=autolottery)
         distribution_range = get_distribution_range(form.instance.winner_count or 1)
 
-    # If instance has winners_distribution, set distribution_range accordingly
+    # Si instance a winners_distribution, ajuster distribution_range
     if form.instance.winners_distribution:
         distribution_range = range(len(form.instance.winners_distribution))
 
@@ -450,56 +454,43 @@ def create_lottery(request):
             return redirect("fortunaisk:lottery")
         else:
             messages.error(request, _("Veuillez corriger les erreurs ci-dessous."))
-            logger.error(f"Form errors in create_lottery: {form.errors}")
-            # Utiliser winner_count soumis par l'utilisateur
+            # Passer 'distribution_range' basé sur le nombre de gagnants soumis
             winner_count = form.data.get("winner_count", 1)
             distribution_range = get_distribution_range(winner_count)
     else:
         form = LotteryCreateForm()
         distribution_range = get_distribution_range(form.instance.winner_count or 1)
 
-    context = {
-        "form": form,
-        "distribution_range": distribution_range,
-    }
-    return render(request, "fortunaisk/standard_lottery_form.html", context)
+    # Si instance a winners_distribution, ajuster distribution_range
+    if form.instance.winners_distribution:
+        distribution_range = range(len(form.instance.winners_distribution))
+
+    return render(
+        request,
+        "fortunaisk/standard_lottery_form.html",
+        {"form": form, "distribution_range": distribution_range},
+    )
 
 
 @login_required
-@permission_required("fortunaisk.view_lotteryhistory", raise_exception=True)
-def lottery_detail(request, lottery_id):
+@permission_required("fortunaisk.lottery_participants", raise_exception=True)
+def lottery_participants(request, lottery_id):
     """
-    Vue d'un détail d'une loterie (participants, anomalies, winners, etc.)
+    Vue listant les participants d'une loterie.
     """
     lottery_obj = get_object_or_404(Lottery, id=lottery_id)
     participants_qs = lottery_obj.ticket_purchases.select_related(
         "user", "character"
     ).all()
-    paginator_participants = Paginator(participants_qs, 25)
-    page_number_participants = request.GET.get("participants_page")
-    page_obj_participants = paginator_participants.get_page(page_number_participants)
-
-    anomalies_qs = TicketAnomaly.objects.filter(lottery=lottery_obj).select_related(
-        "user", "character"
-    )
-    paginator_anomalies = Paginator(anomalies_qs, 25)
-    page_number_anomalies = request.GET.get("anomalies_page")
-    page_obj_anomalies = paginator_anomalies.get_page(page_number_anomalies)
-
-    winners_qs = Winner.objects.filter(ticket__lottery=lottery_obj).select_related(
-        "ticket__user", "character"
-    )
-    paginator_winners = Paginator(winners_qs, 25)
-    page_number_winners = request.GET.get("winners_page")
-    page_obj_winners = paginator_winners.get_page(page_number_winners)
+    paginator = Paginator(participants_qs, 25)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
 
     context = {
         "lottery": lottery_obj,
-        "participants": page_obj_participants,
-        "anomalies": page_obj_anomalies,
-        "winners": page_obj_winners,
+        "participants": page_obj,
     }
-    return render(request, "fortunaisk/lottery_detail.html", context)
+    return render(request, "fortunaisk/lottery_participants.html", context)
 
 
 @login_required
@@ -550,27 +541,6 @@ def terminate_lottery(request, lottery_id):
     return render(
         request, "fortunaisk/terminate_lottery_confirm.html", {"lottery": lottery_obj}
     )
-
-
-@login_required
-@permission_required("fortunaisk.lottery_participants", raise_exception=True)
-def lottery_participants(request, lottery_id):
-    """
-    Vue listant les participants d'une loterie.
-    """
-    lottery_obj = get_object_or_404(Lottery, id=lottery_id)
-    participants_qs = lottery_obj.ticket_purchases.select_related(
-        "user", "character"
-    ).all()
-    paginator = Paginator(participants_qs, 25)
-    page_number = request.GET.get("page")
-    page_obj = paginator.get_page(page_number)
-
-    context = {
-        "lottery": lottery_obj,
-        "participants": page_obj,
-    }
-    return render(request, "fortunaisk/lottery_participants.html", context)
 
 
 ##################################
