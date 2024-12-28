@@ -11,10 +11,13 @@
 <div class="container mt-5">
     <h2 class="text-center mb-4">{% trans "Automatic Lotteries" %}</h2>
 
-    <!-- Bouton pour créer une nouvelle AutoLottery -->
+    <!-- Boutons pour créer des loteries -->
     <div class="d-flex justify-content-end mb-3">
-        <a href="{% url 'fortunaisk:auto_lottery_create' %}" class="btn btn-primary">
-            <i class="fas fa-plus-circle"></i> {% trans "Create Automatic Lottery" %}
+        <a href="{% url 'fortunaisk:lottery_create' %}" class="btn btn-primary me-2">
+            <i class="fas fa-plus-circle"></i> {% trans "Create Lottery" %}
+        </a>
+        <a href="{% url 'fortunaisk:auto_lottery_create' %}" class="btn btn-success">
+            <i class="fas fa-sync"></i> {% trans "Create Automatic Lottery" %}
         </a>
     </div>
 
