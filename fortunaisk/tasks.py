@@ -95,7 +95,7 @@ def check_purchased_tickets(self):
                         )
                         # Enregistrer une anomalie
                         TicketAnomaly.objects.create(
-                            lottery=None,  # Puisque Lottery n'existe pas
+                            lottery=None,  # Maintenant accepté
                             reason=f"Aucune loterie active trouvée pour la référence '{lottery_reference}'.",
                             payment_date=payment_locked.date,
                             amount=amount,

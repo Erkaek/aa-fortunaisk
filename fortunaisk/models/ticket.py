@@ -120,6 +120,8 @@ class TicketAnomaly(models.Model):
         on_delete=models.CASCADE,
         related_name="anomalies",
         verbose_name="Lottery",
+        null=True,  # Permettre les valeurs nulles
+        blank=True,  # Permettre les formulaires vides
     )
     character = models.ForeignKey(
         EveCharacter,
@@ -147,4 +149,6 @@ class TicketAnomaly(models.Model):
     recorded_at = models.DateTimeField(auto_now_add=True, verbose_name="Recorded At")
 
     def __str__(self) -> str:
-        return f"Anomaly: {self.reason} (Lottery {self.lottery.lottery_reference})"
+        if self.lottery:
+            return f"Anomaly: {self.reason} (Lottery {self.lottery.lottery_reference})"
+        return f"Anomaly: {self.reason} (No Lottery)"
