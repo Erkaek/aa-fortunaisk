@@ -451,7 +451,7 @@ def create_lottery(request):
         else:
             messages.error(request, _("Veuillez corriger les erreurs ci-dessous."))
             # Passer 'distribution_range' basé sur le nombre de gagnants soumis
-            winner_count = form.data.get("winner_count", 1)
+            winner_count = form.cleaned_data.get("winner_count", 1)
             distribution_range = get_distribution_range(winner_count)
     else:
         form = LotteryCreateForm()

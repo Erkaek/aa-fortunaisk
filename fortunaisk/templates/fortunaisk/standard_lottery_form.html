@@ -1,3 +1,5 @@
+<!-- fortunaisk/templates/fortunaisk/standard_lottery_form.html -->
+
 {% extends "fortunaisk/base.html" %}
 {% load i18n %}
 {% load static %}
@@ -127,10 +129,10 @@
                                                     type="number"
                                                     name="winners_distribution_entry"
                                                     class="form-control prize-distribution"
-                                                    value="{{ form.instance.winners_distribution|index:idx|default_if_none:'' }}"
+                                                    value="{{ form.instance.winners_distribution|index:idx|default_if_none:0 }}"
                                                     min="0"
                                                     max="100"
-                                                    step="1"  <!-- Utilisation de pas de 1 pour des entiers -->
+                                                    step="1"
                                                     required
                                                 >
                                                 <span class="input-group-text">%</span>
@@ -138,7 +140,7 @@
                                         {% endfor %}
                                     </div>
                                     <!-- Champ caché pour stocker la répartition des gagnants -->
-                                    <input type="hidden" id="id_winners_distribution" name="winners_distribution" value="">
+                                    <input type="hidden" id="id_winners_distribution" name="winners_distribution" value="{{ form.instance.winners_distribution|default:"[]" }}">
                                     {% if form.winners_distribution.errors %}
                                         <div class="text-danger mt-1">
                                             {{ form.winners_distribution.errors|striptags }}
@@ -237,7 +239,7 @@ document.addEventListener('DOMContentLoaded', function() {
     class FormValidator {
         static validateDistribution(distributions) {
             const values = Array.from(distributions)
-                .map(input => parseInt(input.value.trim()))
+                .map(input => parseInt(input.value.trim(), 10))
                 .filter(val => !isNaN(val));
             const total = values.reduce((a, b) => a + b, 0);
             return total === 100;
@@ -263,7 +265,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     class PrizeDistributionHandler {
-        static createDistributionField(index, value = 100) {
+        static createDistributionField(index, value = 0) {  // Valeur par défaut 0
             const div = document.createElement('div');
             div.className = 'input-group mb-2';
 
@@ -320,7 +322,8 @@ document.addEventListener('DOMContentLoaded', function() {
         static updateHiddenDistribution() {
             const distributionElems = FORM_ELEMENTS.distributionInputs();
             const distributionValues = Array.from(distributionElems)
-                .map(input => parseInt(input.value.trim(), 10));  // Utiliser base 10
+                .map(input => parseInt(input.value.trim(), 10))
+                .filter(val => !isNaN(val));
             const distributionStr = JSON.stringify(distributionValues);
             FORM_ELEMENTS.hiddenDistributionInput.value = distributionStr;
             console.log('Répartition des gagnants mise à jour:', distributionStr);
@@ -341,7 +344,7 @@ document.addEventListener('DOMContentLoaded', function() {
         static handleBlur(event) {
             const input = event.target;
             if (input.value) {
-                input.value = parseInt(input.value).toFixed(0);
+                input.value = parseInt(input.value, 10).toFixed(0);
             }
         }
     }
@@ -349,7 +352,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function initializeEventListeners() {
         // Mettre à jour les champs de répartition lorsque le nombre de gagnants change
         FORM_ELEMENTS.winnerCount?.addEventListener('input', function(e) {
-            const count = parseInt(e.target.value);
+            const count = parseInt(e.target.value, 10);
             if (!isNaN(count) && count > 0) {
                 PrizeDistributionHandler.updateDistributionFields(count);
             } else {
@@ -359,7 +362,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         // Initialiser les champs de répartition au chargement de la page
-        const initialCount = parseInt(FORM_ELEMENTS.winnerCount?.value) || 1;
+        const initialCount = parseInt(FORM_ELEMENTS.winnerCount?.value, 10) || 1;
         PrizeDistributionHandler.updateDistributionFields(initialCount);
 
         // Formater le prix du ticket au blur
@@ -374,7 +377,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const distributionValues = [];
 
             distributionElems.forEach(input => {
-                const value = parseInt(input.value.trim());
+                const value = parseInt(input.value.trim(), 10);
                 if (isNaN(value) || value < 0 || value > 100) {
                     FormValidator.showError(input, ERROR_MESSAGES.range);
                     isValid = false;

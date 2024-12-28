@@ -7,6 +7,7 @@ import logging
 # Django
 from django import forms
 from django.core.exceptions import ValidationError
+from django.utils import timezone  # Import ajouté
 from django.utils.translation import gettext as _
 
 # fortunaisk
@@ -104,7 +105,37 @@ class LotteryCreateForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        # Ajout d'autres nettoyages si nécessaire
+        name = cleaned_data.get("name")
+        frequency = cleaned_data.get("frequency")
+        frequency_unit = cleaned_data.get("frequency_unit")
+        duration_value = cleaned_data.get("duration_value")
+        duration_unit = cleaned_data.get("duration_unit")
+
+        if not name:
+            self.add_error("name", _("Le nom de la loterie est requis."))
+
+        if frequency and frequency_unit:
+            if frequency < 1:
+                self.add_error("frequency", _("La fréquence doit être au moins de 1."))
+        else:
+            self.add_error("frequency", _("La fréquence et son unité sont requises."))
+
+        if duration_value and duration_unit:
+            if duration_unit == "hours":
+                delta = timezone.timedelta(hours=duration_value)
+            elif duration_unit == "days":
+                delta = timezone.timedelta(days=duration_value)
+            elif duration_unit == "months":
+                # Approximation: 1 mois = 30 jours
+                delta = timezone.timedelta(days=duration_value * 30)
+            else:
+                delta = timezone.timedelta()
+
+            if delta <= timezone.timedelta():
+                self.add_error("duration_value", _("La durée doit être positive."))
+        else:
+            self.add_error("duration_value", _("La durée et son unité sont requises."))
+
         return cleaned_data
 
     def save(self, commit=True):
