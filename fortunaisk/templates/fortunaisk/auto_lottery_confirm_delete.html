@@ -1,6 +1,7 @@
 <!-- fortunaisk/templates/fortunaisk/auto_lottery_confirm_delete.html -->
 {% extends "fortunaisk/base.html" %}
 {% load i18n %}
+{% load static %}
 
 {% block page_title %}
     {% trans "Delete Automatic Lottery" %}
@@ -9,13 +10,16 @@
 {% block details %}
 <div class="container mt-5">
     <div class="row justify-content-center">
-        <div class="col-lg-6">
-            <div class="card shadow-sm">
+        <div class="col-md-8">
+            <div class="card shadow-lg">
                 <div class="card-header bg-danger text-white">
                     <h4 class="mb-0">{% trans "Delete Automatic Lottery" %}</h4>
                 </div>
                 <div class="card-body">
-                    <p>{% trans "Are you sure you want to delete the automatic lottery" %} <strong>{{ autolottery.name }}</strong> ?</p>
+                    <p class="lead">
+                        {% trans "Are you sure you want to delete the automatic lottery" %}
+                        <strong>{{ autolottery.name }}</strong>?
+                    </p>
                     <form method="post">
                         {% csrf_token %}
                         <div class="d-flex justify-content-end">
@@ -23,7 +27,7 @@
                                 {% trans "Cancel" %}
                             </a>
                             <button type="submit" class="btn btn-danger">
-                                {% trans "Delete" %}
+                                <i class="fas fa-trash me-1"></i> {% trans "Delete" %}
                             </button>
                         </div>
                     </form>

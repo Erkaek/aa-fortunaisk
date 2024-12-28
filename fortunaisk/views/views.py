@@ -204,7 +204,7 @@ def list_auto_lotteries(request):
 def create_auto_lottery(request):
     """
     Vue pour créer une AutoLottery.
-    Gère le form AutoLotteryForm.
+    Gère AutoLotteryForm.
     Et crée immédiatement une Lottery quand c'est validé si is_active=True.
     """
     if request.method == "POST":
@@ -220,6 +220,7 @@ def create_auto_lottery(request):
             return redirect("fortunaisk:auto_lottery_list")
         else:
             messages.error(request, "Veuillez corriger les erreurs ci-dessous.")
+            logger.error(f"Form errors in create_auto_lottery: {form.errors}")
     else:
         form = AutoLotteryForm()
 
@@ -238,7 +239,7 @@ def create_auto_lottery(request):
         "is_auto_lottery": True,
         "distribution_range": distribution_range,
     }
-    return render(request, "fortunaisk/lottery_form.html", context)
+    return render(request, "fortunaisk/auto_lottery_form.html", context)
 
 
 @login_required
@@ -253,7 +254,7 @@ def edit_auto_lottery(request, autolottery_id):
         if form.is_valid():
             auto_lottery = form.save()
             if auto_lottery.is_active and not autolottery.is_active:
-                # If reactivated, create a new lottery
+                # Si réactivé, créer une nouvelle loterie
                 create_lottery_from_auto_lottery.delay(auto_lottery.id)
             messages.success(request, "Loterie automatique mise à jour avec succès.")
             return redirect("fortunaisk:auto_lottery_list")
@@ -277,7 +278,7 @@ def edit_auto_lottery(request, autolottery_id):
         "is_auto_lottery": True,
         "distribution_range": distribution_range,
     }
-    return render(request, "fortunaisk/lottery_form.html", context)
+    return render(request, "fortunaisk/auto_lottery_form.html", context)
 
 
 @login_required
@@ -448,7 +449,7 @@ def create_lottery(request):
         "is_auto_lottery": False,  # Indique que c'est une loterie standard
         "distribution_range": distribution_range,
     }
-    return render(request, "fortunaisk/lottery_form.html", context)
+    return render(request, "fortunaisk/standard_lottery_form.html", context)
 
 
 @login_required

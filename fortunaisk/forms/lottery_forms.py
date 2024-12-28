@@ -141,15 +141,18 @@ class LotteryCreateForm(forms.ModelForm):
             if not instance.duration_value or not instance.duration_unit:
                 if instance.end_date and instance.start_date:
                     delta = instance.end_date - instance.start_date
-                    if delta <= timedelta(hours=24):
-                        instance.duration_unit = "hours"
-                        instance.duration_value = int(delta.total_seconds() // 3600)
-                    elif delta <= timedelta(days=30):
-                        instance.duration_unit = "days"
-                        instance.duration_value = delta.days
-                    else:
-                        instance.duration_unit = "months"
-                        instance.duration_value = delta.days // 30
+                    duration_unit = (
+                        "hours"
+                        if delta <= timedelta(hours=24)
+                        else "days" if delta <= timedelta(days=30) else "months"
+                    )
+                    duration_value = (
+                        int(delta.total_seconds() // 3600)
+                        if duration_unit == "hours"
+                        else delta.days if duration_unit == "days" else delta.days // 30
+                    )
+                    instance.duration_unit = duration_unit
+                    instance.duration_value = duration_value
 
         if commit:
             instance.save()

@@ -1,15 +1,11 @@
-<!-- fortunaisk/templates/fortunaisk/lottery_form.html -->
+<!-- fortunaisk/templates/fortunaisk/auto_lottery_form.html -->
 {% extends "fortunaisk/base.html" %}
 {% load i18n %}
 {% load static %}
 {% load my_filters %}
 
 {% block page_title %}
-    {% if is_auto_lottery %}
-        {% trans "Create Automatic Lottery" %}
-    {% else %}
-        {% trans "Create New Lottery" %}
-    {% endif %}
+    {% trans "Create Automatic Lottery" %}
 {% endblock page_title %}
 
 {% block details %}
@@ -19,23 +15,13 @@
             <!-- Main card -->
             <div class="card shadow-lg">
                 <!-- Header -->
-                <div class="card-header {% if is_auto_lottery %}bg-success{% else %}bg-primary{% endif %} text-white py-3">
+                <div class="card-header bg-success text-white py-3">
                     <div class="d-flex align-items-center">
-                        <i class="fas {% if is_auto_lottery %}fa-sync{% else %}fa-ticket-alt{% endif %} fa-2x me-3"></i>
+                        <i class="fas fa-sync fa-2x me-3"></i>
                         <div>
-                            <h4 class="mb-0">
-                                {% if is_auto_lottery %}
-                                    {% trans "Create Automatic Lottery" %}
-                                {% else %}
-                                    {% trans "Create New Lottery" %}
-                                {% endif %}
-                            </h4>
+                            <h4 class="mb-0">{% trans "Create Automatic Lottery" %}</h4>
                             <small class="opacity-75">
-                                {% if is_auto_lottery %}
-                                    {% trans "Set up a recurring lottery that runs automatically" %}
-                                {% else %}
-                                    {% trans "Create a one-time lottery event" %}
-                                {% endif %}
+                                {% trans "Set up a recurring lottery that runs automatically" %}
                             </small>
                         </div>
                     </div>
@@ -45,7 +31,6 @@
                     <form method="post" class="needs-validation" novalidate>
                         {% csrf_token %}
 
-                        {% if is_auto_lottery %}
                         <!-- is_active Switch -->
                         <div class="mb-4 p-3 bg-light rounded">
                             <div class="d-flex align-items-center">
@@ -58,7 +43,6 @@
                                 </div>
                             </div>
                         </div>
-                        {% endif %}
 
                         <!-- 1) Basic Info -->
                         <div class="mb-4">
@@ -67,7 +51,6 @@
                                 <h5 class="mb-0">{% trans "Basic Information" %}</h5>
                             </div>
                             <div class="row g-3">
-                                {% if is_auto_lottery %}
                                 <div class="col-md-6" id="field-name">
                                     <label for="{{ form.name.id_for_label }}" class="form-label">
                                         {% trans "Lottery Name" %}*
@@ -95,7 +78,6 @@
                                     <div class="text-danger mt-1">{{ form.frequency.errors|striptags }}</div>
                                     {% endif %}
                                 </div>
-                                {% endif %}
 
                                 <div class="col-md-6">
                                     <label for="{{ form.ticket_price.id_for_label }}" class="form-label">
@@ -113,7 +95,6 @@
                                     {% endif %}
                                 </div>
                                 <div class="col-md-6">
-                                    {% if is_auto_lottery %}
                                     <label for="{{ form.duration_value.id_for_label }}" class="form-label">
                                         {% trans "Duration" %}*
                                     </label>
@@ -126,23 +107,6 @@
                                     </div>
                                     {% if form.duration_value.errors %}
                                     <div class="text-danger mt-1">{{ form.duration_value.errors|striptags }}</div>
-                                    {% endif %}
-                                    {% else %}
-                                    <label for="{{ form.end_date.id_for_label }}" class="form-label">
-                                        {% trans "End Date" %}*
-                                    </label>
-                                    <div class="input-group">
-                                        <span class="input-group-text">
-                                            <i class="fas fa-calendar-alt"></i>
-                                        </span>
-                                        {{ form.end_date }}
-                                    </div>
-                                    <div class="form-text">
-                                        {% trans "Format: YYYY-MM-DD HH:MM" %}
-                                    </div>
-                                    {% if form.end_date.errors %}
-                                    <div class="text-danger mt-1">{{ form.end_date.errors|striptags }}</div>
-                                    {% endif %}
                                     {% endif %}
                                 </div>
                             </div>
@@ -162,7 +126,7 @@
 
                                     <!-- Champ de recherche local pour filter le select -->
                                     <input type="text" class="form-control mb-2" id="paymentReceiverSearch"
-                                            placeholder="{% trans 'Filter Corporation...' %}">
+                                           placeholder="{% trans 'Filter Corporation...' %}">
 
                                     <div class="input-group">
                                         <span class="input-group-text">
@@ -252,21 +216,16 @@
 
                         <!-- Actions -->
                         <div class="d-flex justify-content-between align-items-center mt-4">
-                            <a href="{% if is_auto_lottery %}{% url 'fortunaisk:auto_lottery_list' %}{% else %}{% url 'fortunaisk:lottery' %}{% endif %}"
-                                class="btn btn-outline-secondary">
+                            <a href="{% url 'fortunaisk:auto_lottery_list' %}" class="btn btn-outline-secondary">
                                 <i class="fas fa-arrow-left me-2"></i>
                                 {% trans "Back" %}
                             </a>
                             <button
                                 type="submit"
-                                class="btn btn-lg {% if is_auto_lottery %}btn-success{% else %}btn-primary{% endif %}"
+                                class="btn btn-lg btn-success"
                             >
-                                <i class="fas {% if is_auto_lottery %}fa-sync{% else %}fa-plus{% endif %} me-2"></i>
-                                {% if is_auto_lottery %}
-                                    {% trans "Create Automatic Lottery" %}
-                                {% else %}
-                                    {% trans "Create Lottery" %}
-                                {% endif %}
+                                <i class="fas fa-sync me-2"></i>
+                                {% trans "Create Automatic Lottery" %}
                             </button>
                         </div>
                     </form>
@@ -305,7 +264,7 @@
             distributionContainer: document.getElementById('prize-distribution-container'),
             distributionInputs: () => document.querySelectorAll('.prize-distribution'),
             hiddenDistributionInput: document.getElementById('id_winners_distribution'),
-            isAutoLottery: {% if is_auto_lottery %}true{% else %}false{% endif %},
+            isAutoLottery: true, // Indique que c'est une AutoLottery
         };
 
         const ERROR_MESSAGES = {
@@ -509,7 +468,5 @@
         initializeEventListeners();
     });
     </script>
-
 </div>
-
 {% endblock details %}

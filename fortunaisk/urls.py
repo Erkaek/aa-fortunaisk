@@ -37,6 +37,7 @@ urlpatterns = [
         name="lottery_participants",
     ),
     path("lottery_create/", create_lottery, name="lottery_create"),
+    # AutoLottery URLs
     path("auto_lotteries/", list_auto_lotteries, name="auto_lottery_list"),
     path("auto_lotteries/create/", create_auto_lottery, name="auto_lottery_create"),
     path(
