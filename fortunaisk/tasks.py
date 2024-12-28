@@ -25,6 +25,7 @@ def check_purchased_tickets(self):
     Vérifie les paiements contenant "lottery" dans la raison,
     crée des entrées TicketPurchase correspondantes et marque les paiements comme traités.
     """
+    logger.info("Démarrage de la tâche 'check_purchased_tickets'.")
     try:
         # Récupérer les paiements contenant "lottery" dans le champ reason et non traités
         CorporationWalletJournalEntryModel = apps.get_model(
@@ -41,11 +42,15 @@ def check_purchased_tickets(self):
         for payment in pending_payments:
             with transaction.atomic():
                 try:
+                    logger.debug(f"Traitement du paiement ID: {payment.id}")
                     # Double-check if payment is still not processed
                     payment = CorporationWalletJournalEntryModel.objects.select_for_update().get(
                         id=payment.id
                     )
                     if payment.processed:
+                        logger.debug(
+                            f"Le paiement ID {payment.id} a déjà été traité. Passage au suivant."
+                        )
                         continue
 
                     # Étape 1 : Extraire les informations nécessaires
@@ -53,15 +58,24 @@ def check_purchased_tickets(self):
                     amount = payment.amount
                     payment_id = payment.entry_id
 
+                    logger.debug(
+                        f"Extraction des informations du paiement ID {payment_id}: "
+                        f"référence loterie='{lottery_reference}', montant={amount}"
+                    )
+
                     # Étape 2 : Trouver la loterie correspondante
                     Lottery = apps.get_model("fortunaisk", "Lottery")
                     try:
                         lottery = Lottery.objects.select_for_update().get(
                             lottery_reference=lottery_reference, status="active"
                         )
+                        logger.debug(
+                            f"Loterie trouvée pour la référence '{lottery_reference}': ID {lottery.id}"
+                        )
                     except Lottery.DoesNotExist:
                         logger.warning(
-                            f"Aucune loterie active trouvée pour la référence '{lottery_reference}'. Paiement {payment_id} ignoré."
+                            f"Aucune loterie active trouvée pour la référence '{lottery_reference}'. "
+                            f"Paiement ID {payment_id} ignoré."
                         )
                         # Enregistrer une anomalie
                         TicketAnomaly = apps.get_model("fortunaisk", "TicketAnomaly")
@@ -75,6 +89,9 @@ def check_purchased_tickets(self):
                         # Marquer le paiement comme traité
                         payment.processed = True
                         payment.save(update_fields=["processed"])
+                        logger.info(
+                            f"Paiement ID {payment_id} marqué comme traité suite à l'anomalie."
+                        )
                         continue
 
                     # Étape 3 : Trouver l'utilisateur
@@ -85,28 +102,43 @@ def check_purchased_tickets(self):
                     UserProfile = apps.get_model("authentication", "UserProfile")
 
                     try:
+                        logger.debug(
+                            f"Recherche de l'EveCharacter avec character_id={payment.first_party_name_id}."
+                        )
                         # Trouver EveCharacter lié au paiement
                         eve_character = EveCharacter.objects.get(
                             character_id=payment.first_party_name_id
+                        )
+                        logger.debug(
+                            f"EveCharacter trouvé: ID {eve_character.id} pour le paiement ID {payment_id}."
                         )
 
                         # Trouver CharacterOwnership
                         character_ownership = CharacterOwnership.objects.get(
                             character_id=eve_character.character_id
                         )
+                        logger.debug(
+                            f"CharacterOwnership trouvé: user_id={character_ownership.user_id} pour le personnage ID {eve_character.character_id}."
+                        )
 
                         # Trouver UserProfile à partir de CharacterOwnership
                         user_profile = UserProfile.objects.get(
                             user_id=character_ownership.user_id
                         )
+                        logger.debug(
+                            f"UserProfile trouvé: user_id={user_profile.user_id} associé au CharacterOwnership."
+                        )
 
                         # Vérifier le personnage principal
                         if user_profile.main_character_id == eve_character.id:
                             user = user_profile.user
+                            logger.debug(
+                                f"Personnage principal confirmé pour l'utilisateur '{user.username}'."
+                            )
                         else:
                             logger.warning(
-                                f"Personnage principal ({user_profile.main_character_id}) "
-                                f"ne correspond pas à EveCharacter.id ({eve_character.id}) pour payment_id: {payment_id}"
+                                f"Personnage principal (ID {user_profile.main_character_id}) "
+                                f"ne correspond pas à EveCharacter.id ({eve_character.id}) pour paiement ID {payment_id}."
                             )
                             # Enregistrer une anomalie
                             TicketAnomaly.objects.create(
@@ -121,11 +153,14 @@ def check_purchased_tickets(self):
                             # Marquer le paiement comme traité
                             payment.processed = True
                             payment.save(update_fields=["processed"])
+                            logger.info(
+                                f"Paiement ID {payment_id} marqué comme traité suite à une incompatibilité de personnage principal."
+                            )
                             continue
 
                     except EveCharacter.DoesNotExist:
                         logger.warning(
-                            f"Aucun EveCharacter trouvé pour first_party_name_id: {payment.first_party_name_id}"
+                            f"Aucun EveCharacter trouvé pour first_party_name_id: {payment.first_party_name_id}."
                         )
                         # Enregistrer une anomalie
                         TicketAnomaly.objects.create(
@@ -138,10 +173,13 @@ def check_purchased_tickets(self):
                         # Marquer le paiement comme traité
                         payment.processed = True
                         payment.save(update_fields=["processed"])
+                        logger.info(
+                            f"Paiement ID {payment_id} marqué comme traité suite à l'absence d'EveCharacter."
+                        )
                         continue
                     except CharacterOwnership.DoesNotExist:
                         logger.warning(
-                            f"Aucun CharacterOwnership trouvé pour character_id: {eve_character.character_id}"
+                            f"Aucun CharacterOwnership trouvé pour character_id: {eve_character.character_id}."
                         )
                         # Enregistrer une anomalie
                         TicketAnomaly.objects.create(
@@ -156,10 +194,13 @@ def check_purchased_tickets(self):
                         # Marquer le paiement comme traité
                         payment.processed = True
                         payment.save(update_fields=["processed"])
+                        logger.info(
+                            f"Paiement ID {payment_id} marqué comme traité suite à l'absence de CharacterOwnership."
+                        )
                         continue
                     except UserProfile.DoesNotExist:
                         logger.warning(
-                            f"Aucun UserProfile trouvé pour user_id: {character_ownership.user_id}"
+                            f"Aucun UserProfile trouvé pour user_id: {character_ownership.user_id}."
                         )
                         # Enregistrer une anomalie
                         TicketAnomaly.objects.create(
@@ -174,6 +215,9 @@ def check_purchased_tickets(self):
                         # Marquer le paiement comme traité
                         payment.processed = True
                         payment.save(update_fields=["processed"])
+                        logger.info(
+                            f"Paiement ID {payment_id} marqué comme traité suite à l'absence de UserProfile."
+                        )
                         continue
 
                     # Étape 4 : Vérifier le nombre de tickets de l'utilisateur
@@ -183,9 +227,12 @@ def check_purchased_tickets(self):
                         user_ticket_count = TicketPurchase.objects.filter(
                             lottery=lottery, user=user
                         ).count()
+                        logger.debug(
+                            f"Utilisateur '{user.username}' possède actuellement {user_ticket_count} tickets pour la loterie '{lottery.lottery_reference}'."
+                        )
                         if user_ticket_count >= lottery_max_tickets:
                             logger.warning(
-                                f"User {user.username} has reached the maximum tickets for lottery {lottery.lottery_reference}."
+                                f"Utilisateur '{user.username}' a atteint le nombre maximum de tickets ({lottery_max_tickets}) pour la loterie '{lottery.lottery_reference}'."
                             )
                             # Enregistrer une anomalie
                             TicketAnomaly.objects.create(
@@ -200,6 +247,9 @@ def check_purchased_tickets(self):
                             # Marquer le paiement comme traité
                             payment.processed = True
                             payment.save(update_fields=["processed"])
+                            logger.info(
+                                f"Paiement ID {payment_id} marqué comme traité suite au dépassement du nombre de tickets."
+                            )
                             continue
 
                     # Étape 5 : Créer une entrée TicketPurchase
@@ -214,11 +264,14 @@ def check_purchased_tickets(self):
                     )
 
                     logger.info(
-                        f"TicketPurchase {ticket_purchase.id} créé pour user '{user.username}' "
-                        f"dans la loterie '{lottery.lottery_reference}'"
+                        f"TicketPurchase ID {ticket_purchase.id} créé pour l'utilisateur '{user.username}' "
+                        f"dans la loterie '{lottery.lottery_reference}'."
                     )
 
                     # Mise à jour des compteurs
+                    previous_participant_count = lottery.participant_count
+                    previous_total_pot = lottery.total_pot
+
                     lottery.participant_count = lottery.ticket_purchases.count()
                     lottery.total_pot = (
                         lottery.ticket_purchases.aggregate(total=Sum("amount"))["total"]
@@ -226,24 +279,43 @@ def check_purchased_tickets(self):
                     )
                     lottery.save(update_fields=["participant_count", "total_pot"])
 
+                    logger.debug(
+                        f"Mise à jour de la loterie '{lottery.lottery_reference}': "
+                        f"participant_count: {previous_participant_count} -> {lottery.participant_count}, "
+                        f"total_pot: {previous_total_pot} -> {lottery.total_pot}."
+                    )
+
                     # Étape 6 : Marquer le paiement comme traité
                     payment.processed = True
                     payment.save(update_fields=["processed"])
+                    logger.info(
+                        f"Paiement ID {payment_id} marqué comme traité avec succès."
+                    )
 
                 except Exception as e:
                     logger.error(
-                        f"Erreur lors du traitement du paiement {payment_id}: {e}"
+                        f"Erreur lors du traitement du paiement ID {payment_id}: {e}",
+                        exc_info=True,
                     )
                     # Optionally, retry the task
                     try:
                         self.retry(exc=e, countdown=60, max_retries=3)
+                        logger.debug(
+                            f"Requête de réexécution de la tâche pour le paiement ID {payment_id}."
+                        )
                     except self.MaxRetriesExceededError:
-                        logger.error(f"Max retries exceeded for payment {payment_id}")
+                        logger.error(
+                            f"Nombre maximal de tentatives dépassé pour le paiement ID {payment_id}."
+                        )
 
-        logger.info("check_purchased_tickets exécutée avec succès.")
     except Exception as e:
-        logger.error(f"Erreur globale dans check_purchased_tickets: {e}")
+        logger.critical(
+            f"Erreur globale dans la tâche 'check_purchased_tickets': {e}",
+            exc_info=True,
+        )
         # Optionally, notify admins of failure
+
+    logger.info("Exécution de la tâche 'check_purchased_tickets' terminée avec succès.")
 
 
 @shared_task(bind=True)
@@ -252,6 +324,7 @@ def check_lottery_status(self):
     Vérifie l'état des loteries toutes les 15 minutes et clôture les loteries terminées.
     Avant de clôturer, revérifie les tickets achetés.
     """
+    logger.info("Démarrage de la tâche 'check_lottery_status'.")
     Lottery = apps.get_model("fortunaisk", "Lottery")
     try:
         now = timezone.now()
@@ -262,9 +335,12 @@ def check_lottery_status(self):
 
         for lottery in active_lotteries:
             try:
+                logger.debug(
+                    f"Début de la clôture de la loterie '{lottery.lottery_reference}' (ID {lottery.id})."
+                )
                 # Revérifier les tickets achetés si nécessaire
                 logger.debug(
-                    f"Revérification des tickets pour la loterie '{lottery.lottery_reference}'"
+                    f"Revérification des tickets pour la loterie '{lottery.lottery_reference}'."
                 )
 
                 # Ici, on pourrait ajouter des vérifications spécifiques des tickets
@@ -273,18 +349,23 @@ def check_lottery_status(self):
                 # Clôturer la loterie
                 lottery.complete_lottery()
                 logger.info(
-                    f"Loterie '{lottery.lottery_reference}' clôturée avec succès."
+                    f"Loterie '{lottery.lottery_reference}' (ID {lottery.id}) clôturée avec succès."
                 )
 
             except Exception as e:
                 logger.error(
-                    f"Erreur lors de la clôture de la loterie '{lottery.lottery_reference}': {e}"
+                    f"Erreur lors de la clôture de la loterie '{lottery.lottery_reference}' (ID {lottery.id}): {e}",
+                    exc_info=True,
                 )
                 # Optionally, notify admins of failure
 
-        logger.info("check_lottery_status exécutée avec succès.")
+        logger.info(
+            "Exécution de la tâche 'check_lottery_status' terminée avec succès."
+        )
     except Exception as e:
-        logger.error(f"Erreur dans check_lottery_status: {e}")
+        logger.critical(
+            f"Erreur dans la tâche 'check_lottery_status': {e}", exc_info=True
+        )
         # Optionally, notify admins of failure
 
 
@@ -293,12 +374,18 @@ def create_lottery_from_auto_lottery(self, auto_lottery_id: int):
     """
     Crée une Lottery basée sur une AutoLottery spécifique.
     """
+    logger.info(
+        f"Démarrage de la tâche 'create_lottery_from_auto_lottery' pour AutoLottery ID {auto_lottery_id}."
+    )
     AutoLottery = apps.get_model("fortunaisk", "AutoLottery")
     try:
         auto_lottery = AutoLottery.objects.get(id=auto_lottery_id, is_active=True)
+        logger.debug(
+            f"AutoLottery trouvé: ID {auto_lottery.id}, nom='{auto_lottery.name}'. Création de la Lottery associée."
+        )
         new_lottery = auto_lottery.create_lottery()
         logger.info(
-            f"Created Lottery '{new_lottery.lottery_reference}' from AutoLottery '{auto_lottery.name}'"
+            f"Lottery '{new_lottery.lottery_reference}' (ID {new_lottery.id}) créée à partir de l'AutoLottery '{auto_lottery.name}' (ID {auto_lottery.id})."
         )
         return new_lottery.id
     except AutoLottery.DoesNotExist:
@@ -307,7 +394,8 @@ def create_lottery_from_auto_lottery(self, auto_lottery_id: int):
         )
     except Exception as e:
         logger.error(
-            f"Erreur lors de la création de la Lottery depuis l'AutoLottery {auto_lottery_id}: {e}"
+            f"Erreur lors de la création de la Lottery depuis l'AutoLottery ID {auto_lottery_id}: {e}",
+            exc_info=True,
         )
     return None
 
@@ -318,47 +406,70 @@ def finalize_lottery(self, lottery_id: int):
     Finalise une Lottery une fois qu'elle est terminée.
     Sélectionne les gagnants, met à jour le statut et envoie des notifications.
     """
+    logger.info(
+        f"Démarrage de la tâche 'finalize_lottery' pour Lottery ID {lottery_id}."
+    )
     Lottery = apps.get_model("fortunaisk", "Lottery")
     try:
         lottery = Lottery.objects.get(id=lottery_id)
+        logger.debug(
+            f"Lottery trouvé: '{lottery.lottery_reference}' (ID {lottery.id}), statut actuel: '{lottery.status}'."
+        )
         if lottery.status != "active":
             logger.info(
-                f"Lottery '{lottery.lottery_reference}' is not active. Current status: {lottery.status}"
+                f"Lottery '{lottery.lottery_reference}' (ID {lottery.id}) n'est pas active. Statut actuel: '{lottery.status}'. Aucune action effectuée."
             )
             return
 
         # Sélectionner les gagnants
         winners = lottery.select_winners()
         logger.info(
-            f"Selected {len(winners)} winners for Lottery '{lottery.lottery_reference}'"
+            f"{len(winners)} gagnant(s) sélectionné(s) pour la Lottery '{lottery.lottery_reference}' (ID {lottery.id})."
         )
 
         if not winners:
             logger.warning(
-                f"Aucun gagnant sélectionné pour la loterie {lottery.lottery_reference}."
+                f"Aucun gagnant sélectionné pour la loterie '{lottery.lottery_reference}' (ID {lottery.id})."
             )
             lottery.status = "completed"
             lottery.save(update_fields=["status"])
+            logger.info(
+                f"Loterie '{lottery.lottery_reference}' (ID {lottery.id}) marquée comme 'completed' sans gagnants."
+            )
             return
 
         # Mettre à jour le statut de la loterie
         lottery.status = "completed"
         lottery.save(update_fields=["status"])
+        logger.debug(
+            f"Statut de la loterie '{lottery.lottery_reference}' (ID {lottery.id}) mis à jour en 'completed'."
+        )
 
         # Envoyer des notifications Discord pour les gagnants
         lottery.notify_discord(winners)
+        logger.info(
+            f"Notifications Discord envoyées pour les gagnants de la loterie '{lottery.lottery_reference}' (ID {lottery.id})."
+        )
 
-        logger.info(f"Lottery '{lottery.lottery_reference}' finalized successfully.")
+        logger.info(
+            f"Finalisation de la loterie '{lottery.lottery_reference}' (ID {lottery.id}) terminée avec succès."
+        )
     except Lottery.DoesNotExist:
         logger.error(f"Lottery avec l'ID {lottery_id} n'existe pas.")
     except Exception as e:
-        logger.error(f"Erreur lors de la finalisation de la Lottery {lottery_id}: {e}")
+        logger.error(
+            f"Erreur lors de la finalisation de la Lottery ID {lottery_id}: {e}",
+            exc_info=True,
+        )
         # Optionally, retry the task
         try:
             self.retry(exc=e, countdown=60, max_retries=3)
+            logger.debug(
+                f"Requête de réexécution de la tâche 'finalize_lottery' pour Lottery ID {lottery_id}."
+            )
         except self.MaxRetriesExceededError:
             logger.error(
-                f"Max retries exceeded for finalize_lottery task for lottery {lottery_id}"
+                f"Nombre maximal de tentatives dépassé pour la tâche 'finalize_lottery' de la Lottery ID {lottery_id}."
             )
 
 
@@ -366,34 +477,54 @@ def setup_periodic_tasks():
     """
     Configure les tâches périodiques globales pour FortunaIsk.
     """
-    # Vérifier si la tâche 'check_purchased_tickets' existe déjà
-    if not PeriodicTask.objects.filter(name="check_purchased_tickets").exists():
-        # check_purchased_tickets => toutes les 5 minutes
-        schedule_check_tickets, created = IntervalSchedule.objects.get_or_create(
-            every=5,
-            period=IntervalSchedule.MINUTES,
-        )
-        PeriodicTask.objects.create(
-            name="check_purchased_tickets",
-            task="fortunaisk.tasks.check_purchased_tickets",
-            interval=schedule_check_tickets,
-            args=json.dumps([]),
-        )
-        logger.info("Periodic task 'check_purchased_tickets' créée.")
+    logger.info("Configuration des tâches périodiques globales pour FortunaIsk.")
+    try:
+        # Vérifier si la tâche 'check_purchased_tickets' existe déjà
+        if not PeriodicTask.objects.filter(name="check_purchased_tickets").exists():
+            # check_purchased_tickets => toutes les 5 minutes
+            schedule_check_tickets, created = IntervalSchedule.objects.get_or_create(
+                every=5,
+                period=IntervalSchedule.MINUTES,
+            )
+            PeriodicTask.objects.create(
+                name="check_purchased_tickets",
+                task="fortunaisk.tasks.check_purchased_tickets",
+                interval=schedule_check_tickets,
+                args=json.dumps([]),
+            )
+            if created:
+                logger.debug("IntervalSchedule créée pour 'check_purchased_tickets'.")
+            logger.info("Tâche périodique 'check_purchased_tickets' créée.")
 
-    # Vérifier si la tâche 'check_lottery_status' existe déjà
-    if not PeriodicTask.objects.filter(name="check_lottery_status").exists():
-        # check_lottery_status => toutes les 15 minutes
-        schedule_check_lottery, created = IntervalSchedule.objects.get_or_create(
-            every=15,
-            period=IntervalSchedule.MINUTES,
-        )
-        PeriodicTask.objects.create(
-            name="check_lottery_status",
-            task="fortunaisk.tasks.check_lottery_status",
-            interval=schedule_check_lottery,
-            args=json.dumps([]),
-        )
-        logger.info("Periodic task 'check_lottery_status' créée.")
+        else:
+            logger.debug("La tâche périodique 'check_purchased_tickets' existe déjà.")
 
-    logger.info("Periodic tasks globales configurées avec succès.")
+        # Vérifier si la tâche 'check_lottery_status' existe déjà
+        if not PeriodicTask.objects.filter(name="check_lottery_status").exists():
+            # check_lottery_status => toutes les 15 minutes
+            schedule_check_lottery, created = IntervalSchedule.objects.get_or_create(
+                every=15,
+                period=IntervalSchedule.MINUTES,
+            )
+            PeriodicTask.objects.create(
+                name="check_lottery_status",
+                task="fortunaisk.tasks.check_lottery_status",
+                interval=schedule_check_lottery,
+                args=json.dumps([]),
+            )
+            if created:
+                logger.debug("IntervalSchedule créée pour 'check_lottery_status'.")
+            logger.info("Tâche périodique 'check_lottery_status' créée.")
+
+        else:
+            logger.debug("La tâche périodique 'check_lottery_status' existe déjà.")
+
+        logger.info(
+            "Configuration des tâches périodiques globales terminée avec succès."
+        )
+    except Exception as e:
+        logger.critical(
+            f"Erreur lors de la configuration des tâches périodiques: {e}",
+            exc_info=True,
+        )
+        # Optionally, notify admins of failure
