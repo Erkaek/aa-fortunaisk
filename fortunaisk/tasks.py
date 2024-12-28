@@ -1,10 +1,12 @@
 # fortunaisk/tasks.py
 
 # Standard Library
+import json
 import logging
 
 # Third Party
 from celery import shared_task
+from django_celery_beat.models import IntervalSchedule, PeriodicTask
 
 # Django
 from django.apps import apps
@@ -14,171 +16,116 @@ logger = logging.getLogger(__name__)
 
 
 @shared_task
-def finalize_lottery(lottery_id: int) -> str:
+def check_purchased_tickets():
     """
-    Finalise une loterie en sélectionnant les gagnants, en mettant à jour le statut et en envoyant des notifications.
+    Vérifie les tickets achetés toutes les 5 minutes.
     """
-    Lottery = apps.get_model("fortunaisk", "Lottery")
+    TicketPurchase = apps.get_model("fortunaisk", "TicketPurchase")
     try:
-        lottery = Lottery.objects.get(id=lottery_id)
-        if lottery.status != "active":
-            logger.warning(
-                f"Lottery {lottery.lottery_reference} not active. Status: {lottery.status}"
+        # Exemple de logique : traiter les tickets en attente
+        pending_tickets = TicketPurchase.objects.filter(status="pending")
+        for ticket in pending_tickets:
+            # Implémentez votre logique ici, par exemple, valider ou notifier
+            logger.debug(
+                f"Processing ticket {ticket.id} for user {ticket.user.username}"
             )
-            return "Lottery not active"
-
-        winners = lottery.select_winners()
-        if winners:
-            lottery.notify_discord(winners)
-        lottery.status = "completed"
-        lottery.save(update_fields=["status"])
-
-        logger.info(f"Loterie {lottery.lottery_reference} finalisée.")
-        return f"Loterie {lottery.lottery_reference} finalisée."
-    except Lottery.DoesNotExist:
-        logger.error(f"Lottery {lottery_id} n'existe pas.")
-        return "Lottery not found."
+            # Exemple de traitement : marquer le ticket comme traité
+            # ticket.status = 'processed'
+            # ticket.save()
+        logger.info("check_purchased_tickets exécutée avec succès.")
     except Exception as e:
-        logger.exception(f"Erreur finalisant la loterie {lottery_id}: {e}")
-        return "Error finalize_lottery"
+        logger.error(f"Erreur dans check_purchased_tickets: {e}")
 
 
 @shared_task
-def schedule_finalization(lottery_id: int):
+def check_lottery_status():
     """
-    Planifie la finalisation d'une loterie à sa date de fin.
+    Vérifie l'état des loteries toutes les 15 minutes et clôture les loteries terminées.
+    Avant de clôturer, revérifie les tickets achetés.
     """
     Lottery = apps.get_model("fortunaisk", "Lottery")
     try:
-        lottery = Lottery.objects.get(id=lottery_id)
-        if lottery.status != "active":
-            logger.warning(
-                f"Lottery {lottery.lottery_reference} not active. Current status: {lottery.status}"
-            )
-            return
-
-        # Calculer le temps restant jusqu'à la fin de la loterie
         now = timezone.now()
-        delay = (lottery.end_date - now).total_seconds()
+        active_lotteries = Lottery.objects.filter(status="active", end_date__lte=now)
+        for lottery in active_lotteries:
+            # Revérifier les tickets achetés
+            tickets = lottery.ticket_purchases.all()
+            logger.debug(
+                f"Revérification des tickets pour la loterie {lottery.lottery_reference}"
+            )
 
-        if delay <= 0:
-            # Si la date de fin est déjà passée, finaliser immédiatement
-            finalize_lottery.delay(lottery.id)
-            logger.info(
-                f"Finalizing Lottery {lottery.lottery_reference} immediately as end_date is in the past."
-            )
-        else:
-            # Planifier la tâche de finalisation
-            finalize_lottery.apply_async(args=[lottery.id], countdown=delay)
-            logger.info(
-                f"Scheduled finalize_lottery for Lottery {lottery.lottery_reference} in {delay} seconds."
-            )
-    except Lottery.DoesNotExist:
-        logger.error(f"Lottery ID {lottery_id} doesn't exist.")
+            for ticket in tickets:
+                # Implémentez votre logique de revérification ici
+                logger.debug(
+                    f"Checking ticket {ticket.id} for user {ticket.user.username}"
+                )
+                # Exemple de logique : vérifier si le ticket est toujours valide
+                # if not ticket.is_valid():
+                #     logger.warning(f"Ticket {ticket.id} pour l'utilisateur {ticket.user.username} n'est plus valide.")
+
+            # Clôturer la loterie
+            lottery.complete_lottery()
+        logger.info("check_lottery_status exécutée avec succès.")
+    except Exception as e:
+        logger.error(f"Erreur dans check_lottery_status: {e}")
 
 
 @shared_task
-def create_lottery_from_auto(auto_lottery_id: int) -> int | None:
+def create_lottery_from_auto_lottery(auto_lottery_id: int):
     """
-    Crée une Lottery à partir d'une AutoLottery donnée.
+    Crée une Lottery basée sur une AutoLottery spécifique.
     """
-    Lottery = apps.get_model("fortunaisk", "Lottery")
-    AutoLotteryModel = apps.get_model("fortunaisk", "AutoLottery")
+    AutoLottery = apps.get_model("fortunaisk", "AutoLottery")
     try:
-        auto_lottery = AutoLotteryModel.objects.get(id=auto_lottery_id)
-        if not auto_lottery.is_active:
-            logger.warning(
-                f"AutoLottery {auto_lottery.id} not active => skip creation."
-            )
-            return None
-
-        start_date = timezone.now()
-        end_date = start_date + auto_lottery.get_duration_timedelta()
-
-        new_lottery = Lottery.objects.create(
-            ticket_price=auto_lottery.ticket_price,
-            start_date=start_date,
-            end_date=end_date,
-            payment_receiver=auto_lottery.payment_receiver,  # ForeignKey => OK
-            winner_count=auto_lottery.winner_count,
-            winners_distribution=auto_lottery.winners_distribution,
-            max_tickets_per_user=auto_lottery.max_tickets_per_user,
-            lottery_reference=Lottery.generate_unique_reference(),
-            duration_value=auto_lottery.duration_value,
-            duration_unit=auto_lottery.duration_unit,
-        )
+        auto_lottery = AutoLottery.objects.get(id=auto_lottery_id, is_active=True)
+        new_lottery = auto_lottery.create_lottery()
         logger.info(
             f"Created Lottery '{new_lottery.lottery_reference}' from AutoLottery '{auto_lottery.name}'"
         )
         return new_lottery.id
-    except AutoLotteryModel.DoesNotExist:
-        logger.error(f"AutoLottery ID {auto_lottery_id} doesn't exist.")
+    except AutoLottery.DoesNotExist:
+        logger.error(
+            f"AutoLottery avec l'ID {auto_lottery_id} n'existe pas ou est inactive."
+        )
     except Exception as e:
         logger.error(
-            f"Error creating Lottery from AutoLottery {auto_lottery_id}: {str(e)}"
+            f"Erreur lors de la création de la Lottery depuis l'AutoLottery {auto_lottery_id}: {e}"
         )
     return None
 
 
 def setup_periodic_tasks():
     """
-    Configure les tâches périodiques par défaut pour FortunaIsk.
+    Configure les tâches périodiques globales pour FortunaIsk.
     """
-    # Standard Library
-    import json
+    # Vérifier si la tâche 'check_purchased_tickets' existe déjà
+    if not PeriodicTask.objects.filter(name="check_purchased_tickets").exists():
+        # check_purchased_tickets => toutes les 5 minutes
+        schedule_check_tickets, created = IntervalSchedule.objects.get_or_create(
+            every=5,
+            period=IntervalSchedule.MINUTES,
+        )
+        PeriodicTask.objects.create(
+            name="check_purchased_tickets",
+            task="fortunaisk.tasks.check_purchased_tickets",
+            interval=schedule_check_tickets,
+            args=json.dumps([]),
+        )
+        logger.info("Periodic task 'check_purchased_tickets' créée.")
 
-    # Third Party
-    from django_celery_beat.models import CrontabSchedule, PeriodicTask
+    # Vérifier si la tâche 'check_lottery_status' existe déjà
+    if not PeriodicTask.objects.filter(name="check_lottery_status").exists():
+        # check_lottery_status => toutes les 15 minutes
+        schedule_check_lottery, created = IntervalSchedule.objects.get_or_create(
+            every=15,
+            period=IntervalSchedule.MINUTES,
+        )
+        PeriodicTask.objects.create(
+            name="check_lottery_status",
+            task="fortunaisk.tasks.check_lottery_status",
+            interval=schedule_check_lottery,
+            args=json.dumps([]),
+        )
+        logger.info("Periodic task 'check_lottery_status' créée.")
 
-    # check_lotteries => toutes les 15 minutes
-    schedule_check, created = CrontabSchedule.objects.get_or_create(
-        minute="*/15",
-        hour="*",
-        day_of_month="*",
-        month_of_year="*",
-        day_of_week="*",
-    )
-    PeriodicTask.objects.update_or_create(
-        name="check_lotteries",
-        defaults={
-            "task": "fortunaisk.tasks.check_lotteries",
-            "crontab": schedule_check,
-            "args": json.dumps([]),
-        },
-    )
-
-    # process_wallet_tickets => toutes les 5 minutes
-    schedule_wallet, created = CrontabSchedule.objects.get_or_create(
-        minute="*/5",
-        hour="*",
-        day_of_month="*",
-        month_of_year="*",
-        day_of_week="*",
-    )
-    PeriodicTask.objects.update_or_create(
-        name="process_wallet_tickets",
-        defaults={
-            "task": "fortunaisk.tasks.process_wallet_tickets",
-            "crontab": schedule_wallet,
-            "args": json.dumps([]),
-        },
-    )
-
-    # process_auto_lotteries => toutes les 60 minutes
-    schedule_auto, created = CrontabSchedule.objects.get_or_create(
-        minute="0",
-        hour="*",
-        day_of_month="*",
-        month_of_year="*",
-        day_of_week="*",
-    )
-    PeriodicTask.objects.update_or_create(
-        name="process_auto_lotteries",
-        defaults={
-            "task": "fortunaisk.tasks.process_auto_lotteries",
-            "crontab": schedule_auto,
-            "args": json.dumps([]),
-        },
-    )
-
-    logger.info("Periodic tasks configured successfully.")
+    logger.info("Periodic tasks globales configurées avec succès.")

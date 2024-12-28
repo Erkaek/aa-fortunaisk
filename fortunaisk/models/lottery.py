@@ -142,9 +142,9 @@ class Lottery(models.Model):
         if creating:
             # Planifier la finalisation de la loterie
             # fortunaisk
-            from fortunaisk.tasks import schedule_finalization
+            from fortunaisk.tasks import finalize_lottery
 
-            schedule_finalization.delay(self.id)
+            finalize_lottery.delay(self.id)
 
     def get_duration_timedelta(self) -> timedelta:
         if self.duration_unit == "hours":
@@ -256,8 +256,8 @@ class Lottery(models.Model):
             embed = {
                 "title": "🎉 **Congratulations to the Winner!** 🎉",
                 "description": (
-                    f"We are thrilled to announce that **{winner.character.character_name}** "
-                    f"has won the lottery **{self.lottery_reference}**!"
+                    f"We are thrilled to announce that **{winner.ticket.user.username}** "
+                    f"({winner.character.character_name}) has won the lottery **{self.lottery_reference}**!"
                 ),
                 "color": 0xFFD700,
                 "fields": [

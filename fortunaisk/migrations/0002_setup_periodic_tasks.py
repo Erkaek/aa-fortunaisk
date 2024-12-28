@@ -6,7 +6,7 @@ from django.db import migrations
 
 def setup_periodic_tasks_func(apps, schema_editor):
     """
-    Exécute la fonction de configuration des tâches périodiques.
+    Exécute la fonction de configuration des tâches périodiques globales.
     """
     # fortunaisk
     from fortunaisk.tasks import setup_periodic_tasks

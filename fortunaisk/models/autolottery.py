@@ -2,9 +2,12 @@
 
 # Standard Library
 import logging
+from datetime import timedelta  # Déjà utilisé dans get_duration_timedelta
 
 # Django
+from django.apps import apps  # Ajouté pour utiliser apps.get_model
 from django.db import models
+from django.utils import timezone  # Ajouté pour utiliser timezone.now
 
 # Alliance Auth
 from allianceauth.eveonline.models import EveCorporationInfo
@@ -92,9 +95,7 @@ class AutoLottery(models.Model):
         super().save(*args, **kwargs)
 
     def get_duration_timedelta(self):
-        # Standard Library
-        from datetime import timedelta
-
+        # Utilise déjà timedelta importé en haut
         if self.duration_unit == "hours":
             return timedelta(hours=self.duration_value)
         elif self.duration_unit == "days":
@@ -102,3 +103,25 @@ class AutoLottery(models.Model):
         elif self.duration_unit == "months":
             return timedelta(days=30 * self.duration_value)
         return timedelta(hours=self.duration_value)
+
+    def create_lottery(self):
+        """
+        Crée une nouvelle Lottery basée sur cette AutoLottery.
+        """
+        Lottery = apps.get_model("fortunaisk", "Lottery")
+        new_lottery = Lottery.objects.create(
+            ticket_price=self.ticket_price,
+            start_date=timezone.now(),
+            end_date=timezone.now() + self.get_duration_timedelta(),
+            payment_receiver=self.payment_receiver,
+            winner_count=self.winner_count,
+            winners_distribution=self.winners_distribution,
+            max_tickets_per_user=self.max_tickets_per_user,
+            lottery_reference=Lottery.generate_unique_reference(),
+            duration_value=self.duration_value,
+            duration_unit=self.duration_unit,
+        )
+        logger.info(
+            f"AutoLottery '{self.name}' a créé la Lottery '{new_lottery.lottery_reference}'"
+        )
+        return new_lottery
