@@ -31,14 +31,12 @@ def check_purchased_tickets(self):
         ProcessedPayment = apps.get_model("fortunaisk", "ProcessedPayment")
         TicketAnomaly = apps.get_model("fortunaisk", "TicketAnomaly")
         Lottery = apps.get_model("fortunaisk", "Lottery")
-        EveCharacter = apps.get_model(
-            "allianceauth.eveonline", "EveCharacter"
-        )  # App_label corrigé
+        EveCharacter = apps.get_model("eveonline", "EveCharacter")  # App_label corrigé
         CharacterOwnership = apps.get_model(
-            "allianceauth.authentication", "CharacterOwnership"
+            "authentication", "CharacterOwnership"
         )  # App_label corrigé
         UserProfile = apps.get_model(
-            "allianceauth.authentication", "UserProfile"
+            "authentication", "UserProfile"
         )  # App_label corrigé
         TicketPurchase = apps.get_model("fortunaisk", "TicketPurchase")
 
