@@ -14,4 +14,5 @@ __all__ = [
     "TicketAnomaly",
     "WebhookConfiguration",
     "AuditLog",
+    "ProcessedPayment",
 ]
