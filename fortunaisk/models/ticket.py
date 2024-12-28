@@ -76,10 +76,10 @@ class Winner(models.Model):
     Represents a winner associated with a specific TicketPurchase.
     """
 
-    ticket = models.OneToOneField(
+    ticket = models.ForeignKey(
         TicketPurchase,
         on_delete=models.CASCADE,
-        related_name="winner",
+        related_name="winners",
         verbose_name="Ticket Purchase",
     )
     character = models.ForeignKey(

@@ -52,12 +52,12 @@ def admin_dashboard(request):
         active_lotteries.aggregate(total=Sum("ticket_purchases__amount"))["total"] or 0
     )
 
-    winners = Winner.objects.select_related("ticket__user", "ticket__lottery").order_by(
-        "-won_at"
-    )
-    anomalies = TicketAnomaly.objects.select_related("lottery", "user").order_by(
-        "-recorded_at"
-    )
+    winners = Winner.objects.select_related(
+        "ticket__user", "ticket__lottery", "character"
+    ).order_by("-won_at")
+    anomalies = TicketAnomaly.objects.select_related(
+        "lottery", "user", "character"
+    ).order_by("-recorded_at")
 
     stats = {
         "total_lotteries": lotteries.count(),
@@ -117,7 +117,7 @@ def resolve_anomaly(request, anomaly_id):
             send_alliance_auth_notification(
                 user=request.user,
                 title="Anomaly Resolved",
-                message=f"Anomaly {anomaly_id} resolved for lottery {anomaly.lottery.lottery_reference}.",
+                message=f"Anomaly {anomaly.id} resolved for lottery {anomaly.lottery.lottery_reference}.",
                 level="info",
             )
             send_discord_notification(
@@ -137,7 +137,7 @@ def resolve_anomaly(request, anomaly_id):
 
 
 @login_required
-@permission_required("fortunaisk.change_ticketanomaly", raise_exception=True)
+@permission_required("fortunaisk.change_winner", raise_exception=True)
 def distribute_prize(request, winner_id):
     """
     Vue pour marquer le gain d'un winner comme 'distributed'.
@@ -190,9 +190,10 @@ def distribute_prize(request, winner_id):
 @permission_required("fortunaisk.view_autolottery", raise_exception=True)
 def list_auto_lotteries(request):
     """
-    Liste toutes les autolotteries.
+    Liste toutes les autolotteries actives.
     """
-    autolotteries = AutoLottery.objects.all()
+    # Only list active AutoLotteries, per user instruction
+    autolotteries = AutoLottery.objects.filter(is_active=True)
     return render(
         request, "fortunaisk/auto_lottery_list.html", {"autolotteries": autolotteries}
     )
@@ -204,17 +205,18 @@ def create_auto_lottery(request):
     """
     Vue pour créer une AutoLottery.
     Gère le form AutoLotteryForm.
-    Et crée immédiatement une Lottery quand c'est validé.
+    Et crée immédiatement une Lottery quand c'est validé si is_active=True.
     """
     if request.method == "POST":
         form = AutoLotteryForm(request.POST)
         if form.is_valid():
             auto_lottery = form.save()
 
-            # Créer immédiatement la 1ère Lottery associée (tâche Celery en async)
-            create_lottery_from_auto_lottery.delay(auto_lottery.id)
+            if auto_lottery.is_active:
+                # Créer immédiatement la 1ère Lottery associée (tâche Celery en async)
+                create_lottery_from_auto_lottery.delay(auto_lottery.id)
 
-            messages.success(request, "AutoLottery created, and 1st Lottery generated.")
+            messages.success(request, "AutoLottery created.")
             return redirect("fortunaisk:auto_lottery_list")
         else:
             messages.error(request, "Veuillez corriger les erreurs ci-dessous.")
@@ -249,7 +251,10 @@ def edit_auto_lottery(request, autolottery_id):
     if request.method == "POST":
         form = AutoLotteryForm(request.POST, instance=autolottery)
         if form.is_valid():
-            form.save()
+            auto_lottery = form.save()
+            if auto_lottery.is_active and not autolottery.is_active:
+                # If reactivated, create a new lottery
+                create_lottery_from_auto_lottery.delay(auto_lottery.id)
             messages.success(request, "Loterie automatique mise à jour avec succès.")
             return redirect("fortunaisk:auto_lottery_list")
         else:
@@ -321,7 +326,7 @@ def lottery(request):
     for lot in active_lotteries:
         corp_name = (
             lot.payment_receiver.corporation_name
-            if lot.payment_receiver
+            if lot.payment_receiver and lot.payment_receiver.corporation_name
             else "Unknown Corporation"
         )
         user_ticket_count = user_ticket_map.get(lot.id, 0)
@@ -380,7 +385,7 @@ def winner_list(request):
     Vue listant tous les winners (gagnants) avec pagination.
     """
     winners_qs = Winner.objects.select_related(
-        "character", "ticket__user", "ticket__lottery"
+        "ticket__user", "ticket__lottery", "character"
     ).order_by("-won_at")
     paginator = Paginator(winners_qs, 25)
     page_number = request.GET.get("page")
@@ -390,11 +395,11 @@ def winner_list(request):
 
 
 @login_required
+@permission_required("fortunaisk.view_lotteryhistory", raise_exception=True)
 def lottery_history(request):
     """
     Vue listant toutes les loteries passées (complétées ou annulées).
     """
-    # On évite prefetch_related('winners') -> pas de related_name direct
     past_lotteries_qs = Lottery.objects.exclude(status="active").order_by("-end_date")
     paginator = Paginator(past_lotteries_qs, 6)
     page_number = request.GET.get("page")
@@ -452,19 +457,32 @@ def lottery_detail(request, lottery_id):
     Vue d'un détail d'une loterie (participants, anomalies, winners, etc.)
     """
     lottery_obj = get_object_or_404(Lottery, id=lottery_id)
-    participants = lottery_obj.ticket_purchases.select_related(
+    participants_qs = lottery_obj.ticket_purchases.select_related(
         "user", "character"
     ).all()
-    anomalies = TicketAnomaly.objects.filter(lottery=lottery_obj).select_related("user")
+    paginator_participants = Paginator(participants_qs, 25)
+    page_number_participants = request.GET.get("participants_page")
+    page_obj_participants = paginator_participants.get_page(page_number_participants)
+
+    anomalies_qs = TicketAnomaly.objects.filter(lottery=lottery_obj).select_related(
+        "user", "character"
+    )
+    paginator_anomalies = Paginator(anomalies_qs, 25)
+    page_number_anomalies = request.GET.get("anomalies_page")
+    page_obj_anomalies = paginator_anomalies.get_page(page_number_anomalies)
+
     winners_qs = Winner.objects.filter(ticket__lottery=lottery_obj).select_related(
         "ticket__user", "character"
     )
+    paginator_winners = Paginator(winners_qs, 25)
+    page_number_winners = request.GET.get("winners_page")
+    page_obj_winners = paginator_winners.get_page(page_number_winners)
 
     context = {
         "lottery": lottery_obj,
-        "participants": participants,
-        "anomalies": anomalies,
-        "winners": winners_qs,
+        "participants": page_obj_participants,
+        "anomalies": page_obj_anomalies,
+        "winners": page_obj_winners,
     }
     return render(request, "fortunaisk/lottery_detail.html", context)
 
@@ -517,13 +535,16 @@ def lottery_participants(request, lottery_id):
     Vue listant les participants d'une loterie.
     """
     lottery_obj = get_object_or_404(Lottery, id=lottery_id)
-    participants = lottery_obj.ticket_purchases.select_related(
+    participants_qs = lottery_obj.ticket_purchases.select_related(
         "user", "character"
     ).all()
+    paginator = Paginator(participants_qs, 25)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
 
     context = {
         "lottery": lottery_obj,
-        "participants": participants,
+        "participants": page_obj,
     }
     return render(request, "fortunaisk/lottery_participants.html", context)
 
@@ -544,14 +565,21 @@ def user_dashboard(request):
         .select_related("lottery", "character")
         .order_by("-purchase_date")
     )
+    paginator_tickets = Paginator(ticket_purchases_qs, 25)
+    page_number_tickets = request.GET.get("tickets_page")
+    page_obj_tickets = paginator_tickets.get_page(page_number_tickets)
+
     winnings_qs = (
         Winner.objects.filter(ticket__user=user)
         .select_related("ticket__lottery", "character")
         .order_by("-won_at")
     )
+    paginator_winnings = Paginator(winnings_qs, 25)
+    page_number_winnings = request.GET.get("winnings_page")
+    page_obj_winnings = paginator_winnings.get_page(page_number_winnings)
 
     context = {
-        "ticket_purchases": ticket_purchases_qs,
-        "winnings": winnings_qs,
+        "ticket_purchases": page_obj_tickets,
+        "winnings": page_obj_winnings,
     }
     return render(request, "fortunaisk/user_dashboard.html", context)

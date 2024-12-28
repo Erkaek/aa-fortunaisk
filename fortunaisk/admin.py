@@ -2,16 +2,22 @@
 
 # Standard Library
 import csv
+import json
 import logging
 
 # Third Party
+from django_celery_beat.models import (  # Utilisé dans AutoLotteryAdmin
+    IntervalSchedule,
+    PeriodicTask,
+)
 from solo.admin import SingletonModelAdmin  # type: ignore
 
 # Django
 from django.contrib import admin  # type: ignore
+from django.db import models  # Ajouté pour résoudre l'erreur F821
 from django.http import HttpResponse  # type: ignore
 
-from .models import (
+from .models import (  # TicketPurchase,  # Supprimé car inutilisé directement dans admin.py
     AuditLog,
     AutoLottery,
     Lottery,
@@ -39,7 +45,13 @@ class ExportCSVMixin:
         writer = csv.writer(response)
         writer.writerow(field_names)
         for obj in queryset:
-            writer.writerow([getattr(obj, field) for field in field_names])
+            row = []
+            for field in field_names:
+                value = getattr(obj, field)
+                if isinstance(value, models.Model):
+                    value = str(value)
+                row.append(value)
+            writer.writerow(row)
 
         return response
 
@@ -152,7 +164,8 @@ class LotteryAdmin(ExportCSVMixin, admin.ModelAdmin):
 
     @admin.action(description="Marquer les loteries sélectionnées comme annulées")
     def mark_cancelled(self, request, queryset):
-        updated = queryset.filter(status="active").update(status="cancelled")
+        updated = queryset.filter(status="active").count()
+        queryset.filter(status="active").update(status="cancelled")
         self.message_user(request, f"{updated} loterie(s) annulée(s).")
         send_discord_notification(message=f"{updated} loterie(s) ont été annulée(s).")
         # Envoyer une notification via Alliance Auth
@@ -167,7 +180,8 @@ class LotteryAdmin(ExportCSVMixin, admin.ModelAdmin):
     def terminate_lottery(self, request, queryset):
         updated = 0
         for lottery in queryset.filter(status="active"):
-            lottery.complete_lottery()
+            lottery.status = "cancelled"
+            lottery.save(update_fields=["status"])
             updated += 1
         self.message_user(request, f"{updated} loterie(s) terminée(s) prématurément.")
         send_discord_notification(
@@ -196,7 +210,7 @@ class TicketAnomalyAdmin(ExportCSVMixin, admin.ModelAdmin):
         "lottery__lottery_reference",
         "reason",
         "user__username",
-        "character",
+        "character__character_name",
     )
     readonly_fields = (
         "lottery",
@@ -258,6 +272,7 @@ class AutoLotteryAdmin(ExportCSVMixin, admin.ModelAdmin):
         "duration_unit",
         "winner_count",
         "winners_distribution",
+        "payment_receiver",
         "max_tickets_per_user",
     )
     export_fields = [
@@ -271,6 +286,7 @@ class AutoLotteryAdmin(ExportCSVMixin, admin.ModelAdmin):
         "duration_unit",
         "winner_count",
         "winners_distribution",
+        "payment_receiver",
         "max_tickets_per_user",
     ]
 
@@ -279,8 +295,61 @@ class AutoLotteryAdmin(ExportCSVMixin, admin.ModelAdmin):
         if change:
             if obj.is_active:
                 message = f"AutoLoterie {obj.name} est maintenant active."
+                # Create a periodic task for this AutoLottery
+
+                # Define schedule based on frequency and unit
+                if obj.frequency_unit == "minutes":
+                    period = IntervalSchedule.MINUTES
+                elif obj.frequency_unit == "hours":
+                    period = IntervalSchedule.HOURS
+                elif obj.frequency_unit == "days":
+                    period = IntervalSchedule.DAYS
+                elif obj.frequency_unit == "weeks":
+                    period = IntervalSchedule.WEEKS
+                elif obj.frequency_unit == "months":
+                    period = IntervalSchedule.MONTHS
+                else:
+                    logger.error(
+                        f"Unknown frequency_unit {obj.frequency_unit} for AutoLottery {obj.id}"
+                    )
+                    return
+
+                schedule, created = IntervalSchedule.objects.get_or_create(
+                    every=obj.frequency,
+                    period=period,
+                )
+
+                # Create or get the periodic task
+                task_name = f"create_lottery_from_autolottery_{obj.id}"
+                PeriodicTask.objects.update_or_create(
+                    name=task_name,
+                    defaults={
+                        "task": "fortunaisk.tasks.create_lottery_from_auto_lottery",
+                        "interval": schedule,
+                        "args": json.dumps([obj.id]),
+                    },
+                )
+
+                logger.info(
+                    f"Periodic task '{task_name}' created for AutoLottery {obj.id}."
+                )
+
             else:
                 message = f"AutoLoterie {obj.name} a été désactivée."
+                # Delete the periodic task for this AutoLottery
+
+                task_name = f"create_lottery_from_autolottery_{obj.id}"
+                try:
+                    task = PeriodicTask.objects.get(name=task_name)
+                    task.delete()
+                    logger.info(
+                        f"Periodic task '{task_name}' deleted for AutoLottery {obj.id}."
+                    )
+                except PeriodicTask.DoesNotExist:
+                    logger.warning(
+                        f"Periodic task '{task_name}' does not exist for AutoLottery {obj.id}."
+                    )
+
             send_discord_notification(message=message)
 
             # Envoyer une notification via Alliance Auth
@@ -304,7 +373,7 @@ class WinnerAdmin(admin.ModelAdmin):
     )
     search_fields = (
         "ticket__user__username",
-        "character",
+        "character__character_name",
         "ticket__lottery__lottery_reference",
     )
     readonly_fields = (
@@ -349,6 +418,15 @@ class WebhookConfigurationAdmin(SingletonModelAdmin):
             },
         ),
     )
+
+    def has_add_permission(self, request):
+        # Limiter à une seule instance
+        if WebhookConfiguration.objects.exists():
+            return False
+        return True
+
+    def has_change_permission(self, request, obj=None):
+        return True  # Allow changes
 
 
 @admin.register(AuditLog)

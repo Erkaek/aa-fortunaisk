@@ -7,10 +7,12 @@ import logging
 import requests
 
 # Django
+from django.conf import settings
 from django.core.cache import cache
+from django.core.mail import mail_admins
 
 # Alliance Auth
-from allianceauth.notifications import notify
+from allianceauth.notifications import notify  # type: ignore
 
 from .models import WebhookConfiguration
 
@@ -53,13 +55,27 @@ def send_discord_notification(embed=None, message: str = None) -> None:
 
         response = requests.post(webhook_url, json=data)
         if response.status_code not in (200, 204):
-            logger.error(
-                f"Failed to send Discord message (HTTP {response.status_code}): {response.text}"
-            )
+            error_msg = f"Failed to send Discord message (HTTP {response.status_code}): {response.text}"
+            logger.error(error_msg)
+            # Notify admins via email
+            if hasattr(settings, "ADMINS") and settings.ADMINS:
+                mail_admins(
+                    subject="FortunaIsk Discord Notification Failure",
+                    message=error_msg,
+                    fail_silently=True,
+                )
         else:
             logger.info("Discord notification sent successfully.")
     except Exception as e:
-        logger.exception(f"Error sending Discord notification: {e}")
+        error_msg = f"Error sending Discord notification: {e}"
+        logger.exception(error_msg)
+        # Notify admins via email
+        if hasattr(settings, "ADMINS") and settings.ADMINS:
+            mail_admins(
+                subject="FortunaIsk Discord Notification Exception",
+                message=error_msg,
+                fail_silently=True,
+            )
 
 
 def send_alliance_auth_notification(user, title, message, level="info") -> None:
@@ -70,6 +86,12 @@ def send_alliance_auth_notification(user, title, message, level="info") -> None:
         notify(user=user, title=title, message=message, level=level)
         logger.info(f"Notification '{title}' envoyée à {user.username}.")
     except Exception as e:
-        logger.exception(
-            f"Erreur lors de l'envoi de la notification d'Alliance Auth: {e}"
-        )
+        error_msg = f"Erreur lors de l'envoi de la notification d'Alliance Auth: {e}"
+        logger.exception(error_msg)
+        # Notify admins via email
+        if hasattr(settings, "ADMINS") and settings.ADMINS:
+            mail_admins(
+                subject="FortunaIsk Alliance Auth Notification Failure",
+                message=error_msg,
+                fail_silently=True,
+            )

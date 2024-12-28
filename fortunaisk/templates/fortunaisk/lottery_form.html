@@ -1,3 +1,4 @@
+<!-- fortunaisk/templates/fortunaisk/lottery_form.html -->
 {% extends "fortunaisk/base.html" %}
 {% load i18n %}
 {% load static %}
@@ -67,7 +68,7 @@
                             </div>
                             <div class="row g-3">
                                 {% if is_auto_lottery %}
-                                <div class="col-md-6">
+                                <div class="col-md-6" id="field-name">
                                     <label for="{{ form.name.id_for_label }}" class="form-label">
                                         {% trans "Lottery Name" %}*
                                     </label>
@@ -81,7 +82,7 @@
                                     <div class="text-danger mt-1">{{ form.name.errors|striptags }}</div>
                                     {% endif %}
                                 </div>
-                                <div class="col-md-6 frequency-section">
+                                <div class="col-md-6 frequency-section" id="field-frequency">
                                     <label class="form-label">{% trans "Frequency" %}*</label>
                                     <div class="input-group">
                                         <span class="input-group-text">
@@ -273,216 +274,241 @@
             </div>
         </div>
     </div>
-</div>
 
-<!-- JS for dynamic distribution -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // 1) Filtrage local pour payment_receiver
-    const searchInput = document.getElementById("paymentReceiverSearch");
-    const selectElem = document.getElementById("id_payment_receiver");
-    if (searchInput && selectElem) {
-        searchInput.addEventListener("keyup", function() {
-            const filter = this.value.toLowerCase().trim();
-            const options = selectElem.querySelectorAll("option");
-            options.forEach(opt => {
-                const text = opt.textContent.toLowerCase();
-                // on masque les options dont le texte ne matche pas le filtre
-                if (text.includes(filter) || opt.value === "") {
-                    opt.style.display = "";
+    <!-- JS for dynamic distribution and hiding fields -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 1) Filtrage local pour payment_receiver
+        const searchInput = document.getElementById("paymentReceiverSearch");
+        const selectElem = document.getElementById("id_payment_receiver");
+        if (searchInput && selectElem) {
+            searchInput.addEventListener("keyup", function() {
+                const filter = this.value.toLowerCase().trim();
+                const options = selectElem.querySelectorAll("option");
+                options.forEach(opt => {
+                    const text = opt.textContent.toLowerCase();
+                    // on masque les options dont le texte ne matche pas le filtre
+                    if (text.includes(filter) || opt.value === "") {
+                        opt.style.display = "";
+                    } else {
+                        opt.style.display = "none";
+                    }
+                });
+            });
+        }
+
+        // 2) Distribution logic
+        const FORM_ELEMENTS = {
+            form: document.querySelector('form'),
+            winnerCount: document.getElementById('id_winner_count'),
+            distributionContainer: document.getElementById('prize-distribution-container'),
+            distributionInputs: () => document.querySelectorAll('.prize-distribution'),
+            hiddenDistributionInput: document.getElementById('id_winners_distribution'),
+            isAutoLottery: {% if is_auto_lottery %}true{% else %}false{% endif %},
+        };
+
+        const ERROR_MESSAGES = {
+            distribution: 'La somme des pourcentages doit être égale à 100',
+            required: 'Ce champ est obligatoire',
+            range: 'Veuillez entrer une valeur entre 0 et 100.'
+        };
+
+        class FormValidator {
+            static validateDistribution(distributions) {
+                const values = Array.from(distributions)
+                    .map(input => parseFloat(input.value.trim()))
+                    .filter(val => !isNaN(val));
+                const total = values.reduce((a, b) => a + b, 0);
+                return total === 100;
+            }
+
+            static showError(element, message) {
+                element.classList.add('is-invalid');
+                if (!element.nextElementSibling?.classList.contains('invalid-feedback')) {
+                    const feedback = document.createElement('div');
+                    feedback.className = 'invalid-feedback';
+                    feedback.textContent = message;
+                    element.parentNode.appendChild(feedback);
+                }
+            }
+
+            static removeError(element) {
+                element.classList.remove('is-invalid');
+                const feedback = element.nextElementSibling;
+                if (feedback?.classList.contains('invalid-feedback')) {
+                    feedback.remove();
+                }
+            }
+        }
+
+        class PrizeDistributionHandler {
+            static createDistributionField(index, value = 100.00) {
+                const div = document.createElement('div');
+                div.className = 'input-group mb-2';
+
+                const prepend = document.createElement('span');
+                prepend.className = 'input-group-text';
+                prepend.textContent = `Gagnant ${index + 1}`;
+
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.min = '0';
+                input.max = '100';
+                input.step = '0.01';
+                input.className = 'form-control prize-distribution';
+                input.value = value.toFixed(2);
+                input.required = true;
+
+                const append = document.createElement('span');
+                append.className = 'input-group-text';
+                append.textContent = '%';
+
+                div.appendChild(prepend);
+                div.appendChild(input);
+                div.appendChild(append);
+
+                return div;
+            }
+
+            static updateDistributionFields(count) {
+                const container = FORM_ELEMENTS.distributionContainer;
+                container.innerHTML = '';
+
+                let remaining = 100;
+                for (let i = 0; i < count; i++) {
+                    let value;
+                    if (count === 1) {
+                        value = 100.00;
+                    } else {
+                        // Distribute equally, except the last one
+                        if (i === count - 1) {
+                            value = remaining;
+                        } else {
+                            value = parseFloat((100 / count).toFixed(2));
+                            remaining -= value;
+                        }
+                    }
+                    const field = this.createDistributionField(i, value);
+                    container.appendChild(field);
+                }
+
+                this.updateHiddenDistribution();
+                this.addInputListeners();
+            }
+
+            static updateHiddenDistribution() {
+                const distributionElems = FORM_ELEMENTS.distributionInputs();
+                const distributionValues = Array.from(distributionElems)
+                    .map(input => parseFloat(input.value.trim()).toFixed(2));
+                const distributionStr = distributionValues.join(',');
+                FORM_ELEMENTS.hiddenDistributionInput.value = distributionStr;
+                console.log('Updated winners_distribution:', distributionStr);
+            }
+
+            static addInputListeners() {
+                const distributionElems = FORM_ELEMENTS.distributionInputs();
+                distributionElems.forEach(input => {
+                    input.addEventListener('input', () => {
+                        FormValidator.removeError(input);
+                        PrizeDistributionHandler.updateHiddenDistribution();
+                    });
+                });
+            }
+        }
+
+        class PriceFormatter {
+            static handleBlur(event) {
+                const input = event.target;
+                if (input.value) {
+                    input.value = parseFloat(input.value).toFixed(2);
+                }
+            }
+        }
+
+        function initializeEventListeners() {
+            // update distribution fields when winnerCount changes
+            FORM_ELEMENTS.winnerCount?.addEventListener('input', function(e) {
+                const count = parseInt(e.target.value);
+                if (!isNaN(count) && count > 0) {
+                    PrizeDistributionHandler.updateDistributionFields(count);
                 } else {
-                    opt.style.display = "none";
+                    FORM_ELEMENTS.distributionContainer.innerHTML = '';
+                    FORM_ELEMENTS.hiddenDistributionInput.value = '';
                 }
             });
-        });
-    }
 
-    // 2) Distribution logic
-    const FORM_ELEMENTS = {
-        form: document.querySelector('form'),
-        winnerCount: document.getElementById('id_winner_count'),
-        distributionContainer: document.getElementById('prize-distribution-container'),
-        distributionInputs: () => document.querySelectorAll('.prize-distribution'),
-        hiddenDistributionInput: document.getElementById('id_winners_distribution'),
-    };
+            // init distribution fields on page load
+            const initialCount = parseInt(FORM_ELEMENTS.winnerCount?.value) || 1;
+            PrizeDistributionHandler.updateDistributionFields(initialCount);
 
-    const ERROR_MESSAGES = {
-        distribution: 'La somme des pourcentages doit être égale à 100',
-        required: 'Ce champ est obligatoire',
-        range: 'Veuillez entrer une valeur entre 0 et 100.'
-    };
+            // format ticket price on blur
+            const priceInput = document.getElementById('id_ticket_price');
+            priceInput?.addEventListener('blur', PriceFormatter.handleBlur);
 
-    class FormValidator {
-        static validateDistribution(distributions) {
-            const values = Array.from(distributions)
-                .map(input => parseFloat(input.value.trim()))
-                .filter(val => !isNaN(val));
-            const total = values.reduce((a, b) => a + b, 0);
-            return total === 100;
-        }
+            // hide/show fields based on is_active for AutoLottery
+            if (FORM_ELEMENTS.isAutoLottery) {
+                const isActiveSwitch = document.getElementById('id_is_active');
+                const nameField = document.getElementById('field-name');
+                const frequencyField = document.getElementById('field-frequency');
 
-        static showError(element, message) {
-            element.classList.add('is-invalid');
-            if (!element.nextElementSibling?.classList.contains('invalid-feedback')) {
-                const feedback = document.createElement('div');
-                feedback.className = 'invalid-feedback';
-                feedback.textContent = message;
-                element.parentNode.appendChild(feedback);
-            }
-        }
-
-        static removeError(element) {
-            element.classList.remove('is-invalid');
-            const feedback = element.nextElementSibling;
-            if (feedback?.classList.contains('invalid-feedback')) {
-                feedback.remove();
-            }
-        }
-    }
-
-    class PrizeDistributionHandler {
-        static createDistributionField(index, value = 100.00) {
-            const div = document.createElement('div');
-            div.className = 'input-group mb-2';
-
-            const prepend = document.createElement('span');
-            prepend.className = 'input-group-text';
-            prepend.textContent = `Gagnant ${index + 1}`;
-
-            const input = document.createElement('input');
-            input.type = 'number';
-            input.min = '0';
-            input.max = '100';
-            input.step = '0.01';
-            input.className = 'form-control prize-distribution';
-            input.value = value.toFixed(2);
-            input.required = true;
-
-            const append = document.createElement('span');
-            append.className = 'input-group-text';
-            append.textContent = '%';
-
-            div.appendChild(prepend);
-            div.appendChild(input);
-            div.appendChild(append);
-
-            return div;
-        }
-
-        static updateDistributionFields(count) {
-            const container = FORM_ELEMENTS.distributionContainer;
-            container.innerHTML = '';
-
-            let remaining = 100;
-            for (let i = 0; i < count; i++) {
-                let value;
-                if (count === 1) {
-                    value = 100.00;
-                } else {
-                    // Distribute equally, except the last one
-                    if (i === count - 1) {
-                        value = remaining;
+                function toggleFields() {
+                    if (isActiveSwitch.checked) {
+                        nameField.style.display = 'block';
+                        frequencyField.style.display = 'block';
                     } else {
-                        value = parseFloat((100 / count).toFixed(2));
-                        remaining -= value;
+                        nameField.style.display = 'none';
+                        frequencyField.style.display = 'none';
                     }
                 }
-                const field = this.createDistributionField(i, value);
-                container.appendChild(field);
+
+                // Initial toggle
+                toggleFields();
+
+                // Toggle on change
+                isActiveSwitch?.addEventListener('change', toggleFields);
             }
 
-            this.updateHiddenDistribution();
-            this.addInputListeners();
-        }
+            // validate the form on submit
+            FORM_ELEMENTS.form?.addEventListener('submit', function(event) {
+                let isValid = true;
 
-        static updateHiddenDistribution() {
-            const distributionElems = FORM_ELEMENTS.distributionInputs();
-            const distributionValues = Array.from(distributionElems)
-                .map(input => parseFloat(input.value.trim()).toFixed(2));
-            const distributionStr = distributionValues.join(',');
-            FORM_ELEMENTS.hiddenDistributionInput.value = distributionStr;
-            console.log('Updated winners_distribution:', distributionStr);
-        }
+                const distributionElems = FORM_ELEMENTS.distributionInputs();
+                const distributionValues = [];
 
-        static addInputListeners() {
-            const distributionElems = FORM_ELEMENTS.distributionInputs();
-            distributionElems.forEach(input => {
-                input.addEventListener('input', () => {
-                    FormValidator.removeError(input);
-                    this.updateHiddenDistribution();
+                distributionElems.forEach(input => {
+                    const value = parseFloat(input.value.trim());
+                    if (isNaN(value) || value < 0 || value > 100) {
+                        FormValidator.showError(input, ERROR_MESSAGES.range);
+                        isValid = false;
+                    } else {
+                        FormValidator.removeError(input);
+                        distributionValues.push(value);
+                    }
                 });
-            });
-        }
-    }
 
-    class PriceFormatter {
-        static handleBlur(event) {
-            const input = event.target;
-            if (input.value) {
-                input.value = parseFloat(input.value).toFixed(2);
-            }
-        }
-    }
-
-    function initializeEventListeners() {
-        // update distribution fields when winnerCount changes
-        FORM_ELEMENTS.winnerCount?.addEventListener('input', function(e) {
-            const count = parseInt(e.target.value);
-            if (!isNaN(count) && count > 0) {
-                PrizeDistributionHandler.updateDistributionFields(count);
-            } else {
-                FORM_ELEMENTS.distributionContainer.innerHTML = '';
-                FORM_ELEMENTS.hiddenDistributionInput.value = '';
-            }
-        });
-
-        // init distribution fields on page load
-        const initialCount = parseInt(FORM_ELEMENTS.winnerCount?.value) || 1;
-        PrizeDistributionHandler.updateDistributionFields(initialCount);
-
-        // format ticket price on blur
-        const priceInput = document.getElementById('id_ticket_price');
-        priceInput?.addEventListener('blur', PriceFormatter.handleBlur);
-
-        // validate the form on submit
-        FORM_ELEMENTS.form?.addEventListener('submit', function(event) {
-            let isValid = true;
-
-            const distributionElems = FORM_ELEMENTS.distributionInputs();
-            const distributionValues = [];
-
-            distributionElems.forEach(input => {
-                const value = parseFloat(input.value.trim());
-                if (isNaN(value) || value < 0 || value > 100) {
-                    FormValidator.showError(input, ERROR_MESSAGES.range);
+                const total = distributionValues.reduce((a, b) => a + b, 0);
+                if (total !== 100) {
+                    alert(ERROR_MESSAGES.distribution);
                     isValid = false;
+                    distributionElems.forEach(input => {
+                        FormValidator.showError(input, ERROR_MESSAGES.distribution);
+                    });
+                }
+
+                if (isValid) {
+                    PrizeDistributionHandler.updateHiddenDistribution();
+                    console.log('Final winners_distribution:', FORM_ELEMENTS.hiddenDistributionInput.value);
                 } else {
-                    FormValidator.removeError(input);
-                    distributionValues.push(value);
+                    event.preventDefault();
+                    event.stopPropagation();
                 }
             });
+        }
 
-            const total = distributionValues.reduce((a, b) => a + b, 0);
-            if (total !== 100) {
-                alert(ERROR_MESSAGES.distribution);
-                isValid = false;
-                distributionElems.forEach(input => {
-                    FormValidator.showError(input, ERROR_MESSAGES.distribution);
-                });
-            }
+        initializeEventListeners();
+    });
+    </script>
+</div>
 
-            if (isValid) {
-                PrizeDistributionHandler.updateHiddenDistribution();
-                console.log('Final winners_distribution:', FORM_ELEMENTS.hiddenDistributionInput.value);
-            } else {
-                event.preventDefault();
-                event.stopPropagation();
-            }
-        });
-    }
-
-    initializeEventListeners();
-});
-</script>
 {% endblock details %}
