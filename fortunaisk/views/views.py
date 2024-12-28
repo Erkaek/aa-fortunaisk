@@ -12,12 +12,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext as _
 
 # fortunaisk
-from fortunaisk.forms.autolottery_forms import (
-    AutoLotteryForm,  # Assurez-vous que le chemin est correct
-)
-from fortunaisk.forms.lottery_forms import (
-    LotteryCreateForm,  # Assurez-vous que le chemin est correct
-)
+from fortunaisk.forms.autolottery_forms import AutoLotteryForm  # Import ajouté
+from fortunaisk.forms.lottery_forms import LotteryCreateForm
 from fortunaisk.models import (
     AutoLottery,
     Lottery,
@@ -577,3 +573,40 @@ def user_dashboard(request):
         "winnings": page_obj_winnings,
     }
     return render(request, "fortunaisk/user_dashboard.html", context)
+
+
+@login_required
+@permission_required("fortunaisk.view_lotteryhistory", raise_exception=True)
+def lottery_detail(request, lottery_id):
+    """
+    Vue d'un détail d'une loterie (participants, anomalies, winners, etc.)
+    """
+    lottery_obj = get_object_or_404(Lottery, id=lottery_id)
+    participants_qs = lottery_obj.ticket_purchases.select_related(
+        "user", "character"
+    ).all()
+    paginator_participants = Paginator(participants_qs, 25)
+    page_number_participants = request.GET.get("participants_page")
+    page_obj_participants = paginator_participants.get_page(page_number_participants)
+
+    anomalies_qs = TicketAnomaly.objects.filter(lottery=lottery_obj).select_related(
+        "user", "character"
+    )
+    paginator_anomalies = Paginator(anomalies_qs, 25)
+    page_number_anomalies = request.GET.get("anomalies_page")
+    page_obj_anomalies = paginator_anomalies.get_page(page_number_anomalies)
+
+    winners_qs = Winner.objects.filter(ticket__lottery=lottery_obj).select_related(
+        "ticket__user", "character"
+    )
+    paginator_winners = Paginator(winners_qs, 25)
+    page_number_winners = request.GET.get("winners_page")
+    page_obj_winners = paginator_winners.get_page(page_number_winners)
+
+    context = {
+        "lottery": lottery_obj,
+        "participants": page_obj_participants,
+        "anomalies": page_obj_anomalies,
+        "winners": page_obj_winners,
+    }
+    return render(request, "fortunaisk/lottery_detail.html", context)

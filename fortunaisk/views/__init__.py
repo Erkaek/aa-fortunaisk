@@ -1,8 +1,8 @@
 # fortunaisk/views/__init__.py
 
-from .views import create_auto_lottery  # Importer la vue renommée
 from .views import (
     admin_dashboard,
+    create_auto_lottery,
     create_lottery,
     delete_auto_lottery,
     distribute_prize,
@@ -21,19 +21,19 @@ from .views import (
 
 __all__ = [
     "admin_dashboard",
-    "distribute_prize",
     "resolve_anomaly",
+    "distribute_prize",
     "list_auto_lotteries",
-    "create_auto_lottery",  # Inclure la vue renommée
+    "create_auto_lottery",
     "edit_auto_lottery",
     "delete_auto_lottery",
-    "lottery_detail",
-    "create_lottery",
     "lottery",
-    "lottery_history",
-    "lottery_participants",
-    "terminate_lottery",
     "ticket_purchases",
     "winner_list",
+    "lottery_history",
+    "create_lottery",
+    "lottery_detail",
+    "lottery_participants",
+    "terminate_lottery",
     "user_dashboard",
 ]
