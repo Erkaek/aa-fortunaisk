@@ -8,7 +8,10 @@ from datetime import timedelta
 from decimal import Decimal
 
 # Django
+from django.core.exceptions import ValidationError  # Ajouté
 from django.db import models
+from django.utils import timezone
+from django.utils.translation import gettext as _  # Ajouté
 
 # Alliance Auth
 from allianceauth.eveonline.models import EveCorporationInfo
@@ -37,7 +40,10 @@ class Lottery(models.Model):
         verbose_name="Ticket Price (ISK)",
         help_text="Price of a lottery ticket in ISK.",
     )
-    start_date = models.DateTimeField(verbose_name="Start Date")
+    start_date = models.DateTimeField(
+        verbose_name="Start Date",
+        default=timezone.now,  # Définir un défaut pour start_date
+    )
     end_date = models.DateTimeField(db_index=True, verbose_name="End Date")
     payment_receiver = models.ForeignKey(
         EveCorporationInfo,
@@ -126,18 +132,30 @@ class Lottery(models.Model):
         """
         if self.winners_distribution:
             if len(self.winners_distribution) != self.winner_count:
-                raise ValueError(
-                    "Mismatch between winners_distribution and winner_count."
+                raise ValidationError(
+                    {
+                        "winners_distribution": _(
+                            "La répartition doit correspondre au nombre de gagnants."
+                        )
+                    }
                 )
-            s = sum(self.winners_distribution)
-            if abs(s - 100.0) > 0.001:
-                raise ValueError("Sum of winners_distribution must be ~ 100.")
+            total = sum(self.winners_distribution)
+            if abs(total - 100.0) > 0.001:
+                raise ValidationError(
+                    {
+                        "winners_distribution": _(
+                            "La somme des pourcentages doit être égale à 100."
+                        )
+                    }
+                )
 
     def save(self, *args, **kwargs) -> None:
         creating = self._state.adding  # Vérifie si c'est une création
         self.clean()
         if not self.lottery_reference:
             self.lottery_reference = self.generate_unique_reference()
+        # Définir end_date en fonction de start_date et de la durée
+        self.end_date = self.start_date + self.get_duration_timedelta()
         super().save(*args, **kwargs)
         if creating:
             # Planifier la finalisation de la loterie

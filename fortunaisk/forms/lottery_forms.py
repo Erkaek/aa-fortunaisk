@@ -17,30 +17,14 @@ class LotteryCreateForm(forms.ModelForm):
 
     class Meta:
         model = Lottery
-        fields = [
-            "ticket_price",
-            "start_date",
-            "duration_value",
-            "duration_unit",
-            "winner_count",
-            "winners_distribution",
-            "max_tickets_per_user",
-            "payment_receiver",
-        ]
+        # Exclusion du champ 'start_date'
+        exclude = ["start_date"]
         widgets = {
             "ticket_price": forms.NumberInput(
                 attrs={
                     "step": "0.01",
                     "class": "form-control",
                     "placeholder": _("Ex. 100.00"),
-                }
-            ),
-            "start_date": forms.DateTimeInput(
-                attrs={
-                    "type": "datetime-local",
-                    "class": "form-control",
-                    "value": timezone.now().strftime("%Y-%m-%dT%H:%M"),
-                    "readonly": "readonly",
                 }
             ),
             "duration_value": forms.NumberInput(
@@ -107,11 +91,10 @@ class LotteryCreateForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        start_date = cleaned_data.get("start_date")
         duration_value = cleaned_data.get("duration_value")
         duration_unit = cleaned_data.get("duration_unit")
 
-        if start_date and duration_value and duration_unit:
+        if duration_value and duration_unit:
             if duration_unit == "hours":
                 delta = timezone.timedelta(hours=duration_value)
             elif duration_unit == "days":
@@ -122,8 +105,8 @@ class LotteryCreateForm(forms.ModelForm):
             else:
                 delta = timezone.timedelta()
 
-            end_date = start_date + delta
-            if end_date <= start_date:
+            end_date = timezone.now() + delta
+            if end_date <= timezone.now():
                 self.add_error("duration_value", _("La durée doit être positive."))
         else:
             self.add_error("duration_value", _("La durée est requise."))
@@ -140,6 +123,9 @@ class LotteryCreateForm(forms.ModelForm):
         # Gérer max_tickets_per_user
         if instance.max_tickets_per_user == 0:
             instance.max_tickets_per_user = None
+
+        # Définir start_date automatiquement
+        instance.start_date = timezone.now()
 
         if commit:
             instance.save()
