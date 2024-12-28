@@ -54,20 +54,25 @@ class LotteryCreateForm(forms.ModelForm):
         }
 
     def clean_winners_distribution(self):
-        distribution = self.cleaned_data.get("winners_distribution", "")
+        distribution = self.cleaned_data.get("winners_distribution", [])
         winner_count = self.cleaned_data.get("winner_count", 1)
 
         if not distribution:
             raise ValidationError(_("La répartition des gagnants est requise."))
 
-        try:
-            distribution_list = [
-                float(x.strip()) for x in distribution.split(",") if x.strip()
-            ]
-        except ValueError:
+        # Si la distribution est un seul float/int, le convertir en liste
+        if isinstance(distribution, (float, int)):
+            distribution = [distribution]
+
+        if not isinstance(distribution, list):
             raise ValidationError(
-                _("Veuillez entrer des pourcentages valides séparés par des virgules.")
+                _("La répartition des gagnants doit être une liste de pourcentages.")
             )
+
+        try:
+            distribution_list = [float(x) for x in distribution]
+        except (ValueError, TypeError):
+            raise ValidationError(_("Veuillez entrer des pourcentages valides."))
 
         if len(distribution_list) != winner_count:
             raise ValidationError(

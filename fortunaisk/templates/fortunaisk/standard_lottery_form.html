@@ -84,7 +84,7 @@
 
                                     <!-- Champ de recherche local pour filtrer le sélecteur -->
                                     <input type="text" class="form-control mb-2" id="paymentReceiverSearch"
-                                            placeholder="{% trans 'Filtrer la Corporation...' %}">
+                                           placeholder="{% trans 'Filtrer la Corporation...' %}">
 
                                     <div class="input-group">
                                         <span class="input-group-text">
@@ -127,7 +127,7 @@
                                                     type="number"
                                                     name="winners_distribution_entry"
                                                     class="form-control prize-distribution"
-                                                    value="{{ form.instance.winners_distribution|split:","|index:idx }}"
+                                                    value="{{ form.instance.winners_distribution|index:idx|default_if_none:'' }}"
                                                     min="0"
                                                     max="100"
                                                     step="0.01"
@@ -321,7 +321,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const distributionElems = FORM_ELEMENTS.distributionInputs();
             const distributionValues = Array.from(distributionElems)
                 .map(input => parseFloat(input.value.trim()).toFixed(2));
-            const distributionStr = distributionValues.join(',');
+            const distributionStr = JSON.stringify(distributionValues);
             FORM_ELEMENTS.hiddenDistributionInput.value = distributionStr;
             console.log('Répartition des gagnants mise à jour:', distributionStr);
         }
