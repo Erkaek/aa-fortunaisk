@@ -31,10 +31,16 @@ def check_purchased_tickets(self):
         CorporationWalletJournalEntryModel = apps.get_model(
             "corptools", "CorporationWalletJournalEntry"
         )
+        ProcessedPayment = apps.get_model("fortunaisk", "ProcessedPayment")
+
+        # Récupérer les IDs des paiements déjà traités
+        processed_payment_ids = ProcessedPayment.objects.values_list('payment_id', flat=True)
+
+        # Filtrer les paiements non traités contenant "lottery"
         pending_payments = (
             CorporationWalletJournalEntryModel.objects.select_for_update().filter(
-                reason__icontains="lottery", processed=False
-            )
+                reason__icontains="lottery"
+            ).exclude(entry_id__in=processed_payment_ids)
         )
 
         logger.debug(f"Nombre de paiements en attente: {pending_payments.count()}")
@@ -43,14 +49,14 @@ def check_purchased_tickets(self):
             with transaction.atomic():
                 try:
                     logger.debug(f"Traitement du paiement ID: {payment.id}")
-                    # Double-check if payment is still not processed
+                    # Recharger le paiement pour verrouiller la ligne
                     payment = CorporationWalletJournalEntryModel.objects.select_for_update().get(
                         id=payment.id
                     )
-                    if payment.processed:
-                        logger.debug(
-                            f"Le paiement ID {payment.id} a déjà été traité. Passage au suivant."
-                        )
+                    
+                    # Vérifier si le paiement a été traité pendant le verrouillage
+                    if ProcessedPayment.objects.filter(payment_id=payment.entry_id).exists():
+                        logger.debug(f"Le paiement ID {payment.id} a déjà été traité. Passage au suivant.")
                         continue
 
                     # Étape 1 : Extraire les informations nécessaires
@@ -86,12 +92,9 @@ def check_purchased_tickets(self):
                             amount=amount,
                             payment_id=payment_id,
                         )
-                        # Marquer le paiement comme traité
-                        payment.processed = True
-                        payment.save(update_fields=["processed"])
-                        logger.info(
-                            f"Paiement ID {payment_id} marqué comme traité suite à l'anomalie."
-                        )
+                        # Marquer le paiement comme traité en créant une entrée dans ProcessedPayment
+                        ProcessedPayment.objects.create(payment_id=payment_id)
+                        logger.info(f"Paiement ID {payment_id} marqué comme traité suite à l'anomalie.")
                         continue
 
                     # Étape 3 : Trouver l'utilisateur
@@ -151,8 +154,7 @@ def check_purchased_tickets(self):
                                 payment_id=payment_id,
                             )
                             # Marquer le paiement comme traité
-                            payment.processed = True
-                            payment.save(update_fields=["processed"])
+                            ProcessedPayment.objects.create(payment_id=payment_id)
                             logger.info(
                                 f"Paiement ID {payment_id} marqué comme traité suite à une incompatibilité de personnage principal."
                             )
@@ -171,8 +173,7 @@ def check_purchased_tickets(self):
                             payment_id=payment_id,
                         )
                         # Marquer le paiement comme traité
-                        payment.processed = True
-                        payment.save(update_fields=["processed"])
+                        ProcessedPayment.objects.create(payment_id=payment_id)
                         logger.info(
                             f"Paiement ID {payment_id} marqué comme traité suite à l'absence d'EveCharacter."
                         )
@@ -192,8 +193,7 @@ def check_purchased_tickets(self):
                             payment_id=payment_id,
                         )
                         # Marquer le paiement comme traité
-                        payment.processed = True
-                        payment.save(update_fields=["processed"])
+                        ProcessedPayment.objects.create(payment_id=payment_id)
                         logger.info(
                             f"Paiement ID {payment_id} marqué comme traité suite à l'absence de CharacterOwnership."
                         )
@@ -213,8 +213,7 @@ def check_purchased_tickets(self):
                             payment_id=payment_id,
                         )
                         # Marquer le paiement comme traité
-                        payment.processed = True
-                        payment.save(update_fields=["processed"])
+                        ProcessedPayment.objects.create(payment_id=payment_id)
                         logger.info(
                             f"Paiement ID {payment_id} marqué comme traité suite à l'absence de UserProfile."
                         )
@@ -245,8 +244,7 @@ def check_purchased_tickets(self):
                                 payment_id=payment_id,
                             )
                             # Marquer le paiement comme traité
-                            payment.processed = True
-                            payment.save(update_fields=["processed"])
+                            ProcessedPayment.objects.create(payment_id=payment_id)
                             logger.info(
                                 f"Paiement ID {payment_id} marqué comme traité suite au dépassement du nombre de tickets."
                             )
@@ -285,9 +283,8 @@ def check_purchased_tickets(self):
                         f"total_pot: {previous_total_pot} -> {lottery.total_pot}."
                     )
 
-                    # Étape 6 : Marquer le paiement comme traité
-                    payment.processed = True
-                    payment.save(update_fields=["processed"])
+                    # Étape 6 : Marquer le paiement comme traité en créant une entrée dans ProcessedPayment
+                    ProcessedPayment.objects.create(payment_id=payment_id)
                     logger.info(
                         f"Paiement ID {payment_id} marqué comme traité avec succès."
                     )
