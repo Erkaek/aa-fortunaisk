@@ -33,9 +33,9 @@ def check_purchased_tickets(self):
         Lottery = apps.get_model("fortunaisk", "Lottery")
         EveCharacter = apps.get_model("eveonline", "EveCharacter")
         CharacterOwnership = apps.get_model(
-            "allianceauth.authentication", "CharacterOwnership"
+            "authentication", "CharacterOwnership"
         )
-        UserProfile = apps.get_model("allianceauth.authentication", "UserProfile")
+        UserProfile = apps.get_model("authentication", "UserProfile")
         TicketPurchase = apps.get_model("fortunaisk", "TicketPurchase")
 
         # Récupérer les IDs des paiements déjà traités
