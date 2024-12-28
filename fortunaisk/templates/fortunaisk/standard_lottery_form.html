@@ -31,13 +31,14 @@
                     <form method="post" class="needs-validation" novalidate>
                         {% csrf_token %}
 
-                        <!-- 1) Basic Info -->
+                        <!-- 1) Basic Information -->
                         <div class="mb-4">
                             <div class="d-flex align-items-center mb-3">
                                 <i class="fas fa-info-circle text-primary me-2"></i>
                                 <h5 class="mb-0">{% trans "Basic Information" %}</h5>
                             </div>
                             <div class="row g-3">
+                                <!-- Ticket Price -->
                                 <div class="col-md-6">
                                     <label for="{{ form.ticket_price.id_for_label }}" class="form-label">
                                         {% trans "Ticket Price (ISK)" %}*
@@ -50,9 +51,10 @@
                                         <span class="input-group-text">ISK</span>
                                     </div>
                                     {% if form.ticket_price.errors %}
-                                    <div class="text-danger mt-1">{{ form.ticket_price.errors|striptags }}</div>
+                                        <div class="text-danger mt-1">{{ form.ticket_price.errors|striptags }}</div>
                                     {% endif %}
                                 </div>
+                                <!-- End Date -->
                                 <div class="col-md-6">
                                     <label for="{{ form.end_date.id_for_label }}" class="form-label">
                                         {% trans "End Date" %}*
@@ -67,7 +69,7 @@
                                         {% trans "Format: YYYY-MM-DD HH:MM" %}
                                     </div>
                                     {% if form.end_date.errors %}
-                                    <div class="text-danger mt-1">{{ form.end_date.errors|striptags }}</div>
+                                        <div class="text-danger mt-1">{{ form.end_date.errors|striptags }}</div>
                                     {% endif %}
                                 </div>
                             </div>
@@ -80,12 +82,13 @@
                                 <h5 class="mb-0">{% trans "Winners Configuration" %}</h5>
                             </div>
                             <div class="row g-3">
+                                <!-- Payment Receiver -->
                                 <div class="col-md-6">
                                     <label for="{{ form.payment_receiver.id_for_label }}" class="form-label">
                                         {% trans "Payment Receiver" %}
                                     </label>
 
-                                    <!-- Champ de recherche local pour filter le select -->
+                                    <!-- Local search field to filter the select -->
                                     <input type="text" class="form-control mb-2" id="paymentReceiverSearch"
                                             placeholder="{% trans 'Filter Corporation...' %}">
 
@@ -96,9 +99,10 @@
                                         {{ form.payment_receiver }}
                                     </div>
                                     {% if form.payment_receiver.errors %}
-                                    <div class="text-danger mt-1">{{ form.payment_receiver.errors|striptags }}</div>
+                                        <div class="text-danger mt-1">{{ form.payment_receiver.errors|striptags }}</div>
                                     {% endif %}
                                 </div>
+                                <!-- Number of Winners -->
                                 <div class="col-md-6">
                                     <label for="{{ form.winner_count.id_for_label }}" class="form-label">
                                         {% trans "Number of Winners" %}*
@@ -110,40 +114,41 @@
                                         {{ form.winner_count }}
                                     </div>
                                     {% if form.winner_count.errors %}
-                                    <div class="text-danger mt-1">{{ form.winner_count.errors|striptags }}</div>
+                                        <div class="text-danger mt-1">{{ form.winner_count.errors|striptags }}</div>
                                     {% endif %}
                                 </div>
+                                <!-- Prize Distribution -->
                                 <div class="col-12">
                                     <label class="form-label">
                                         {% trans "Prize Distribution" %}
                                     </label>
                                     <div id="prize-distribution-container">
-                                        <!-- dynamic fields here -->
+                                        <!-- Dynamic fields will be injected here via JavaScript -->
                                         {% for idx in distribution_range %}
-                                        <div class="input-group mb-2">
-                                            <span class="input-group-text">
-                                                {% trans "Winner" %} {{ idx|add:"1" }}%
-                                            </span>
-                                            <input
-                                                type="number"
-                                                name="winners_distribution_entry"
-                                                class="form-control prize-distribution"
-                                                value="{{ form.instance.winners_distribution|index:idx }}"
-                                                min="0"
-                                                max="100"
-                                                step="0.01"
-                                                required
-                                            >
-                                            <span class="input-group-text">%</span>
-                                        </div>
+                                            <div class="input-group mb-2">
+                                                <span class="input-group-text">
+                                                    {% trans "Winner" %} {{ idx|add:"1" }}%
+                                                </span>
+                                                <input
+                                                    type="number"
+                                                    name="winners_distribution_entry"
+                                                    class="form-control prize-distribution"
+                                                    value="{{ form.instance.winners_distribution|index:idx }}"
+                                                    min="0"
+                                                    max="100"
+                                                    step="0.01"
+                                                    required
+                                                >
+                                                <span class="input-group-text">%</span>
+                                            </div>
                                         {% endfor %}
                                     </div>
-                                    <!-- Champ caché pour la répartition des gagnants -->
+                                    <!-- Hidden field to store the prize distribution as a comma-separated string -->
                                     <input type="hidden" id="id_winners_distribution" name="winners_distribution" value="">
                                     {% if form.winners_distribution.errors %}
-                                    <div class="text-danger mt-1">
-                                        {{ form.winners_distribution.errors|striptags }}
-                                    </div>
+                                        <div class="text-danger mt-1">
+                                            {{ form.winners_distribution.errors|striptags }}
+                                        </div>
                                     {% endif %}
                                 </div>
                             </div>
@@ -156,6 +161,7 @@
                                 <h5 class="mb-0">{% trans "Additional Settings" %}</h5>
                             </div>
                             <div class="row g-3">
+                                <!-- Max Tickets Per User -->
                                 <div class="col-md-6">
                                     <label for="{{ form.max_tickets_per_user.id_for_label }}" class="form-label">
                                         {% trans "Max Tickets Per User" %}
@@ -167,9 +173,9 @@
                                         {{ form.max_tickets_per_user }}
                                     </div>
                                     {% if form.max_tickets_per_user.errors %}
-                                    <div class="text-danger mt-1">
-                                        {{ form.max_tickets_per_user.errors|striptags }}
-                                    </div>
+                                        <div class="text-danger mt-1">
+                                            {{ form.max_tickets_per_user.errors|striptags }}
+                                        </div>
                                     {% endif %}
                                 </div>
                             </div>
@@ -199,7 +205,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // 1) Filtrage local pour payment_receiver
+        // 1) Local filtering for payment_receiver
         const searchInput = document.getElementById("paymentReceiverSearch");
         const selectElem = document.getElementById("id_payment_receiver");
         if (searchInput && selectElem) {
@@ -208,7 +214,7 @@
                 const options = selectElem.querySelectorAll("option");
                 options.forEach(opt => {
                     const text = opt.textContent.toLowerCase();
-                    // On masque les options dont le texte ne matche pas le filtre
+                    // Hide options that do not match the filter
                     if (text.includes(filter) || opt.value === "") {
                         opt.style.display = "";
                     } else {
@@ -218,14 +224,14 @@
             });
         }
 
-        // 2) Distribution logic
+        // 2) Prize Distribution Logic
         const FORM_ELEMENTS = {
             form: document.querySelector('form'),
             winnerCount: document.getElementById('id_winner_count'),
             distributionContainer: document.getElementById('prize-distribution-container'),
             distributionInputs: () => document.querySelectorAll('.prize-distribution'),
             hiddenDistributionInput: document.getElementById('id_winners_distribution'),
-            isAutoLottery: false, // Indique que c'est une loterie standard
+            isAutoLottery: false, // Indicates it's a standard lottery
         };
 
         const ERROR_MESSAGES = {
@@ -358,7 +364,7 @@
                 }
             });
 
-            // Init distribution fields on page load
+            // Initialize distribution fields on page load
             const initialCount = parseInt(FORM_ELEMENTS.winnerCount?.value) || 1;
             PrizeDistributionHandler.updateDistributionFields(initialCount);
 
