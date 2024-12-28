@@ -2,11 +2,12 @@
 
 # Standard Library
 import json
+import logging
 
 # Django
 from django import forms
 from django.core.exceptions import ValidationError
-from django.utils import timezone  # Ajout de l'import manquant
+from django.utils import timezone
 from django.utils.translation import gettext as _
 
 # Alliance Auth
@@ -14,6 +15,8 @@ from allianceauth.eveonline.models import EveCorporationInfo
 
 # fortunaisk
 from fortunaisk.models import AutoLottery
+
+logger = logging.getLogger(__name__)
 
 
 class AutoLotteryForm(forms.ModelForm):
@@ -24,7 +27,7 @@ class AutoLotteryForm(forms.ModelForm):
     winners_distribution = forms.CharField(
         widget=forms.HiddenInput(),
         required=True,
-        help_text=_("Liste des répartitions des gagnants séparées par des virgules."),
+        help_text=_("Liste des répartitions des gagnants en pourcentages (JSON)."),
     )
 
     payment_receiver = forms.ModelChoiceField(
@@ -63,9 +66,9 @@ class AutoLotteryForm(forms.ModelForm):
             "frequency_unit": forms.Select(attrs={"class": "form-select"}),
             "ticket_price": forms.NumberInput(
                 attrs={
-                    "step": "0.01",
+                    "step": "1",  # Align with standard Lottery
                     "class": "form-control",
-                    "placeholder": _("Ex. 100.00"),
+                    "placeholder": _("Ex. 100"),
                 }
             ),
             "duration_value": forms.NumberInput(
@@ -100,12 +103,15 @@ class AutoLotteryForm(forms.ModelForm):
             raise ValidationError(_("La répartition des gagnants est requise."))
 
         try:
-            distribution_list = [
-                float(x.strip()) for x in distribution_str.split(",") if x.strip()
-            ]
-        except ValueError:
+            distribution_list = json.loads(distribution_str)
+            if not isinstance(distribution_list, list):
+                raise ValueError
+            distribution_list = [int(x) for x in distribution_list]
+        except (ValueError, TypeError, json.JSONDecodeError):
             raise ValidationError(
-                _("Veuillez entrer des pourcentages valides séparés par des virgules.")
+                _(
+                    "Veuillez entrer des pourcentages valides en tant que liste JSON d'entiers."
+                )
             )
 
         if len(distribution_list) != winner_count:
@@ -114,17 +120,10 @@ class AutoLotteryForm(forms.ModelForm):
             )
 
         total = sum(distribution_list)
-        if abs(total - 100.0) > 0.001:
+        if total != 100:
             raise ValidationError(_("La somme des pourcentages doit être égale à 100."))
 
-        # Arrondir chaque valeur à deux décimales
-        distribution_list = [round(x, 2) for x in distribution_list]
-
         # Ajout de logs pour débogage
-        # Standard Library
-        import logging
-
-        logger = logging.getLogger(__name__)
         logger.debug(f"Répartition des gagnants nettoyée: {distribution_list}")
 
         return distribution_list
@@ -177,7 +176,7 @@ class AutoLotteryForm(forms.ModelForm):
         if instance.max_tickets_per_user == 0:
             instance.max_tickets_per_user = None
 
-        # S'assurer que winners_distribution est une liste de floats
+        # S'assurer que winners_distribution est une liste de ints
         if isinstance(instance.winners_distribution, str):
             try:
                 instance.winners_distribution = json.loads(

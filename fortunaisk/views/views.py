@@ -243,14 +243,22 @@ def create_auto_lottery(request):
         form = AutoLotteryForm(request.POST)
         if form.is_valid():
             form.save()
-            messages.success(request, "AutoLottery créée avec succès.")
+            messages.success(request, _("AutoLottery créée avec succès."))
             return redirect("fortunaisk:auto_lottery_list")
         else:
-            messages.error(request, "Veuillez corriger les erreurs ci-dessous.")
+            messages.error(request, _("Veuillez corriger les erreurs ci-dessous."))
+            # Passer 'distribution_range' basé sur le nombre de gagnants soumis
+            winner_count = form.data.get("winner_count", 1)
+            distribution_range = get_distribution_range(winner_count)
     else:
         form = AutoLotteryForm()
-    # Passer 'distribution_range' basé sur le nombre de gagnants initial
-    distribution_range = range(form.initial.get("winner_count", 1))
+        # Passer 'distribution_range' basé sur le nombre de gagnants initial
+        distribution_range = get_distribution_range(form.initial.get("winner_count", 1))
+
+    # Si instance has winners_distribution, set distribution_range accordingly
+    if form.instance.winners_distribution:
+        distribution_range = range(len(form.instance.winners_distribution))
+
     return render(
         request,
         "fortunaisk/auto_lottery_form.html",
@@ -277,10 +285,16 @@ def edit_auto_lottery(request, autolottery_id):
             return redirect("fortunaisk:auto_lottery_list")
         else:
             messages.error(request, _("Veuillez corriger les erreurs ci-dessous."))
+            # Passer 'distribution_range' basé sur le nombre de gagnants soumis
+            winner_count = form.data.get("winner_count", 1)
+            distribution_range = get_distribution_range(winner_count)
     else:
         form = AutoLotteryForm(instance=autolottery)
+        distribution_range = get_distribution_range(form.instance.winner_count or 1)
 
-    distribution_range = get_distribution_range(form.instance.winner_count or 1)
+    # If instance has winners_distribution, set distribution_range accordingly
+    if form.instance.winners_distribution:
+        distribution_range = range(len(form.instance.winners_distribution))
 
     context = {
         "form": form,

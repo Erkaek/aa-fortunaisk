@@ -6,7 +6,7 @@ import logging
 
 # Django
 from django import forms
-from django.utils import timezone
+from django.core.exceptions import ValidationError
 from django.utils.translation import gettext as _
 
 # fortunaisk
@@ -19,6 +19,12 @@ class LotteryCreateForm(forms.ModelForm):
     """
     Formulaire pour créer une loterie standard (non automatique).
     """
+
+    winners_distribution = forms.CharField(
+        widget=forms.HiddenInput(),
+        required=True,
+        help_text=_("Liste des répartitions des gagnants en pourcentages (JSON)."),
+    )
 
     class Meta:
         model = Lottery
@@ -47,7 +53,6 @@ class LotteryCreateForm(forms.ModelForm):
                     "placeholder": _("Ex. 3"),
                 }
             ),
-            "winners_distribution": forms.HiddenInput(),
             "max_tickets_per_user": forms.NumberInput(
                 attrs={
                     "min": "1",
@@ -58,86 +63,38 @@ class LotteryCreateForm(forms.ModelForm):
             "payment_receiver": forms.Select(attrs={"class": "form-select"}),
         }
 
-    def clean(self):
-        cleaned_data = super().clean()
-        distribution = cleaned_data.get("winners_distribution", [])
-        winner_count = cleaned_data.get("winner_count", 1)
+    def clean_winners_distribution(self):
+        distribution_str = self.cleaned_data.get("winners_distribution") or ""
+        winner_count = self.cleaned_data.get("winner_count", 1)
 
-        logger.debug(f"Form Clean - winner_count: {winner_count}")
-        logger.debug(f"Form Clean - winners_distribution: {distribution}")
-
-        if not distribution:
-            self.add_error(
-                "winners_distribution", _("La répartition des gagnants est requise.")
-            )
-            return cleaned_data
-
-        # Parse JSON si c'est une chaîne
-        if isinstance(distribution, str):
-            try:
-                distribution = json.loads(distribution)
-                logger.debug(
-                    f"Parsed winners_distribution from JSON string: {distribution}"
-                )
-            except json.JSONDecodeError:
-                self.add_error(
-                    "winners_distribution",
-                    _("La répartition des gagnants doit être une liste JSON valide."),
-                )
-                return cleaned_data
-
-        # Si la distribution est un seul int, le convertir en liste
-        if isinstance(distribution, (float, int)):
-            distribution = [distribution]
-            logger.debug(f"Converted single value distribution to list: {distribution}")
-
-        if not isinstance(distribution, list):
-            self.add_error(
-                "winners_distribution",
-                _("La répartition des gagnants doit être une liste de pourcentages."),
-            )
-            return cleaned_data
+        if not distribution_str:
+            raise ValidationError(_("La répartition des gagnants est requise."))
 
         try:
-            # Convertir en entiers
-            distribution_list = [int(x) for x in distribution]
-            logger.debug(f"Converted distribution to integers: {distribution_list}")
-        except (ValueError, TypeError):
-            self.add_error(
-                "winners_distribution",
-                _("Veuillez entrer des pourcentages valides (entiers)."),
-            )
-            return cleaned_data
-
-        # Vérifier la correspondance entre la répartition et le nombre de gagnants
-        if len(distribution_list) != winner_count:
-            self.add_error(
-                "winners_distribution",
+            distribution_list = json.loads(distribution_str)
+            if not isinstance(distribution_list, list):
+                raise ValueError
+            distribution_list = [int(x) for x in distribution_list]
+        except (ValueError, TypeError, json.JSONDecodeError):
+            raise ValidationError(
                 _(
-                    "La répartition doit correspondre au nombre de gagnants. "
-                    f"Nombre de gagnants attendu : {winner_count}, mais répartition reçue : {len(distribution_list)}."
-                ),
+                    "Veuillez entrer des pourcentages valides en tant que liste JSON d'entiers."
+                )
             )
-            logger.debug("Mismatch between winner_count and distribution_list length.")
 
-        # Vérifier que la somme des pourcentages est égale à 100
+        if len(distribution_list) != winner_count:
+            raise ValidationError(
+                _("La répartition doit correspondre au nombre de gagnants.")
+            )
+
         total = sum(distribution_list)
         if total != 100:
-            self.add_error(
-                "winners_distribution",
-                _("La somme des pourcentages doit être égale à 100."),
-            )
-            logger.debug(
-                f"Sum of distribution_list is {total}, which is not equal to 100."
-            )
+            raise ValidationError(_("La somme des pourcentages doit être égale à 100."))
 
-        # Mettre à jour cleaned_data avec la répartition validée
-        cleaned_data["winners_distribution"] = distribution_list
+        # Ajout de logs pour débogage
+        logger.debug(f"Répartition des gagnants nettoyée: {distribution_list}")
 
-        logger.debug(
-            f"Final cleaned_data winners_distribution: {cleaned_data['winners_distribution']}"
-        )
-        return cleaned_data
+        return distribution_list
 
     def clean_max_tickets_per_user(self):
         max_tickets = self.cleaned_data.get("max_tickets_per_user")
@@ -145,19 +102,28 @@ class LotteryCreateForm(forms.ModelForm):
             return None  # Illimité
         return max_tickets
 
+    def clean(self):
+        cleaned_data = super().clean()
+        # Add any additional cleaning if necessary
+        return cleaned_data
+
     def save(self, commit=True):
         instance = super().save(commit=False)
-
-        # Générer une référence unique si nécessaire
-        if not instance.lottery_reference:
-            instance.lottery_reference = Lottery.generate_unique_reference()
 
         # Gérer max_tickets_per_user
         if instance.max_tickets_per_user == 0:
             instance.max_tickets_per_user = None
 
-        # Définir start_date automatiquement
-        instance.start_date = timezone.now()
+        # S'assurer que winners_distribution est une liste de ints
+        if isinstance(instance.winners_distribution, str):
+            try:
+                instance.winners_distribution = json.loads(
+                    instance.winners_distribution
+                )
+            except json.JSONDecodeError:
+                raise ValidationError(
+                    _("La répartition des gagnants est mal formatée.")
+                )
 
         if commit:
             instance.save()
