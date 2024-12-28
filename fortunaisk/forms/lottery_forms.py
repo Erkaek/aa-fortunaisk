@@ -2,6 +2,7 @@
 
 # Standard Library
 import json
+import logging
 
 # Django
 from django import forms
@@ -10,6 +11,8 @@ from django.utils.translation import gettext as _
 
 # fortunaisk
 from fortunaisk.models import Lottery
+
+logger = logging.getLogger(__name__)
 
 
 class LotteryCreateForm(forms.ModelForm):
@@ -60,6 +63,9 @@ class LotteryCreateForm(forms.ModelForm):
         distribution = cleaned_data.get("winners_distribution", [])
         winner_count = cleaned_data.get("winner_count", 1)
 
+        logger.debug(f"Form Clean - winner_count: {winner_count}")
+        logger.debug(f"Form Clean - winners_distribution: {distribution}")
+
         if not distribution:
             self.add_error(
                 "winners_distribution", _("La répartition des gagnants est requise.")
@@ -70,6 +76,9 @@ class LotteryCreateForm(forms.ModelForm):
         if isinstance(distribution, str):
             try:
                 distribution = json.loads(distribution)
+                logger.debug(
+                    f"Parsed winners_distribution from JSON string: {distribution}"
+                )
             except json.JSONDecodeError:
                 self.add_error(
                     "winners_distribution",
@@ -80,6 +89,7 @@ class LotteryCreateForm(forms.ModelForm):
         # Si la distribution est un seul int, le convertir en liste
         if isinstance(distribution, (float, int)):
             distribution = [distribution]
+            logger.debug(f"Converted single value distribution to list: {distribution}")
 
         if not isinstance(distribution, list):
             self.add_error(
@@ -91,6 +101,7 @@ class LotteryCreateForm(forms.ModelForm):
         try:
             # Convertir en entiers
             distribution_list = [int(x) for x in distribution]
+            logger.debug(f"Converted distribution to integers: {distribution_list}")
         except (ValueError, TypeError):
             self.add_error(
                 "winners_distribution",
@@ -107,6 +118,7 @@ class LotteryCreateForm(forms.ModelForm):
                     f"Nombre de gagnants attendu : {winner_count}, mais répartition reçue : {len(distribution_list)}."
                 ),
             )
+            logger.debug("Mismatch between winner_count and distribution_list length.")
 
         # Vérifier que la somme des pourcentages est égale à 100
         total = sum(distribution_list)
@@ -115,10 +127,16 @@ class LotteryCreateForm(forms.ModelForm):
                 "winners_distribution",
                 _("La somme des pourcentages doit être égale à 100."),
             )
+            logger.debug(
+                f"Sum of distribution_list is {total}, which is not equal to 100."
+            )
 
         # Mettre à jour cleaned_data avec la répartition validée
         cleaned_data["winners_distribution"] = distribution_list
 
+        logger.debug(
+            f"Final cleaned_data winners_distribution: {cleaned_data['winners_distribution']}"
+        )
         return cleaned_data
 
     def clean_max_tickets_per_user(self):
