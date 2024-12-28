@@ -7,4 +7,5 @@ __all__ = [
     "lottery_signals",
     "webhook_signals",
     "autolottery_signals",
+    "ProcessedPayment",
 ]
