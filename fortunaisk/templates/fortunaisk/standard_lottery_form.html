@@ -84,7 +84,7 @@
 
                                     <!-- Champ de recherche local pour filtrer le sélecteur -->
                                     <input type="text" class="form-control mb-2" id="paymentReceiverSearch"
-                                           placeholder="{% trans 'Filtrer la Corporation...' %}">
+                                            placeholder="{% trans 'Filtrer la Corporation...' %}">
 
                                     <div class="input-group">
                                         <span class="input-group-text">
@@ -130,7 +130,7 @@
                                                     value="{{ form.instance.winners_distribution|index:idx|default_if_none:'' }}"
                                                     min="0"
                                                     max="100"
-                                                    step="0.01"
+                                                    step="1"  <!-- Utilisation de pas de 1 pour des entiers -->
                                                     required
                                                 >
                                                 <span class="input-group-text">%</span>
@@ -237,7 +237,7 @@ document.addEventListener('DOMContentLoaded', function() {
     class FormValidator {
         static validateDistribution(distributions) {
             const values = Array.from(distributions)
-                .map(input => parseFloat(input.value.trim()))
+                .map(input => parseInt(input.value.trim()))
                 .filter(val => !isNaN(val));
             const total = values.reduce((a, b) => a + b, 0);
             return total === 100;
@@ -263,7 +263,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     class PrizeDistributionHandler {
-        static createDistributionField(index, value = 100.00) {
+        static createDistributionField(index, value = 100) {
             const div = document.createElement('div');
             div.className = 'input-group mb-2';
 
@@ -275,9 +275,9 @@ document.addEventListener('DOMContentLoaded', function() {
             input.type = 'number';
             input.min = '0';
             input.max = '100';
-            input.step = '0.01';
+            input.step = '1'; // Pas de 1 pour des entiers
             input.className = 'form-control prize-distribution';
-            input.value = value.toFixed(2);
+            input.value = value;
             input.required = true;
 
             const append = document.createElement('span');
@@ -299,13 +299,13 @@ document.addEventListener('DOMContentLoaded', function() {
             for (let i = 0; i < count; i++) {
                 let value;
                 if (count === 1) {
-                    value = 100.00;
+                    value = 100;
                 } else {
                     // Répartir équitablement, sauf le dernier
                     if (i === count - 1) {
                         value = remaining;
                     } else {
-                        value = parseFloat((100 / count).toFixed(2));
+                        value = Math.floor(100 / count);
                         remaining -= value;
                     }
                 }
@@ -320,7 +320,7 @@ document.addEventListener('DOMContentLoaded', function() {
         static updateHiddenDistribution() {
             const distributionElems = FORM_ELEMENTS.distributionInputs();
             const distributionValues = Array.from(distributionElems)
-                .map(input => parseFloat(input.value.trim()).toFixed(2));
+                .map(input => parseInt(input.value.trim()));
             const distributionStr = JSON.stringify(distributionValues);
             FORM_ELEMENTS.hiddenDistributionInput.value = distributionStr;
             console.log('Répartition des gagnants mise à jour:', distributionStr);
@@ -341,7 +341,7 @@ document.addEventListener('DOMContentLoaded', function() {
         static handleBlur(event) {
             const input = event.target;
             if (input.value) {
-                input.value = parseFloat(input.value).toFixed(2);
+                input.value = parseInt(input.value).toFixed(0);
             }
         }
     }
@@ -374,7 +374,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const distributionValues = [];
 
             distributionElems.forEach(input => {
-                const value = parseFloat(input.value.trim());
+                const value = parseInt(input.value.trim());
                 if (isNaN(value) || value < 0 || value > 100) {
                     FormValidator.showError(input, ERROR_MESSAGES.range);
                     isValid = false;

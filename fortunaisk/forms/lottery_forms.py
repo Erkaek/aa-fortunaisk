@@ -1,5 +1,8 @@
 # fortunaisk/forms/lottery_forms.py
 
+# Standard Library
+import json
+
 # Django
 from django import forms
 from django.core.exceptions import ValidationError
@@ -17,14 +20,14 @@ class LotteryCreateForm(forms.ModelForm):
 
     class Meta:
         model = Lottery
-        # Exclusion du champ 'start_date'
+        # Exclusion du champ 'start_date' car il est géré automatiquement
         exclude = ["start_date"]
         widgets = {
             "ticket_price": forms.NumberInput(
                 attrs={
-                    "step": "0.01",
+                    "step": "1",  # Utilisation de pas de 1 pour des entiers
                     "class": "form-control",
-                    "placeholder": _("Ex. 100.00"),
+                    "placeholder": _("Ex. 100"),
                 }
             ),
             "duration_value": forms.NumberInput(
@@ -60,6 +63,15 @@ class LotteryCreateForm(forms.ModelForm):
         if not distribution:
             raise ValidationError(_("La répartition des gagnants est requise."))
 
+        # Parse JSON si c'est une chaîne
+        if isinstance(distribution, str):
+            try:
+                distribution = json.loads(distribution)
+            except json.JSONDecodeError:
+                raise ValidationError(
+                    _("La répartition des gagnants doit être une liste JSON valide.")
+                )
+
         # Si la distribution est un seul float/int, le convertir en liste
         if isinstance(distribution, (float, int)):
             distribution = [distribution]
@@ -70,7 +82,8 @@ class LotteryCreateForm(forms.ModelForm):
             )
 
         try:
-            distribution_list = [float(x) for x in distribution]
+            # Convertir en entiers
+            distribution_list = [int(x) for x in distribution]
         except (ValueError, TypeError):
             raise ValidationError(_("Veuillez entrer des pourcentages valides."))
 
@@ -80,11 +93,8 @@ class LotteryCreateForm(forms.ModelForm):
             )
 
         total = sum(distribution_list)
-        if abs(total - 100.0) > 0.001:
+        if total != 100:
             raise ValidationError(_("La somme des pourcentages doit être égale à 100."))
-
-        # Arrondir chaque valeur à deux décimales
-        distribution_list = [round(x, 2) for x in distribution_list]
 
         return distribution_list
 
@@ -105,7 +115,7 @@ class LotteryCreateForm(forms.ModelForm):
             elif duration_unit == "days":
                 delta = timezone.timedelta(days=duration_value)
             elif duration_unit == "months":
-                # Approximation: 1 mois = 30 jours
+                # Approximation : 1 mois = 30 jours
                 delta = timezone.timedelta(days=duration_value * 30)
             else:
                 delta = timezone.timedelta()
