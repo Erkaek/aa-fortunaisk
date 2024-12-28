@@ -158,11 +158,7 @@ class Lottery(models.Model):
         self.end_date = self.start_date + self.get_duration_timedelta()
         super().save(*args, **kwargs)
         if creating:
-            # Planifier la finalisation de la loterie
-            # fortunaisk
-            from fortunaisk.tasks import finalize_lottery
-
-            finalize_lottery.delay(self.id)
+            pass
 
     def get_duration_timedelta(self) -> timedelta:
         if self.duration_unit == "hours":
