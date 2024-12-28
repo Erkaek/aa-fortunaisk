@@ -3,7 +3,6 @@
 # Standard Library
 import json
 import logging
-from decimal import Decimal
 
 # Third Party
 from celery import shared_task
@@ -17,85 +16,103 @@ from django.apps import apps
 from django.db import transaction
 from django.utils import timezone
 
-# fortunaisk
-from fortunaisk.models import ProcessedPayment, TicketPurchase
-
 logger = logging.getLogger(__name__)
 
 
 @shared_task
 def check_purchased_tickets():
     """
-    Vérifie tous les paiements liés à une loterie basée sur `CorporationWalletJournalEntry.reason`,
+    Vérifie les paiements non traités toutes les 5 minutes,
     crée des entrées TicketPurchase correspondantes,
-    et marque les paiements comme traités dans `ProcessedPayment`.
+    et marque les paiements comme traités.
     """
     try:
-        # Obtenez tous les `lottery_reference` des loteries actives
-        Lottery = apps.get_model("fortunaisk", "Lottery")
-        active_lotteries = Lottery.objects.filter(status="active")
-        active_lottery_references = active_lotteries.values_list(
-            "lottery_reference", flat=True
-        )
-
-        logger.debug(f"Loteries actives trouvées : {list(active_lottery_references)}")
-
-        # Obtenez les paiements non encore traités pour les références de loteries actives
-        processed_payment_ids = ProcessedPayment.objects.values_list(
-            "payment_id", flat=True
-        )
+        # Récupérer les paiements non traités
         pending_payments = CorporationWalletJournalEntry.objects.filter(
-            reason__in=active_lottery_references
-        ).exclude(entry_id__in=processed_payment_ids)
+            reason__icontains="lottery"
+        )  # Tous les paiements avec "lottery" dans le champ reason
 
-        logger.debug(f"Nombre de paiements en attente : {pending_payments.count()}")
+        logger.debug(f"Nombre de paiements en attente: {pending_payments.count()}")
 
         for payment in pending_payments:
             with transaction.atomic():
                 try:
-                    # Extraire les informations nécessaires du paiement
-                    lottery_reference = payment.reason
+                    # Étape 1 : Extraire les informations nécessaires
+                    lottery_reference = payment.reason.strip()
                     amount = payment.amount
                     payment_id = payment.entry_id
-                    username = payment.first_party_name  # Nom de l'utilisateur
 
-                    # Rechercher la loterie correspondante par `lottery_reference`
+                    # Étape 2 : Trouver la loterie correspondante
+                    Lottery = apps.get_model("fortunaisk", "Lottery")
                     try:
-                        lottery = active_lotteries.get(
-                            lottery_reference=lottery_reference
+                        lottery = Lottery.objects.get(
+                            lottery_reference=lottery_reference, status="active"
                         )
                     except Lottery.DoesNotExist:
                         logger.warning(
-                            f"Aucune loterie active trouvée pour '{lottery_reference}'. Paiement {payment_id} non traité."
+                            f"Aucune loterie active trouvée pour la référence '{lottery_reference}'. Paiement {payment_id} non traité."
                         )
                         continue
 
-                    # Rechercher l'utilisateur associé
-                    User = apps.get_model("auth", "User")
+                    # Étape 3 : Trouver l'utilisateur à partir des relations
                     try:
-                        user = User.objects.get(username=username)
-                    except User.DoesNotExist:
+                        # Rechercher l'utilisateur via les relations décrites
+                        # Third Party
+                        from authentication.models import (
+                            CharacterOwnership,
+                            UserProfile,
+                        )
+
+                        # Alliance Auth
+                        from allianceauth.eveonline.models import EveCharacter
+
+                        eve_character = EveCharacter.objects.get(
+                            character_id=payment.first_party_name_id
+                        )
+                        character_ownership = CharacterOwnership.objects.get(
+                            character_id=eve_character.character_id
+                        )
+                        user_profile = UserProfile.objects.get(
+                            user_id=character_ownership.user_id
+                        )
+                        main_character = EveCharacter.objects.get(
+                            id=user_profile.main_character_id
+                        )
+                        user = main_character.user
+                    except EveCharacter.DoesNotExist:
                         logger.warning(
-                            f"Aucun utilisateur trouvé pour le paiement {payment_id}."
+                            f"Aucun EveCharacter trouvé pour first_party_name_id: {payment.first_party_name_id}"
+                        )
+                        continue
+                    except CharacterOwnership.DoesNotExist:
+                        logger.warning(
+                            f"Aucun CharacterOwnership trouvé pour character_id: {eve_character.character_id}"
+                        )
+                        continue
+                    except UserProfile.DoesNotExist:
+                        logger.warning(
+                            f"Aucun UserProfile trouvé pour user_id: {character_ownership.user_id}"
                         )
                         continue
 
-                    # Créer une entrée TicketPurchase
+                    # Étape 4 : Créer une entrée TicketPurchase
+                    TicketPurchase = apps.get_model("fortunaisk", "TicketPurchase")
                     ticket_purchase = TicketPurchase.objects.create(
                         lottery=lottery,
                         user=user,
                         character=None,  # Remplacez par des informations sur le personnage si disponibles
-                        amount=Decimal(amount),
+                        amount=amount,
                         payment_id=str(payment_id),
                         status="pending",
                     )
 
-                    logger.debug(
+                    logger.info(
                         f"Created TicketPurchase {ticket_purchase.id} for user '{user.username}' in lottery '{lottery.lottery_reference}'"
                     )
 
-                    # Enregistrer le paiement comme traité
-                    ProcessedPayment.objects.create(payment_id=str(payment_id))
+                    # Étape 5 : Marquer le paiement comme traité
+                    payment.processed = True
+                    payment.save(update_fields=["processed"])
 
                 except Exception as e:
                     logger.error(
