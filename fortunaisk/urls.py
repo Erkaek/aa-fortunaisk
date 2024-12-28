@@ -3,7 +3,7 @@
 # Django
 from django.urls import path  # type: ignore
 
-from .views import (  # Ajoutez d'autres vues si nécessaire
+from .views import (
     admin_dashboard,
     create_auto_lottery,
     create_lottery,

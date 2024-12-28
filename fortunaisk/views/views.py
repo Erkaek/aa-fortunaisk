@@ -238,7 +238,7 @@ def list_auto_lotteries(request):
 
 @login_required
 @permission_required("fortunaisk.add_autolottery", raise_exception=True)
-def create_autolottery(request):
+def create_auto_lottery(request):
     if request.method == "POST":
         form = AutoLotteryForm(request.POST)
         if form.is_valid():
