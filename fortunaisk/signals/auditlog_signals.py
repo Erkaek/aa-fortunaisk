@@ -56,9 +56,16 @@ def get_changes(old_instance, new_instance):
     return changes
 
 
+def is_fortunaisk_model(sender):
+    """
+    Vérifie si le modèle appartient à l'application 'fortunaisk'.
+    """
+    return sender._meta.app_label == "fortunaisk"
+
+
 @receiver(pre_save)
 def auditlog_pre_save(sender, instance, **kwargs):
-    if sender == AuditLog:
+    if sender == AuditLog or not is_fortunaisk_model(sender):
         return
     if not instance.pk:
         # Cas création, pas d'ancienne version
@@ -73,7 +80,7 @@ def auditlog_pre_save(sender, instance, **kwargs):
 
 @receiver(post_save)
 def auditlog_post_save(sender, instance, created, **kwargs):
-    if sender == AuditLog:
+    if sender == AuditLog or not is_fortunaisk_model(sender):
         return
 
     # On vérifie l'existence de la table avant d'insérer
@@ -107,14 +114,14 @@ def auditlog_post_save(sender, instance, created, **kwargs):
 
 @receiver(pre_delete)
 def auditlog_pre_delete(sender, instance, **kwargs):
-    if sender == AuditLog:
+    if sender == AuditLog or not is_fortunaisk_model(sender):
         return
     instance._pre_delete_instance = instance
 
 
 @receiver(post_delete)
 def auditlog_post_delete(sender, instance, **kwargs):
-    if sender == AuditLog:
+    if sender == AuditLog or not is_fortunaisk_model(sender):
         return
 
     if not table_exists("fortunaisk_auditlog"):
