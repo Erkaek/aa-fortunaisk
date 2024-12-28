@@ -320,7 +320,7 @@ document.addEventListener('DOMContentLoaded', function() {
         static updateHiddenDistribution() {
             const distributionElems = FORM_ELEMENTS.distributionInputs();
             const distributionValues = Array.from(distributionElems)
-                .map(input => parseInt(input.value.trim()));
+                .map(input => parseInt(input.value.trim(), 10));  // Utiliser base 10
             const distributionStr = JSON.stringify(distributionValues);
             FORM_ELEMENTS.hiddenDistributionInput.value = distributionStr;
             console.log('Répartition des gagnants mise à jour:', distributionStr);

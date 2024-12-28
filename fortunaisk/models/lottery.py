@@ -8,10 +8,10 @@ from datetime import timedelta
 from decimal import Decimal
 
 # Django
-from django.core.exceptions import ValidationError  # Ajouté
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
-from django.utils.translation import gettext as _  # Ajouté
+from django.utils.translation import gettext as _
 
 # Alliance Auth
 from allianceauth.eveonline.models import EveCorporationInfo

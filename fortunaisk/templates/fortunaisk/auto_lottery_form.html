@@ -250,7 +250,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 2) Logique de Répartition des Prix
     const FORM_ELEMENTS = {
-        form: document.getElementById('autoLotteryForm'),
+        form: document.getElementById('standardLotteryForm'),
         winnerCount: document.getElementById('id_winner_count'),
         distributionContainer: document.getElementById('prize-distribution-container'),
         distributionInputs: () => document.querySelectorAll('.prize-distribution'),
@@ -349,8 +349,8 @@ document.addEventListener('DOMContentLoaded', function() {
         static updateHiddenDistribution() {
             const distributionElems = FORM_ELEMENTS.distributionInputs();
             const distributionValues = Array.from(distributionElems)
-                .map(input => parseFloat(input.value.trim()).toFixed(2));
-            const distributionStr = distributionValues.join(',');
+                .map(input => parseInt(input.value.trim(), 10));  // Utiliser base 10
+            const distributionStr = JSON.stringify(distributionValues);
             FORM_ELEMENTS.hiddenDistributionInput.value = distributionStr;
             console.log('Répartition des gagnants mise à jour:', distributionStr);
         }

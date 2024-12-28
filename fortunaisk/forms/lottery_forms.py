@@ -22,8 +22,8 @@ class LotteryCreateForm(forms.ModelForm):
 
     class Meta:
         model = Lottery
-        # Exclusion du champ 'start_date' car il est géré automatiquement
-        exclude = ["start_date"]
+        # Exclusion des champs gérés automatiquement
+        exclude = ["start_date", "end_date", "status", "total_pot"]
         widgets = {
             "ticket_price": forms.NumberInput(
                 attrs={
