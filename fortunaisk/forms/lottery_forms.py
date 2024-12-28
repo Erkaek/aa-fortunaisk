@@ -7,6 +7,7 @@ from datetime import timedelta
 from django import forms
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+from django.utils.translation import gettext as _
 
 # fortunaisk
 from fortunaisk.models import Lottery
@@ -22,14 +23,44 @@ class LotteryCreateForm(forms.ModelForm):
             "winner_count",
             "winners_distribution",
             "max_tickets_per_user",
-            "duration_value",
-            "duration_unit",
         ]
         widgets = {
-            "ticket_price": forms.NumberInput(attrs={"step": "0.01"}),
-            "end_date": forms.DateTimeInput(attrs={"type": "datetime-local"}),
-            "start_date": forms.DateTimeInput(attrs={"type": "datetime-local"}),
-            "duration_unit": forms.Select(attrs={"class": "form-select"}),
+            "ticket_price": forms.NumberInput(
+                attrs={
+                    "step": "0.01",
+                    "class": "form-control",
+                    "placeholder": _("Ex. 100.00"),
+                }
+            ),
+            "end_date": forms.DateTimeInput(
+                attrs={
+                    "type": "datetime-local",
+                    "class": "form-control",
+                }
+            ),
+            "start_date": forms.DateTimeInput(
+                attrs={
+                    "type": "datetime-local",
+                    "class": "form-control",
+                    "value": timezone.now().strftime("%Y-%m-%dT%H:%M"),
+                    "readonly": "readonly",
+                }
+            ),
+            "winner_count": forms.NumberInput(
+                attrs={
+                    "min": "1",
+                    "class": "form-control",
+                    "placeholder": _("Ex. 3"),
+                }
+            ),
+            "winners_distribution": forms.HiddenInput(),
+            "max_tickets_per_user": forms.NumberInput(
+                attrs={
+                    "min": "1",
+                    "class": "form-control",
+                    "placeholder": _("Illimité si laissé vide"),
+                }
+            ),
         }
 
     def __init__(self, *args, **kwargs):
@@ -39,44 +70,46 @@ class LotteryCreateForm(forms.ModelForm):
 
         if not self.is_auto_lottery:
             # Exclure les champs 'duration_value' et 'duration_unit'
-            self.fields.pop("duration_value")
-            self.fields.pop("duration_unit")
+            self.fields.pop("duration_value", None)
+            self.fields.pop("duration_unit", None)
 
     def clean_winners_distribution(self):
         distribution = self.cleaned_data.get("winners_distribution", "")
-        winner_count = self.cleaned_data.get("winner_count", 0)
+        winner_count = self.cleaned_data.get("winner_count", 1)
 
         if not distribution:
-            raise ValidationError("La répartition des gagnants est requise.")
+            raise ValidationError(_("La répartition des gagnants est requise."))
 
-        # Convertir en liste si possible
         try:
-            if isinstance(distribution, str):
-                distribution_list = [float(x.strip()) for x in distribution.split(",")]
-            elif isinstance(distribution, list):
-                distribution_list = [float(x) for x in distribution]
-            else:
-                raise ValueError
+            distribution_list = [
+                float(x.strip()) for x in distribution.split(",") if x.strip()
+            ]
         except ValueError:
             raise ValidationError(
-                "Veuillez entrer des pourcentages valides (séparés par des virgules)."
+                _(
+                    "Veuillez entrer des pourcentages valides (séparés par des virgules)."
+                )
             )
 
-        # Vérifier la correspondance du nombre de gagnants
         if len(distribution_list) != winner_count:
             raise ValidationError(
-                "La répartition doit correspondre au nombre de gagnants."
+                _("La répartition doit correspondre au nombre de gagnants.")
             )
 
-        # Vérifier que la somme est égale à 100
         total = sum(distribution_list)
         if abs(total - 100.0) > 0.001:
-            raise ValidationError("La somme des pourcentages doit être égale à 100.")
+            raise ValidationError(_("La somme des pourcentages doit être égale à 100."))
 
         # Arrondir chaque valeur à deux décimales
         distribution_list = [round(x, 2) for x in distribution_list]
 
         return distribution_list
+
+    def clean_max_tickets_per_user(self):
+        max_tickets = self.cleaned_data.get("max_tickets_per_user")
+        if max_tickets == 0:
+            return None  # Illimité
+        return max_tickets
 
     def clean(self):
         cleaned_data = super().clean()
@@ -87,7 +120,7 @@ class LotteryCreateForm(forms.ModelForm):
             if end_date <= start_date:
                 self.add_error(
                     "end_date",
-                    "La date de fin doit être postérieure à la date de début.",
+                    _("La date de fin doit être postérieure à la date de début."),
                 )
                 return cleaned_data
 
@@ -105,20 +138,9 @@ class LotteryCreateForm(forms.ModelForm):
                     cleaned_data["duration_unit"] = "months"
                     cleaned_data["duration_value"] = delta.days // 30
             else:
-                # Pour une loterie standard, calculer la durée et assigner
-                duration_unit = (
-                    "hours"
-                    if delta <= timedelta(hours=24)
-                    else "days" if delta <= timedelta(days=30) else "months"
-                )
-                duration_value = (
-                    int(delta.total_seconds() // 3600)
-                    if duration_unit == "hours"
-                    else delta.days if duration_unit == "days" else delta.days // 30
-                )
-                cleaned_data["duration_unit"] = duration_unit
-                cleaned_data["duration_value"] = duration_value
-
+                # Pour une loterie standard, la durée est déterminée par start_date et end_date
+                # Pas besoin d'assigner duration_value et duration_unit
+                pass
         return cleaned_data
 
     def save(self, commit=True):

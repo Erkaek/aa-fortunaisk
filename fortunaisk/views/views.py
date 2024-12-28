@@ -29,6 +29,19 @@ from fortunaisk.tasks import create_lottery_from_auto_lottery  # Import correct
 logger = logging.getLogger(__name__)
 
 
+def get_distribution_range(winner_count):
+    """
+    Fonction utilitaire pour obtenir la plage de distribution en fonction du nombre de gagnants.
+    """
+    try:
+        winner_count = int(winner_count)
+        if winner_count < 1:
+            winner_count = 1
+    except (ValueError, TypeError):
+        winner_count = 1
+    return range(winner_count)
+
+
 ##################################
 #           ADMIN VIEWS
 ##################################
@@ -111,23 +124,34 @@ def resolve_anomaly(request, anomaly_id):
     if request.method == "POST":
         try:
             anomaly.delete()
-            messages.success(request, "Anomaly resolved successfully.")
+            messages.success(request, _("Anomalie résolue avec succès."))
 
             # Notifications
             send_alliance_auth_notification(
                 user=request.user,
-                title="Anomaly Resolved",
-                message=f"Anomaly {anomaly.id} resolved for lottery {anomaly.lottery.lottery_reference}.",
+                title=_("Anomalie Résolue"),
+                message=_(
+                    "Anomalie {anomaly_id} résolue pour la loterie {lottery_ref}."
+                ).format(
+                    anomaly_id=anomaly.id,
+                    lottery_ref=anomaly.lottery.lottery_reference,
+                ),
                 level="info",
             )
             send_discord_notification(
-                message=(
-                    f"Anomaly resolved: {anomaly.reason} for lottery {anomaly.lottery.lottery_reference} "
-                    f"by {request.user.username}."
+                message=_(
+                    "Anomalie résolue : {reason} pour la loterie {lottery_ref} par {username}."
+                ).format(
+                    reason=anomaly.reason,
+                    lottery_ref=anomaly.lottery.lottery_reference,
+                    username=request.user.username,
                 )
             )
         except Exception as e:
-            messages.error(request, "An error occurred while resolving the anomaly.")
+            messages.error(
+                request,
+                _("Une erreur est survenue lors de la résolution de l'anomalie."),
+            )
             logger.exception(f"Error resolving anomaly {anomaly_id}: {e}")
         return redirect("fortunaisk:admin_dashboard")
 
@@ -150,29 +174,39 @@ def distribute_prize(request, winner_id):
                 winner.save()
 
                 messages.success(
-                    request, f"Prize distributed to {winner.ticket.user.username}."
+                    request,
+                    _("Prix distribué à {username}.").format(
+                        username=winner.ticket.user.username
+                    ),
                 )
                 # Notifications
                 send_alliance_auth_notification(
                     user=request.user,
-                    title="Prize Distributed",
-                    message=(
-                        f"Prizes of {winner.prize_amount} ISK distributed to "
-                        f"{winner.ticket.user.username} for lottery {winner.ticket.lottery.lottery_reference}."
+                    title=_("Prix Distribué"),
+                    message=_(
+                        "Les prix de {prize_amount} ISK ont été distribués à {username} pour la loterie {lottery_ref}."
+                    ).format(
+                        prize_amount=winner.prize_amount,
+                        username=winner.ticket.user.username,
+                        lottery_ref=winner.ticket.lottery.lottery_reference,
                     ),
                     level="success",
                 )
                 send_discord_notification(
-                    message=(
-                        f"Prize distributed: {winner.prize_amount} ISK "
-                        f"to {winner.ticket.user.username} "
-                        f"for lottery {winner.ticket.lottery.lottery_reference}."
+                    message=_(
+                        "Prix distribué : {prize_amount} ISK à {username} pour la loterie {lottery_ref}."
+                    ).format(
+                        prize_amount=winner.prize_amount,
+                        username=winner.ticket.user.username,
+                        lottery_ref=winner.ticket.lottery.lottery_reference,
                     )
                 )
             else:
-                messages.info(request, "This prize has already been distributed.")
+                messages.info(request, _("Ce prix a déjà été distribué."))
         except Exception as e:
-            messages.error(request, "An error occurred while distributing the prize.")
+            messages.error(
+                request, _("Une erreur est survenue lors de la distribution du prix.")
+            )
             logger.exception(f"Error distributing prize {winner_id}: {e}")
         return redirect("fortunaisk:admin_dashboard")
 
@@ -192,7 +226,7 @@ def list_auto_lotteries(request):
     """
     Liste toutes les autolotteries actives.
     """
-    # Only list active AutoLotteries, per user instruction
+    # Only list active AutoLotteries
     autolotteries = AutoLottery.objects.filter(is_active=True)
     return render(
         request, "fortunaisk/auto_lottery_list.html", {"autolotteries": autolotteries}
@@ -211,28 +245,18 @@ def create_auto_lottery(request):
         form = AutoLotteryForm(request.POST)
         if form.is_valid():
             auto_lottery = form.save()
-
             if auto_lottery.is_active:
                 # Créer immédiatement la 1ère Lottery associée (tâche Celery en async)
                 create_lottery_from_auto_lottery.delay(auto_lottery.id)
-
-            messages.success(request, "AutoLottery created.")
+            messages.success(request, _("AutoLottery créée avec succès."))
             return redirect("fortunaisk:auto_lottery_list")
         else:
-            messages.error(request, "Veuillez corriger les erreurs ci-dessous.")
+            messages.error(request, _("Veuillez corriger les erreurs ci-dessous."))
             logger.error(f"Form errors in create_auto_lottery: {form.errors}")
     else:
         form = AutoLotteryForm()
 
-    winner_count = form.instance.winner_count or 1
-    try:
-        winner_count = int(winner_count)
-        if winner_count < 1:
-            winner_count = 1
-    except (ValueError, TypeError):
-        winner_count = 1
-
-    distribution_range = range(winner_count)
+    distribution_range = get_distribution_range(form.instance.winner_count or 1)
 
     context = {
         "form": form,
@@ -256,22 +280,14 @@ def edit_auto_lottery(request, autolottery_id):
             if auto_lottery.is_active and not autolottery.is_active:
                 # Si réactivé, créer une nouvelle loterie
                 create_lottery_from_auto_lottery.delay(auto_lottery.id)
-            messages.success(request, "Loterie automatique mise à jour avec succès.")
+            messages.success(request, _("Loterie automatique mise à jour avec succès."))
             return redirect("fortunaisk:auto_lottery_list")
         else:
-            messages.error(request, "Veuillez corriger les erreurs ci-dessous.")
+            messages.error(request, _("Veuillez corriger les erreurs ci-dessous."))
     else:
         form = AutoLotteryForm(instance=autolottery)
 
-    winner_count = form.instance.winner_count or 1
-    try:
-        winner_count = int(winner_count)
-        if winner_count < 1:
-            winner_count = 1
-    except (ValueError, TypeError):
-        winner_count = 1
-
-    distribution_range = range(winner_count)
+    distribution_range = get_distribution_range(form.instance.winner_count or 1)
 
     context = {
         "form": form,
@@ -290,7 +306,7 @@ def delete_auto_lottery(request, autolottery_id):
     autolottery = get_object_or_404(AutoLottery, id=autolottery_id)
     if request.method == "POST":
         autolottery.delete()
-        messages.success(request, "Loterie automatique supprimée avec succès.")
+        messages.success(request, _("Loterie automatique supprimée avec succès."))
         return redirect("fortunaisk:auto_lottery_list")
 
     return render(
@@ -328,14 +344,14 @@ def lottery(request):
         corp_name = (
             lot.payment_receiver.corporation_name
             if lot.payment_receiver and lot.payment_receiver.corporation_name
-            else "Unknown Corporation"
+            else _("Unknown Corporation")
         )
         user_ticket_count = user_ticket_map.get(lot.id, 0)
         has_ticket = user_ticket_count > 0
 
         instructions = _(
-            "To participate, send {ticket_price} ISK to {corp_name} "
-            "with the reference '{lottery_reference}' in the payment description."
+            "Pour participer, envoyez {ticket_price} ISK à {corp_name} "
+            "avec la référence '{lottery_reference}' dans la description du paiement."
         ).format(
             ticket_price=lot.ticket_price,
             corp_name=corp_name,
@@ -424,25 +440,17 @@ def create_lottery(request):
         form = LotteryCreateForm(request.POST, is_auto_lottery=False)
         if form.is_valid():
             lottery_obj = form.save(commit=False)
-            # ex: lottery_obj.modified_by = request.user
+            # Exemple : lottery_obj.modified_by = request.user
             lottery_obj.save()
-            messages.success(request, "Lottery created successfully.")
+            messages.success(request, _("Loterie créée avec succès."))
             return redirect("fortunaisk:lottery")
         else:
-            messages.error(request, "Veuillez corriger les erreurs ci-dessous.")
+            messages.error(request, _("Veuillez corriger les erreurs ci-dessous."))
             logger.error(f"Form errors in create_lottery: {form.errors}")
     else:
         form = LotteryCreateForm(is_auto_lottery=False)
 
-    winner_count = form.instance.winner_count or 1
-    try:
-        winner_count = int(winner_count)
-        if winner_count < 1:
-            winner_count = 1
-    except (ValueError, TypeError):
-        winner_count = 1
-
-    distribution_range = range(winner_count)
+    distribution_range = get_distribution_range(form.instance.winner_count or 1)
 
     context = {
         "form": form,
@@ -502,26 +510,35 @@ def terminate_lottery(request, lottery_id):
             lottery_obj.save(update_fields=["status"])
             messages.success(
                 request,
-                f"Lottery {lottery_obj.lottery_reference} terminated successfully.",
+                _("Loterie {lottery_ref} terminée avec succès.").format(
+                    lottery_ref=lottery_obj.lottery_reference
+                ),
             )
             # Notifications
             send_alliance_auth_notification(
                 user=request.user,
-                title="Lottery Terminated",
-                message=(
-                    f"Lottery {lottery_obj.lottery_reference} was terminated prematurely "
-                    f"by {request.user.username}."
+                title=_("Loterie Terminée"),
+                message=_(
+                    "La loterie {lottery_ref} a été terminée prématurément par {username}."
+                ).format(
+                    lottery_ref=lottery_obj.lottery_reference,
+                    username=request.user.username,
                 ),
                 level="warning",
             )
             send_discord_notification(
-                message=(
-                    f"Lottery {lottery_obj.lottery_reference} terminated prematurely "
-                    f"by {request.user.username}."
+                message=_(
+                    "La loterie {lottery_ref} a été terminée prématurément par {username}."
+                ).format(
+                    lottery_ref=lottery_obj.lottery_reference,
+                    username=request.user.username,
                 )
             )
         except Exception as e:
-            messages.error(request, "An error occurred while terminating the lottery.")
+            messages.error(
+                request,
+                _("Une erreur est survenue lors de la terminaison de la loterie."),
+            )
             logger.exception(f"Error terminating lottery {lottery_id}: {e}")
         return redirect("fortunaisk:admin_dashboard")
 
