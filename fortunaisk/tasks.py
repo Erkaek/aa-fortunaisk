@@ -27,21 +27,27 @@ def check_purchased_tickets(self):
     """
     logger.info("Démarrage de la tâche 'check_purchased_tickets'.")
     try:
-        # Récupérer les paiements contenant "lottery" dans le champ reason et non traités
+        # Récupérer les modèles nécessaires
         CorporationWalletJournalEntryModel = apps.get_model(
             "corptools", "CorporationWalletJournalEntry"
         )
         ProcessedPayment = apps.get_model("fortunaisk", "ProcessedPayment")
+        TicketAnomaly = apps.get_model("fortunaisk", "TicketAnomaly")
+        Lottery = apps.get_model("fortunaisk", "Lottery")
+        EveCharacter = apps.get_model("eveonline", "EveCharacter")
+        CharacterOwnership = apps.get_model("authentication", "CharacterOwnership")
+        UserProfile = apps.get_model("authentication", "UserProfile")
+        TicketPurchase = apps.get_model("fortunaisk", "TicketPurchase")
 
         # Récupérer les IDs des paiements déjà traités
-        processed_payment_ids = ProcessedPayment.objects.values_list('payment_id', flat=True)
-
-        # Filtrer les paiements non traités contenant "lottery"
-        pending_payments = (
-            CorporationWalletJournalEntryModel.objects.select_for_update().filter(
-                reason__icontains="lottery"
-            ).exclude(entry_id__in=processed_payment_ids)
+        processed_payment_ids = list(
+            ProcessedPayment.objects.values_list("payment_id", flat=True)
         )
+
+        # Filtrer les paiements contenant "lottery" et non encore traités
+        pending_payments = CorporationWalletJournalEntryModel.objects.filter(
+            reason__icontains="lottery"
+        ).exclude(entry_id__in=processed_payment_ids)
 
         logger.debug(f"Nombre de paiements en attente: {pending_payments.count()}")
 
@@ -49,20 +55,25 @@ def check_purchased_tickets(self):
             with transaction.atomic():
                 try:
                     logger.debug(f"Traitement du paiement ID: {payment.id}")
-                    # Recharger le paiement pour verrouiller la ligne
-                    payment = CorporationWalletJournalEntryModel.objects.select_for_update().get(
+
+                    # Verrouiller la ligne du paiement pour éviter les traitements concurrents
+                    payment_locked = CorporationWalletJournalEntryModel.objects.select_for_update().get(
                         id=payment.id
                     )
-                    
-                    # Vérifier si le paiement a été traité pendant le verrouillage
-                    if ProcessedPayment.objects.filter(payment_id=payment.entry_id).exists():
-                        logger.debug(f"Le paiement ID {payment.id} a déjà été traité. Passage au suivant.")
+
+                    # Re-vérifier si le paiement a déjà été traité
+                    if ProcessedPayment.objects.filter(
+                        payment_id=payment_locked.entry_id
+                    ).exists():
+                        logger.debug(
+                            f"Le paiement ID {payment_locked.id} a déjà été traité. Passage au suivant."
+                        )
                         continue
 
                     # Étape 1 : Extraire les informations nécessaires
-                    lottery_reference = payment.reason.strip().lower()
-                    amount = payment.amount
-                    payment_id = payment.entry_id
+                    lottery_reference = payment_locked.reason.strip().lower()
+                    amount = payment_locked.amount
+                    payment_id = payment_locked.entry_id
 
                     logger.debug(
                         f"Extraction des informations du paiement ID {payment_id}: "
@@ -70,7 +81,6 @@ def check_purchased_tickets(self):
                     )
 
                     # Étape 2 : Trouver la loterie correspondante
-                    Lottery = apps.get_model("fortunaisk", "Lottery")
                     try:
                         lottery = Lottery.objects.select_for_update().get(
                             lottery_reference=lottery_reference, status="active"
@@ -84,33 +94,28 @@ def check_purchased_tickets(self):
                             f"Paiement ID {payment_id} ignoré."
                         )
                         # Enregistrer une anomalie
-                        TicketAnomaly = apps.get_model("fortunaisk", "TicketAnomaly")
                         TicketAnomaly.objects.create(
                             lottery=None,  # Puisque Lottery n'existe pas
                             reason=f"Aucune loterie active trouvée pour la référence '{lottery_reference}'.",
-                            payment_date=payment.date,
+                            payment_date=payment_locked.date,
                             amount=amount,
                             payment_id=payment_id,
                         )
                         # Marquer le paiement comme traité en créant une entrée dans ProcessedPayment
                         ProcessedPayment.objects.create(payment_id=payment_id)
-                        logger.info(f"Paiement ID {payment_id} marqué comme traité suite à l'anomalie.")
+                        logger.info(
+                            f"Paiement ID {payment_id} marqué comme traité suite à l'anomalie."
+                        )
                         continue
 
                     # Étape 3 : Trouver l'utilisateur
-                    EveCharacter = apps.get_model("eveonline", "EveCharacter")
-                    CharacterOwnership = apps.get_model(
-                        "authentication", "CharacterOwnership"
-                    )
-                    UserProfile = apps.get_model("authentication", "UserProfile")
-
                     try:
                         logger.debug(
-                            f"Recherche de l'EveCharacter avec character_id={payment.first_party_name_id}."
+                            f"Recherche de l'EveCharacter avec character_id={payment_locked.first_party_name_id}."
                         )
                         # Trouver EveCharacter lié au paiement
                         eve_character = EveCharacter.objects.get(
-                            character_id=payment.first_party_name_id
+                            character_id=payment_locked.first_party_name_id
                         )
                         logger.debug(
                             f"EveCharacter trouvé: ID {eve_character.id} pour le paiement ID {payment_id}."
@@ -149,7 +154,7 @@ def check_purchased_tickets(self):
                                 user=user_profile.user,
                                 character=eve_character,
                                 reason="Main character mismatch",
-                                payment_date=payment.date,
+                                payment_date=payment_locked.date,
                                 amount=amount,
                                 payment_id=payment_id,
                             )
@@ -162,13 +167,13 @@ def check_purchased_tickets(self):
 
                     except EveCharacter.DoesNotExist:
                         logger.warning(
-                            f"Aucun EveCharacter trouvé pour first_party_name_id: {payment.first_party_name_id}."
+                            f"Aucun EveCharacter trouvé pour first_party_name_id: {payment_locked.first_party_name_id}."
                         )
                         # Enregistrer une anomalie
                         TicketAnomaly.objects.create(
                             lottery=lottery,
                             reason="EveCharacter does not exist",
-                            payment_date=payment.date,
+                            payment_date=payment_locked.date,
                             amount=amount,
                             payment_id=payment_id,
                         )
@@ -188,7 +193,7 @@ def check_purchased_tickets(self):
                             user=None,
                             character=eve_character,
                             reason="CharacterOwnership does not exist",
-                            payment_date=payment.date,
+                            payment_date=payment_locked.date,
                             amount=amount,
                             payment_id=payment_id,
                         )
@@ -208,7 +213,7 @@ def check_purchased_tickets(self):
                             user=None,
                             character=eve_character,
                             reason="UserProfile does not exist",
-                            payment_date=payment.date,
+                            payment_date=payment_locked.date,
                             amount=amount,
                             payment_id=payment_id,
                         )
@@ -222,7 +227,6 @@ def check_purchased_tickets(self):
                     # Étape 4 : Vérifier le nombre de tickets de l'utilisateur
                     lottery_max_tickets = lottery.max_tickets_per_user
                     if lottery_max_tickets:
-                        TicketPurchase = apps.get_model("fortunaisk", "TicketPurchase")
                         user_ticket_count = TicketPurchase.objects.filter(
                             lottery=lottery, user=user
                         ).count()
@@ -239,7 +243,7 @@ def check_purchased_tickets(self):
                                 user=user,
                                 character=eve_character,
                                 reason="Max tickets per user exceeded",
-                                payment_date=payment.date,
+                                payment_date=payment_locked.date,
                                 amount=amount,
                                 payment_id=payment_id,
                             )
@@ -251,7 +255,6 @@ def check_purchased_tickets(self):
                             continue
 
                     # Étape 5 : Créer une entrée TicketPurchase
-                    TicketPurchase = apps.get_model("fortunaisk", "TicketPurchase")
                     ticket_purchase = TicketPurchase.objects.create(
                         lottery=lottery,
                         user=user,
