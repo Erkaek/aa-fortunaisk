@@ -3,14 +3,22 @@
 # Standard Library
 import json
 import logging
+from decimal import Decimal
 
 # Third Party
 from celery import shared_task
+
+# Importer les modèles nécessaires
+from corptools.models import CorporationWalletJournalEntry
 from django_celery_beat.models import IntervalSchedule, PeriodicTask
 
 # Django
 from django.apps import apps
+from django.db import transaction
 from django.utils import timezone
+
+# fortunaisk
+from fortunaisk.models import ProcessedPayment, TicketPurchase
 
 logger = logging.getLogger(__name__)
 
@@ -18,20 +26,86 @@ logger = logging.getLogger(__name__)
 @shared_task
 def check_purchased_tickets():
     """
-    Vérifie les tickets achetés toutes les 5 minutes.
+    Vérifie les paiements non traités toutes les 5 minutes,
+    crée des entrées TicketPurchase correspondantes,
+    et marque les paiements comme traités.
     """
-    TicketPurchase = apps.get_model("fortunaisk", "TicketPurchase")
     try:
-        # Exemple de logique : traiter les tickets en attente
-        pending_tickets = TicketPurchase.objects.filter(status="pending")
-        for ticket in pending_tickets:
-            # Implémentez votre logique ici, par exemple, valider ou notifier
-            logger.debug(
-                f"Processing ticket {ticket.id} for user {ticket.user.username}"
-            )
-            # Exemple de traitement : marquer le ticket comme traité
-            # ticket.status = 'processed'
-            # ticket.save()
+        # Récupérer les paiements non traités
+        pending_payments = CorporationWalletJournalEntry.objects.filter(
+            processed=False
+        )[
+            :100
+        ]  # Limiter à 100 paiements par exécution
+
+        logger.debug(f"Nombre de paiements en attente: {pending_payments.count()}")
+
+        for payment in pending_payments:
+            with transaction.atomic():
+                try:
+                    # Extraire les informations nécessaires du paiement
+                    # Adaptez ces lignes en fonction de vos champs réels
+                    lottery_reference = (
+                        payment.payment_reference
+                    )  # Remplacez par le champ correct
+                    amount = payment.amount  # Assurez-vous que le champ 'amount' existe
+                    payment_id = (
+                        payment.id
+                    )  # Utilisez un identifiant unique du paiement
+                    username = payment.username  # Remplacez par la logique appropriée
+
+                    # Rechercher la loterie correspondante
+                    Lottery = apps.get_model("fortunaisk", "Lottery")
+                    try:
+                        lottery = Lottery.objects.get(
+                            lottery_reference=lottery_reference, status="active"
+                        )
+                    except Lottery.DoesNotExist:
+                        logger.warning(
+                            f"Aucune loterie active trouvée pour la référence '{lottery_reference}'. Paiement {payment_id} non traité."
+                        )
+                        continue
+
+                    # Rechercher l'utilisateur associé
+                    User = apps.get_model(
+                        "auth", "User"
+                    )  # Assurez-vous que le modèle utilisateur est correct
+                    try:
+                        user = User.objects.get(username=username)
+                    except User.DoesNotExist:
+                        logger.warning(
+                            f"Aucun utilisateur trouvé pour le paiement {payment_id}."
+                        )
+                        continue
+
+                    # Créer une entrée TicketPurchase
+                    ticket_purchase = TicketPurchase.objects.create(
+                        lottery=lottery,
+                        user=user,
+                        character=None,  # Remplacez par des informations sur le personnage si disponibles
+                        amount=Decimal(amount),
+                        payment_id=str(
+                            payment_id
+                        ),  # Assurez-vous que c'est une chaîne unique
+                        status="pending",
+                    )
+
+                    logger.debug(
+                        f"Created TicketPurchase {ticket_purchase.id} for user '{user.username}' in lottery '{lottery.lottery_reference}'"
+                    )
+
+                    # Marquer le paiement comme traité en enregistrant dans ProcessedPayment
+                    ProcessedPayment.objects.create(payment_id=str(payment_id))
+
+                    # Marquer le paiement comme traité dans corptools_corporationwalletjournalentry
+                    payment.processed = True
+                    payment.save(update_fields=["processed"])
+
+                except Exception as e:
+                    logger.error(
+                        f"Erreur lors du traitement du paiement {payment.id}: {e}"
+                    )
+
         logger.info("check_purchased_tickets exécutée avec succès.")
     except Exception as e:
         logger.error(f"Erreur dans check_purchased_tickets: {e}")
@@ -47,24 +121,35 @@ def check_lottery_status():
     try:
         now = timezone.now()
         active_lotteries = Lottery.objects.filter(status="active", end_date__lte=now)
+        logger.debug(
+            f"Nombre de loteries actives à clôturer: {active_lotteries.count()}"
+        )
+
         for lottery in active_lotteries:
-            # Revérifier les tickets achetés
-            tickets = lottery.ticket_purchases.all()
-            logger.debug(
-                f"Revérification des tickets pour la loterie {lottery.lottery_reference}"
-            )
-
-            for ticket in tickets:
-                # Implémentez votre logique de revérification ici
+            try:
+                # Revérifier les tickets achetés si nécessaire
+                tickets = lottery.ticket_purchases.all()
                 logger.debug(
-                    f"Checking ticket {ticket.id} for user {ticket.user.username}"
+                    f"Revérification des tickets pour la loterie '{lottery.lottery_reference}'"
                 )
-                # Exemple de logique : vérifier si le ticket est toujours valide
-                # if not ticket.is_valid():
-                #     logger.warning(f"Ticket {ticket.id} pour l'utilisateur {ticket.user.username} n'est plus valide.")
 
-            # Clôturer la loterie
-            lottery.complete_lottery()
+                for ticket in tickets:
+                    logger.debug(
+                        f"Checking ticket {ticket.id} for user '{ticket.user.username}'"
+                    )
+                    # Ajoutez votre logique de revérification ici si nécessaire
+
+                # Clôturer la loterie
+                lottery.complete_lottery()
+                logger.info(
+                    f"Loterie '{lottery.lottery_reference}' clôturée avec succès."
+                )
+
+            except Exception as e:
+                logger.error(
+                    f"Erreur lors de la clôture de la loterie '{lottery.lottery_reference}': {e}"
+                )
+
         logger.info("check_lottery_status exécutée avec succès.")
     except Exception as e:
         logger.error(f"Erreur dans check_lottery_status: {e}")
@@ -92,6 +177,41 @@ def create_lottery_from_auto_lottery(auto_lottery_id: int):
             f"Erreur lors de la création de la Lottery depuis l'AutoLottery {auto_lottery_id}: {e}"
         )
     return None
+
+
+@shared_task
+def finalize_lottery(lottery_id: int):
+    """
+    Finalise une Lottery une fois qu'elle est terminée.
+    Sélectionne les gagnants, met à jour le statut et envoie des notifications.
+    """
+    Lottery = apps.get_model("fortunaisk", "Lottery")
+    try:
+        lottery = Lottery.objects.get(id=lottery_id)
+        if lottery.status != "active":
+            logger.info(
+                f"Lottery '{lottery.lottery_reference}' is not active. Current status: {lottery.status}"
+            )
+            return
+
+        # Sélectionner les gagnants
+        winners = lottery.select_winners()
+        logger.info(
+            f"Selected {len(winners)} winners for Lottery '{lottery.lottery_reference}'"
+        )
+
+        # Mettre à jour le statut de la loterie
+        lottery.status = "completed"
+        lottery.save(update_fields=["status"])
+
+        # Envoyer des notifications Discord pour les gagnants
+        lottery.notify_discord(winners)
+
+        logger.info(f"Lottery '{lottery.lottery_reference}' finalized successfully.")
+    except Lottery.DoesNotExist:
+        logger.error(f"Lottery avec l'ID {lottery_id} n'existe pas.")
+    except Exception as e:
+        logger.error(f"Erreur lors de la finalisation de la Lottery {lottery_id}: {e}")
 
 
 def setup_periodic_tasks():

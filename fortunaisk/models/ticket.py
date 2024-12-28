@@ -55,7 +55,7 @@ class TicketPurchase(models.Model):
     )
     payment_id = models.CharField(
         max_length=255, null=True, blank=True, verbose_name="Payment ID", unique=True
-    )  # Ajout de unique=True
+    )
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
