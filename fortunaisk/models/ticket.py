@@ -15,6 +15,13 @@ logger = logging.getLogger(__name__)
 
 
 class TicketPurchase(models.Model):
+    STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("processed", "Processed"),
+        ("failed", "Failed"),
+        # Ajoutez d'autres choix si nécessaire
+    ]
+
     lottery = models.ForeignKey(
         "fortunaisk.Lottery",
         on_delete=models.CASCADE,
@@ -49,12 +56,18 @@ class TicketPurchase(models.Model):
     payment_id = models.CharField(
         max_length=255, null=True, blank=True, verbose_name="Payment ID", unique=True
     )  # Ajout de unique=True
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="pending",
+        verbose_name="Ticket Status",
+    )  # Nouveau champ
 
     def __str__(self) -> str:
         return (
             f"TicketPurchase(user={self.user.username}, "
             f"lottery={self.lottery.lottery_reference}, "
-            f"amount={self.amount})"
+            f"amount={self.amount}, status={self.status})"
         )
 
 
