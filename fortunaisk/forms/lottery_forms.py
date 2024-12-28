@@ -7,7 +7,7 @@ import logging
 # Django
 from django import forms
 from django.core.exceptions import ValidationError
-from django.utils import timezone  # Import ajouté
+from django.utils import timezone  # Import nécessaire pour les manipulations de temps
 from django.utils.translation import gettext as _
 
 # fortunaisk
@@ -105,21 +105,16 @@ class LotteryCreateForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        name = cleaned_data.get("name")
-        frequency = cleaned_data.get("frequency")
-        frequency_unit = cleaned_data.get("frequency_unit")
+        # Retirer les références au champ 'name' qui n'existe pas dans le modèle
+
+        # Supprimer les assignations inutiles
+        # frequency = cleaned_data.get("frequency")  # Supprimé
+        # frequency_unit = cleaned_data.get("frequency_unit")  # Supprimé
+
         duration_value = cleaned_data.get("duration_value")
         duration_unit = cleaned_data.get("duration_unit")
 
-        if not name:
-            self.add_error("name", _("Le nom de la loterie est requis."))
-
-        if frequency and frequency_unit:
-            if frequency < 1:
-                self.add_error("frequency", _("La fréquence doit être au moins de 1."))
-        else:
-            self.add_error("frequency", _("La fréquence et son unité sont requises."))
-
+        # Valider la durée
         if duration_value and duration_unit:
             if duration_unit == "hours":
                 delta = timezone.timedelta(hours=duration_value)

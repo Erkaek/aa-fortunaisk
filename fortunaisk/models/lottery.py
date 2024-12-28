@@ -1,27 +1,28 @@
 # fortunaisk/models/lottery.py
 
 # Standard Library
-import logging
-import random
-import string
-from datetime import timedelta
+import logging  # Import ajouté
+import random  # Import ajouté
+import string  # Import ajouté
+from datetime import timedelta  # Import ajouté
 from decimal import Decimal
 
 # Django
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError  # Import ajouté
 from django.db import models
 from django.utils import timezone
-from django.utils.translation import gettext as _
+from django.utils.translation import gettext as _  # Import ajouté
 
 # Alliance Auth
-from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
-
-# fortunaisk
-from fortunaisk.models.ticket import (
-    TicketPurchase,  # Import de TicketPurchase uniquement
+from allianceauth.eveonline.models import (  # Import EveCharacter
+    EveCharacter,
+    EveCorporationInfo,
 )
 
-logger = logging.getLogger(__name__)
+# fortunaisk
+from fortunaisk.models.ticket import TicketPurchase  # Import TicketPurchase
+
+logger = logging.getLogger(__name__)  # Initialisation du logger
 
 
 class Lottery(models.Model):
@@ -44,7 +45,7 @@ class Lottery(models.Model):
     )
     start_date = models.DateTimeField(
         verbose_name="Start Date",
-        default=timezone.now,  # Définir un défaut pour start_date
+        default=timezone.now,
     )
     end_date = models.DateTimeField(db_index=True, verbose_name="End Date")
     payment_receiver = models.ForeignKey(
@@ -120,9 +121,6 @@ class Lottery(models.Model):
 
     @staticmethod
     def generate_unique_reference() -> str:
-        """
-        Génère un identifiant unique (ex: LOTTERY-1234567890).
-        """
         while True:
             reference = f"LOTTERY-{''.join(random.choices(string.digits, k=10))}"
             if not Lottery.objects.filter(lottery_reference=reference).exists():
@@ -163,13 +161,13 @@ class Lottery(models.Model):
             pass
 
     def get_duration_timedelta(self) -> timedelta:
+        # Utilise déjà timedelta importé en haut
         if self.duration_unit == "hours":
             return timedelta(hours=self.duration_value)
         elif self.duration_unit == "days":
             return timedelta(days=self.duration_value)
         elif self.duration_unit == "months":
             return timedelta(days=30 * self.duration_value)
-        # par défaut
         return timedelta(hours=self.duration_value)
 
     def update_total_pot(self):
@@ -217,6 +215,11 @@ class Lottery(models.Model):
         Choisit aléatoirement winner_count tickets (ou moins si pas assez de tickets).
         Crée un Winner pour chaque ticket gagnant.
         """
+        # fortunaisk
+        from fortunaisk.models.ticket import (
+            Winner,  # Import local pour éviter les problèmes de dépendances
+        )
+
         tickets = TicketPurchase.objects.filter(lottery=self)
         ticket_ids = list(tickets.values_list("id", flat=True))
         if not ticket_ids:
@@ -236,10 +239,6 @@ class Lottery(models.Model):
                 percentage_decimal = Decimal(str(self.winners_distribution[idx]))
                 prize_amount = (self.total_pot * percentage_decimal) / Decimal("100")
                 prize_amount = prize_amount.quantize(Decimal("0.01"))
-                # Importer Winner depuis ticket.py
-                # fortunaisk
-                from fortunaisk.models.ticket import Winner
-
                 winner = Winner.objects.create(
                     character=ticket.character,
                     ticket=ticket,
@@ -264,6 +263,9 @@ class Lottery(models.Model):
         """
         Envoie une notification Discord pour chaque gagnant.
         """
+        # fortunaisk
+        from fortunaisk.notifications import send_discord_notification  # Import local
+
         if not winners:
             logger.info(f"No winners to notify for lottery {self.lottery_reference}.")
             return
@@ -276,9 +278,6 @@ class Lottery(models.Model):
         except Exception as ex:
             logger.warning(f"Error retrieving corporation_name: {ex}")
             corp_name = "Unknown Corporation"
-
-        # fortunaisk
-        from fortunaisk.notifications import send_discord_notification
 
         distribution_str = (
             ", ".join([f"{d}%" for d in self.winners_distribution]) or "N/A"
@@ -342,6 +341,6 @@ class Lottery(models.Model):
         Ex : lottery.winners.all() dans un template.
         """
         # fortunaisk
-        from fortunaisk.models.ticket import Winner
+        from fortunaisk.models.ticket import Winner  # Import local
 
         return Winner.objects.filter(ticket__lottery=self)
