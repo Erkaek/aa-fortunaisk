@@ -238,34 +238,24 @@ def list_auto_lotteries(request):
 
 @login_required
 @permission_required("fortunaisk.add_autolottery", raise_exception=True)
-def create_auto_lottery(request):
-    """
-    Vue pour créer une AutoLottery.
-    Gère AutoLotteryForm.
-    Et crée immédiatement une Lottery associée si la loterie automatique est active.
-    """
+def create_autolottery(request):
     if request.method == "POST":
         form = AutoLotteryForm(request.POST)
         if form.is_valid():
-            auto_lottery = form.save()
-            if auto_lottery.is_active:
-                # Créer immédiatement la 1ère Lottery associée (tâche Celery en async)
-                create_lottery_from_auto_lottery.delay(auto_lottery.id)
-            messages.success(request, _("AutoLottery créée avec succès."))
+            form.save()
+            messages.success(request, "AutoLottery créée avec succès.")
             return redirect("fortunaisk:auto_lottery_list")
         else:
-            messages.error(request, _("Veuillez corriger les erreurs ci-dessous."))
-            logger.error(f"Form errors in create_auto_lottery: {form.errors}")
+            messages.error(request, "Veuillez corriger les erreurs ci-dessous.")
     else:
         form = AutoLotteryForm()
-
-    distribution_range = get_distribution_range(form.instance.winner_count or 1)
-
-    context = {
-        "form": form,
-        "distribution_range": distribution_range,
-    }
-    return render(request, "fortunaisk/auto_lottery_form.html", context)
+    # Passer 'distribution_range' basé sur le nombre de gagnants initial
+    distribution_range = range(form.initial.get("winner_count", 1))
+    return render(
+        request,
+        "fortunaisk/autolottery_form.html",
+        {"form": form, "distribution_range": distribution_range},
+    )
 
 
 @login_required

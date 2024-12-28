@@ -1,5 +1,8 @@
 # fortunaisk/forms/autolottery_forms.py
 
+# Standard Library
+import json
+
 # Django
 from django import forms
 from django.core.exceptions import ValidationError
@@ -117,6 +120,13 @@ class AutoLotteryForm(forms.ModelForm):
         # Arrondir chaque valeur à deux décimales
         distribution_list = [round(x, 2) for x in distribution_list]
 
+        # Ajout de logs pour débogage
+        # Standard Library
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.debug(f"Répartition des gagnants nettoyée: {distribution_list}")
+
         return distribution_list
 
     def clean_max_tickets_per_user(self):
@@ -166,6 +176,17 @@ class AutoLotteryForm(forms.ModelForm):
         # Gérer max_tickets_per_user
         if instance.max_tickets_per_user == 0:
             instance.max_tickets_per_user = None
+
+        # S'assurer que winners_distribution est une liste de floats
+        if isinstance(instance.winners_distribution, str):
+            try:
+                instance.winners_distribution = json.loads(
+                    instance.winners_distribution
+                )
+            except json.JSONDecodeError:
+                raise ValidationError(
+                    _("La répartition des gagnants est mal formatée.")
+                )
 
         if commit:
             instance.save()

@@ -6,8 +6,10 @@ from datetime import timedelta  # Déjà utilisé dans get_duration_timedelta
 
 # Django
 from django.apps import apps  # Ajouté pour utiliser apps.get_model
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone  # Ajouté pour utiliser timezone.now
+from django.utils.translation import gettext as _
 
 # Alliance Auth
 from allianceauth.eveonline.models import EveCorporationInfo
@@ -81,14 +83,27 @@ class AutoLottery(models.Model):
         return f"{self.name} (Active={self.is_active})"
 
     def clean(self):
+        """
+        Valide winners_distribution = 100 % et winners_distribution.length == winner_count
+        """
         if self.winners_distribution:
             if len(self.winners_distribution) != self.winner_count:
-                raise ValueError(
-                    "Mismatch between winners_distribution and winner_count."
+                raise ValidationError(
+                    {
+                        "winners_distribution": _(
+                            "La répartition doit correspondre au nombre de gagnants."
+                        )
+                    }
                 )
-            s = sum(self.winners_distribution)
-            if abs(s - 100.0) > 0.001:
-                raise ValueError("Sum of winners_distribution must be approx 100.")
+            total = sum(self.winners_distribution)
+            if abs(total - 100.0) > 0.001:
+                raise ValidationError(
+                    {
+                        "winners_distribution": _(
+                            "La somme des pourcentages doit être égale à 100."
+                        )
+                    }
+                )
 
     def save(self, *args, **kwargs):
         self.clean()

@@ -1,3 +1,5 @@
+<!-- autolottery_form.html -->
+
 {% extends "fortunaisk/base.html" %}
 {% load i18n %}
 {% load static %}
@@ -250,7 +252,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 2) Logique de Répartition des Prix
     const FORM_ELEMENTS = {
-        form: document.getElementById('standardLotteryForm'),
+        form: document.getElementById('autoLotteryForm'),  // Correction ici
         winnerCount: document.getElementById('id_winner_count'),
         distributionContainer: document.getElementById('prize-distribution-container'),
         distributionInputs: () => document.querySelectorAll('.prize-distribution'),
@@ -269,7 +271,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 .map(input => parseFloat(input.value.trim()))
                 .filter(val => !isNaN(val));
             const total = values.reduce((a, b) => a + b, 0);
-            return total === 100;
+            return Math.abs(total - 100.00) <= 0.001;
         }
 
         static showError(element, message) {
@@ -306,7 +308,7 @@ document.addEventListener('DOMContentLoaded', function() {
             input.max = '100';
             input.step = '0.01';
             input.className = 'form-control prize-distribution';
-            input.value = value.toFixed(2);
+            input.value = parseFloat(value).toFixed(2);
             input.required = true;
 
             const append = document.createElement('span');
@@ -324,7 +326,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const container = FORM_ELEMENTS.distributionContainer;
             container.innerHTML = '';
 
-            let remaining = 100;
+            let remaining = 100.00;
             for (let i = 0; i < count; i++) {
                 let value;
                 if (count === 1) {
@@ -332,9 +334,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else {
                     // Répartir équitablement, sauf le dernier
                     if (i === count - 1) {
-                        value = remaining;
+                        value = parseFloat(remaining.toFixed(2));
                     } else {
-                        value = parseFloat((100 / count).toFixed(2));
+                        value = parseFloat((100.00 / count).toFixed(2));
                         remaining -= value;
                     }
                 }
@@ -349,7 +351,8 @@ document.addEventListener('DOMContentLoaded', function() {
         static updateHiddenDistribution() {
             const distributionElems = FORM_ELEMENTS.distributionInputs();
             const distributionValues = Array.from(distributionElems)
-                .map(input => parseInt(input.value.trim(), 10));  // Utiliser base 10
+                .map(input => parseFloat(input.value.trim()).toFixed(2))  // Utiliser parseFloat et deux décimales
+                .filter(val => !isNaN(val));
             const distributionStr = JSON.stringify(distributionValues);
             FORM_ELEMENTS.hiddenDistributionInput.value = distributionStr;
             console.log('Répartition des gagnants mise à jour:', distributionStr);
@@ -414,7 +417,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             const total = distributionValues.reduce((a, b) => a + b, 0);
-            if (total !== 100) {
+            if (Math.abs(total - 100.00) > 0.001) {
                 alert(ERROR_MESSAGES.distribution);
                 isValid = false;
                 distributionElems.forEach(input => {
@@ -435,5 +438,3 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeEventListeners();
 });
 </script>
-</div>
-{% endblock details %}
