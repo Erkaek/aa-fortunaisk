@@ -24,7 +24,7 @@ from fortunaisk.notifications import (
     send_alliance_auth_notification,
     send_discord_notification,
 )
-from fortunaisk.tasks import create_lottery_from_auto  # Import correct
+from fortunaisk.tasks import create_lottery_from_auto_lottery  # Import correct
 
 logger = logging.getLogger(__name__)
 
@@ -212,7 +212,7 @@ def create_auto_lottery(request):
             auto_lottery = form.save()
 
             # Créer immédiatement la 1ère Lottery associée (tâche Celery en async)
-            create_lottery_from_auto.delay(auto_lottery.id)
+            create_lottery_from_auto_lottery.delay(auto_lottery.id)
 
             messages.success(request, "AutoLottery created, and 1st Lottery generated.")
             return redirect("fortunaisk:auto_lottery_list")
