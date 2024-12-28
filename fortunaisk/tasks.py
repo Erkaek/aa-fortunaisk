@@ -56,17 +56,14 @@ def check_purchased_tickets():
 
                     # Étape 3 : Trouver l'utilisateur
                     try:
-                        # Importer les modèles nécessaires
-                        # Third Party
-                        from authentication.models import (
-                            CharacterOwnership,
-                            UserProfile,
+                        # Importer EveCharacter de manière explicite
+                        EveCharacter = apps.get_model("eveonline", "EveCharacter")
+                        CharacterOwnership = apps.get_model(
+                            "authentication", "CharacterOwnership"
                         )
+                        UserProfile = apps.get_model("authentication", "UserProfile")
 
-                        # Alliance Auth
-                        from allianceauth.eveonline.models import EveCharacter
-
-                        # Récupérer EveCharacter à partir du payment.first_party_name_id
+                        # Récupérer EveCharacter à partir de payment.first_party_name_id
                         eve_character = EveCharacter.objects.get(
                             character_id=payment.first_party_name_id
                         )
