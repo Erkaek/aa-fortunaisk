@@ -5,7 +5,6 @@ import json
 
 # Django
 from django import forms
-from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.utils.translation import gettext as _
 
@@ -56,77 +55,77 @@ class LotteryCreateForm(forms.ModelForm):
             "payment_receiver": forms.Select(attrs={"class": "form-select"}),
         }
 
-    def clean_winners_distribution(self):
-        distribution = self.cleaned_data.get("winners_distribution", [])
-        winner_count = self.cleaned_data.get("winner_count", 1)
+    def clean(self):
+        cleaned_data = super().clean()
+        distribution = cleaned_data.get("winners_distribution", [])
+        winner_count = cleaned_data.get("winner_count", 1)
 
         if not distribution:
-            raise ValidationError(_("La répartition des gagnants est requise."))
+            self.add_error(
+                "winners_distribution", _("La répartition des gagnants est requise.")
+            )
+            return cleaned_data
 
         # Parse JSON si c'est une chaîne
         if isinstance(distribution, str):
             try:
                 distribution = json.loads(distribution)
             except json.JSONDecodeError:
-                raise ValidationError(
-                    _("La répartition des gagnants doit être une liste JSON valide.")
+                self.add_error(
+                    "winners_distribution",
+                    _("La répartition des gagnants doit être une liste JSON valide."),
                 )
+                return cleaned_data
 
-        # Si la distribution est un seul float/int, le convertir en liste
+        # Si la distribution est un seul int, le convertir en liste
         if isinstance(distribution, (float, int)):
             distribution = [distribution]
 
         if not isinstance(distribution, list):
-            raise ValidationError(
-                _("La répartition des gagnants doit être une liste de pourcentages.")
+            self.add_error(
+                "winners_distribution",
+                _("La répartition des gagnants doit être une liste de pourcentages."),
             )
+            return cleaned_data
 
         try:
             # Convertir en entiers
             distribution_list = [int(x) for x in distribution]
         except (ValueError, TypeError):
-            raise ValidationError(_("Veuillez entrer des pourcentages valides."))
+            self.add_error(
+                "winners_distribution",
+                _("Veuillez entrer des pourcentages valides (entiers)."),
+            )
+            return cleaned_data
 
+        # Vérifier la correspondance entre la répartition et le nombre de gagnants
         if len(distribution_list) != winner_count:
-            raise ValidationError(
-                _("La répartition doit correspondre au nombre de gagnants.")
+            self.add_error(
+                "winners_distribution",
+                _(
+                    "La répartition doit correspondre au nombre de gagnants. "
+                    f"Nombre de gagnants attendu : {winner_count}, mais répartition reçue : {len(distribution_list)}."
+                ),
             )
 
+        # Vérifier que la somme des pourcentages est égale à 100
         total = sum(distribution_list)
         if total != 100:
-            raise ValidationError(_("La somme des pourcentages doit être égale à 100."))
+            self.add_error(
+                "winners_distribution",
+                _("La somme des pourcentages doit être égale à 100."),
+            )
 
-        return distribution_list
+        # Mettre à jour cleaned_data avec la répartition validée
+        cleaned_data["winners_distribution"] = distribution_list
+
+        return cleaned_data
 
     def clean_max_tickets_per_user(self):
         max_tickets = self.cleaned_data.get("max_tickets_per_user")
         if max_tickets == 0:
             return None  # Illimité
         return max_tickets
-
-    def clean(self):
-        cleaned_data = super().clean()
-        duration_value = cleaned_data.get("duration_value")
-        duration_unit = cleaned_data.get("duration_unit")
-
-        if duration_value and duration_unit:
-            if duration_unit == "hours":
-                delta = timezone.timedelta(hours=duration_value)
-            elif duration_unit == "days":
-                delta = timezone.timedelta(days=duration_value)
-            elif duration_unit == "months":
-                # Approximation : 1 mois = 30 jours
-                delta = timezone.timedelta(days=duration_value * 30)
-            else:
-                delta = timezone.timedelta()
-
-            end_date = timezone.now() + delta
-            if end_date <= timezone.now():
-                self.add_error("duration_value", _("La durée doit être positive."))
-        else:
-            self.add_error("duration_value", _("La durée est requise."))
-
-        return cleaned_data
 
     def save(self, commit=True):
         instance = super().save(commit=False)
