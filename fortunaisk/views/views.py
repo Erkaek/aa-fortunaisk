@@ -428,7 +428,7 @@ def create_lottery(request):
             messages.success(request, "Lottery created successfully.")
             return redirect("fortunaisk:lottery")
         else:
-            messages.error(request, "Please correct the errors below.")
+            messages.error(request, "Veuillez corriger les erreurs ci-dessous.")
     else:
         form = LotteryCreateForm()
 
@@ -444,7 +444,7 @@ def create_lottery(request):
 
     context = {
         "form": form,
-        "is_auto_lottery": False,
+        "is_auto_lottery": False,  # Indique que c'est une loterie standard
         "distribution_range": distribution_range,
     }
     return render(request, "fortunaisk/lottery_form.html", context)
