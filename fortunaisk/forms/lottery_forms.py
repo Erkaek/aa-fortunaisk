@@ -33,10 +33,14 @@ class LotteryCreateForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        # Récupérer le paramètre 'is_auto_lottery' si fourni
+        self.is_auto_lottery = kwargs.pop("is_auto_lottery", False)
         super().__init__(*args, **kwargs)
-        # Rendre duration_value et duration_unit non requis
-        self.fields["duration_value"].required = False
-        self.fields["duration_unit"].required = False
+
+        if not self.is_auto_lottery:
+            # Exclure les champs 'duration_value' et 'duration_unit'
+            self.fields.pop("duration_value")
+            self.fields.pop("duration_unit")
 
     def clean_winners_distribution(self):
         distribution = self.cleaned_data.get("winners_distribution", "")
@@ -89,18 +93,31 @@ class LotteryCreateForm(forms.ModelForm):
 
             delta = end_date - start_date
             # Attribuer duration_value et duration_unit en fonction de delta
-            if delta <= timedelta(hours=24):
-                duration_unit = "hours"
-                duration_value = int(delta.total_seconds() // 3600)
-            elif delta <= timedelta(days=30):
-                duration_unit = "days"
-                duration_value = delta.days
+            if self.is_auto_lottery:
+                # Si c'est une AutoLottery, les champs sont inclus et requis
+                if delta <= timedelta(hours=24):
+                    cleaned_data["duration_unit"] = "hours"
+                    cleaned_data["duration_value"] = int(delta.total_seconds() // 3600)
+                elif delta <= timedelta(days=30):
+                    cleaned_data["duration_unit"] = "days"
+                    cleaned_data["duration_value"] = delta.days
+                else:
+                    cleaned_data["duration_unit"] = "months"
+                    cleaned_data["duration_value"] = delta.days // 30
             else:
-                duration_unit = "months"
-                duration_value = delta.days // 30
-
-            cleaned_data["duration_unit"] = duration_unit
-            cleaned_data["duration_value"] = duration_value
+                # Pour une loterie standard, calculer la durée et assigner
+                duration_unit = (
+                    "hours"
+                    if delta <= timedelta(hours=24)
+                    else "days" if delta <= timedelta(days=30) else "months"
+                )
+                duration_value = (
+                    int(delta.total_seconds() // 3600)
+                    if duration_unit == "hours"
+                    else delta.days if duration_unit == "days" else delta.days // 30
+                )
+                cleaned_data["duration_unit"] = duration_unit
+                cleaned_data["duration_value"] = duration_value
 
         return cleaned_data
 
@@ -119,19 +136,20 @@ class LotteryCreateForm(forms.ModelForm):
         if not instance.start_date:
             instance.start_date = timezone.now()
 
-        # Assurer que duration_value et duration_unit sont attribués
-        if not instance.duration_value or not instance.duration_unit:
-            if instance.end_date and instance.start_date:
-                delta = instance.end_date - instance.start_date
-                if delta <= timedelta(hours=24):
-                    instance.duration_unit = "hours"
-                    instance.duration_value = int(delta.total_seconds() // 3600)
-                elif delta <= timedelta(days=30):
-                    instance.duration_unit = "days"
-                    instance.duration_value = delta.days
-                else:
-                    instance.duration_unit = "months"
-                    instance.duration_value = delta.days // 30
+        # Assurer que duration_value et duration_unit sont attribués si c'est une AutoLottery
+        if self.is_auto_lottery:
+            if not instance.duration_value or not instance.duration_unit:
+                if instance.end_date and instance.start_date:
+                    delta = instance.end_date - instance.start_date
+                    if delta <= timedelta(hours=24):
+                        instance.duration_unit = "hours"
+                        instance.duration_value = int(delta.total_seconds() // 3600)
+                    elif delta <= timedelta(days=30):
+                        instance.duration_unit = "days"
+                        instance.duration_value = delta.days
+                    else:
+                        instance.duration_unit = "months"
+                        instance.duration_value = delta.days // 30
 
         if commit:
             instance.save()

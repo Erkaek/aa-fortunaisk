@@ -420,7 +420,7 @@ def create_lottery(request):
     Gère LotteryCreateForm.
     """
     if request.method == "POST":
-        form = LotteryCreateForm(request.POST)
+        form = LotteryCreateForm(request.POST, is_auto_lottery=False)
         if form.is_valid():
             lottery_obj = form.save(commit=False)
             # ex: lottery_obj.modified_by = request.user
@@ -431,7 +431,7 @@ def create_lottery(request):
             messages.error(request, "Veuillez corriger les erreurs ci-dessous.")
             logger.error(f"Form errors in create_lottery: {form.errors}")
     else:
-        form = LotteryCreateForm()
+        form = LotteryCreateForm(is_auto_lottery=False)
 
     winner_count = form.instance.winner_count or 1
     try:
