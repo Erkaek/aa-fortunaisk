@@ -31,19 +31,21 @@ def check_purchased_tickets():
     et marque les paiements comme traités dans `ProcessedPayment`.
     """
     try:
-        # Obtenez tous les noms de loteries actives
+        # Obtenez tous les `lottery_reference` des loteries actives
         Lottery = apps.get_model("fortunaisk", "Lottery")
         active_lotteries = Lottery.objects.filter(status="active")
-        active_lottery_names = active_lotteries.values_list("name", flat=True)
+        active_lottery_references = active_lotteries.values_list(
+            "lottery_reference", flat=True
+        )
 
-        logger.debug(f"Loteries actives trouvées : {list(active_lottery_names)}")
+        logger.debug(f"Loteries actives trouvées : {list(active_lottery_references)}")
 
-        # Obtenez les paiements non encore traités pour les loteries actives
+        # Obtenez les paiements non encore traités pour les références de loteries actives
         processed_payment_ids = ProcessedPayment.objects.values_list(
             "payment_id", flat=True
         )
         pending_payments = CorporationWalletJournalEntry.objects.filter(
-            reason__in=active_lottery_names
+            reason__in=active_lottery_references
         ).exclude(entry_id__in=processed_payment_ids)
 
         logger.debug(f"Nombre de paiements en attente : {pending_payments.count()}")
@@ -52,17 +54,19 @@ def check_purchased_tickets():
             with transaction.atomic():
                 try:
                     # Extraire les informations nécessaires du paiement
-                    lottery_name = payment.reason
+                    lottery_reference = payment.reason
                     amount = payment.amount
                     payment_id = payment.entry_id
                     username = payment.first_party_name  # Nom de l'utilisateur
 
-                    # Rechercher la loterie correspondante par nom
+                    # Rechercher la loterie correspondante par `lottery_reference`
                     try:
-                        lottery = active_lotteries.get(name=lottery_name)
+                        lottery = active_lotteries.get(
+                            lottery_reference=lottery_reference
+                        )
                     except Lottery.DoesNotExist:
                         logger.warning(
-                            f"Aucune loterie active trouvée pour '{lottery_name}'. Paiement {payment_id} non traité."
+                            f"Aucune loterie active trouvée pour '{lottery_reference}'. Paiement {payment_id} non traité."
                         )
                         continue
 
@@ -87,7 +91,7 @@ def check_purchased_tickets():
                     )
 
                     logger.debug(
-                        f"Created TicketPurchase {ticket_purchase.id} for user '{user.username}' in lottery '{lottery.name}'"
+                        f"Created TicketPurchase {ticket_purchase.id} for user '{user.username}' in lottery '{lottery.lottery_reference}'"
                     )
 
                     # Enregistrer le paiement comme traité
