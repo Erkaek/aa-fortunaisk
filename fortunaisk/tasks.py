@@ -31,11 +31,15 @@ def check_purchased_tickets(self):
         ProcessedPayment = apps.get_model("fortunaisk", "ProcessedPayment")
         TicketAnomaly = apps.get_model("fortunaisk", "TicketAnomaly")
         Lottery = apps.get_model("fortunaisk", "Lottery")
-        EveCharacter = apps.get_model("eveonline", "EveCharacter")
+        EveCharacter = apps.get_model(
+            "allianceauth.eveonline", "EveCharacter"
+        )  # App_label corrigé
         CharacterOwnership = apps.get_model(
-            "authentication", "CharacterOwnership"
-        )
-        UserProfile = apps.get_model("authentication", "UserProfile")
+            "allianceauth.authentication", "CharacterOwnership"
+        )  # App_label corrigé
+        UserProfile = apps.get_model(
+            "allianceauth.authentication", "UserProfile"
+        )  # App_label corrigé
         TicketPurchase = apps.get_model("fortunaisk", "TicketPurchase")
 
         # Récupérer les IDs des paiements déjà traités
@@ -257,19 +261,21 @@ def check_purchased_tickets(self):
                     )
 
                     # Mise à jour des compteurs
-                    previous_participant_count = lottery.participant_count
                     previous_total_pot = lottery.total_pot
 
-                    lottery.participant_count = lottery.ticket_purchases.count()
+                    # Ne pas attribuer à participant_count car c'est une propriété en lecture seule
+                    # lottery.participant_count = lottery.ticket_purchases.count()  # Supprimé
+
                     lottery.total_pot = (
                         lottery.ticket_purchases.aggregate(total=Sum("amount"))["total"]
                         or 0
                     )
-                    lottery.save(update_fields=["participant_count", "total_pot"])
+                    lottery.save(
+                        update_fields=["total_pot"]
+                    )  # Retiré 'participant_count'
 
                     logger.debug(
                         f"Mise à jour de la loterie '{lottery.lottery_reference}': "
-                        f"participant_count: {previous_participant_count} -> {lottery.participant_count}, "
                         f"total_pot: {previous_total_pot} -> {lottery.total_pot}."
                     )
 

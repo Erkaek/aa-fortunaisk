@@ -14,13 +14,12 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 
 # Alliance Auth
-from allianceauth.eveonline.models import (  # Import de EveCharacter
-    EveCharacter,
-    EveCorporationInfo,
-)
+from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 
 # fortunaisk
-from fortunaisk.models.ticket import TicketPurchase, Winner
+from fortunaisk.models.ticket import (
+    TicketPurchase,  # Retiré 'Winner' pour éviter les conflits
+)
 
 logger = logging.getLogger(__name__)
 
@@ -342,3 +341,37 @@ class Lottery(models.Model):
         from fortunaisk.models import Winner
 
         return Winner.objects.filter(ticket__lottery=self)
+
+
+class Winner(models.Model):
+    ticket = models.ForeignKey(
+        TicketPurchase,
+        on_delete=models.CASCADE,
+        related_name="winners",
+        verbose_name="Ticket Purchase",
+    )
+    character = models.ForeignKey(
+        EveCharacter,  # Utilisation de EveCharacter
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="winners",
+        verbose_name="Winning Eve Character",
+    )
+    prize_amount = models.DecimalField(
+        max_digits=25,
+        decimal_places=2,
+        default=0,
+        verbose_name="Prize Amount",
+        help_text="ISK amount that the winner receives.",
+    )
+    won_at = models.DateTimeField(auto_now_add=True, verbose_name="Winning Date")
+    distributed = models.BooleanField(
+        default=False,
+        verbose_name="Prize Distributed",
+        help_text="Indicates whether the prize has been distributed to the winner.",
+    )
+
+    def __str__(self) -> str:
+        char_name = self.character.character_name if self.character else "Unknown"
+        return f"Winner for {self.ticket.lottery.lottery_reference}: {char_name}"
