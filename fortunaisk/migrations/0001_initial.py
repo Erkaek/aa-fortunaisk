@@ -1,5 +1,8 @@
 # fortunaisk/migrations/0001_initial.py
 
+# Standard Library
+from decimal import Decimal
+
 # Django
 import django.db.models.deletion
 from django.db import migrations, models
