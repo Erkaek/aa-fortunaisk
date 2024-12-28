@@ -1,4 +1,5 @@
 # fortunaisk/models/payment.py
+
 # Django
 from django.db import models
 

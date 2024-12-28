@@ -14,7 +14,10 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 
 # Alliance Auth
-from allianceauth.eveonline.models import EveCorporationInfo
+from allianceauth.eveonline.models import (  # Import de EveCharacter
+    EveCharacter,
+    EveCorporationInfo,
+)
 
 # fortunaisk
 from fortunaisk.models.ticket import TicketPurchase, Winner
@@ -229,16 +232,28 @@ class Lottery(models.Model):
 
         winners = []
         for idx, ticket_id in enumerate(selected_ids):
-            ticket = tickets.get(id=ticket_id)
-            percentage_decimal = Decimal(str(self.winners_distribution[idx]))
-            prize_amount = (self.total_pot * percentage_decimal) / Decimal("100")
-            prize_amount = prize_amount.quantize(Decimal("0.01"))
-            winner = Winner.objects.create(
-                character=ticket.character,
-                ticket=ticket,
-                prize_amount=prize_amount,
-            )
-            winners.append(winner)
+            try:
+                ticket = tickets.get(id=ticket_id)
+                percentage_decimal = Decimal(str(self.winners_distribution[idx]))
+                prize_amount = (self.total_pot * percentage_decimal) / Decimal("100")
+                prize_amount = prize_amount.quantize(Decimal("0.01"))
+                winner = Winner.objects.create(
+                    character=ticket.character,
+                    ticket=ticket,
+                    prize_amount=prize_amount,
+                )
+                winners.append(winner)
+            except EveCharacter.DoesNotExist:
+                logger.warning(
+                    f"EveCharacter associé au ticket ID {ticket_id} n'existe pas. Skipping winner creation."
+                )
+                continue
+            except Exception as e:
+                logger.error(
+                    f"Erreur lors de la création du Winner pour le ticket ID {ticket_id}: {e}",
+                    exc_info=True,
+                )
+                continue
 
         return winners
 
@@ -268,39 +283,43 @@ class Lottery(models.Model):
 
         for winner in winners:
             embed = {
-                "title": "🎉 **Congratulations to the Winner!** 🎉",
+                "title": "🎉 **Félicitations au Gagnant!** 🎉",
                 "description": (
-                    f"We are thrilled to announce that **{winner.ticket.user.username}** "
-                    f"({winner.character.character_name}) has won the lottery **{self.lottery_reference}**!"
+                    f"Nous sommes ravis d'annoncer que **{winner.ticket.user.username}** "
+                    f"({winner.character.character_name}) a remporté la loterie **{self.lottery_reference}**!"
                 ),
                 "color": 0xFFD700,
                 "fields": [
                     {
-                        "name": "User",
+                        "name": "Utilisateur",
                         "value": f"{winner.ticket.user.username}",
                         "inline": True,
                     },
                     {
-                        "name": "Character",
+                        "name": "Personnage",
                         "value": f"{winner.character.character_name}",
                         "inline": True,
                     },
                     {
-                        "name": "Prize",
+                        "name": "Prix",
                         "value": f"{winner.prize_amount:,.2f} ISK",
                         "inline": True,
                     },
                     {
-                        "name": "Distribution",
+                        "name": "Répartition",
                         "value": distribution_str,
                         "inline": False,
                     },
                     {
-                        "name": "Win Date",
+                        "name": "Date de Gain",
                         "value": f"{winner.won_at.strftime('%Y-%m-%d %H:%M')}",
                         "inline": False,
                     },
-                    {"name": "Payment Receiver", "value": corp_name, "inline": False},
+                    {
+                        "name": "Récepteur de Paiement",
+                        "value": corp_name,
+                        "inline": False,
+                    },
                 ],
             }
             send_discord_notification(embed=embed)

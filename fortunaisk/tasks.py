@@ -7,9 +7,6 @@ import logging
 # Third Party
 from celery import shared_task
 
-# Import nécessaires pour PeriodicTask et IntervalSchedule
-from django_celery_beat.models import IntervalSchedule, PeriodicTask
-
 # Django
 from django.apps import apps
 from django.db import transaction
@@ -27,16 +24,18 @@ def check_purchased_tickets(self):
     """
     logger.info("Démarrage de la tâche 'check_purchased_tickets'.")
     try:
-        # Récupérer les modèles nécessaires
+        # Récupérer les modèles nécessaires avec les chemins d'importation corrects
         CorporationWalletJournalEntryModel = apps.get_model(
             "corptools", "CorporationWalletJournalEntry"
         )
         ProcessedPayment = apps.get_model("fortunaisk", "ProcessedPayment")
         TicketAnomaly = apps.get_model("fortunaisk", "TicketAnomaly")
         Lottery = apps.get_model("fortunaisk", "Lottery")
-        EveCharacter = apps.get_model("eveonline", "EveCharacter")
-        CharacterOwnership = apps.get_model("authentication", "CharacterOwnership")
-        UserProfile = apps.get_model("authentication", "UserProfile")
+        EveCharacter = apps.get_model("allianceauth.eveonline", "EveCharacter")
+        CharacterOwnership = apps.get_model(
+            "allianceauth.authentication", "CharacterOwnership"
+        )
+        UserProfile = apps.get_model("allianceauth.authentication", "UserProfile")
         TicketPurchase = apps.get_model("fortunaisk", "TicketPurchase")
 
         # Récupérer les IDs des paiements déjà traités
@@ -121,9 +120,9 @@ def check_purchased_tickets(self):
                             f"EveCharacter trouvé: ID {eve_character.id} pour le paiement ID {payment_id}."
                         )
 
-                        # Trouver CharacterOwnership
+                        # Trouver CharacterOwnership en traversant la relation ForeignKey
                         character_ownership = CharacterOwnership.objects.get(
-                            character_id=eve_character.character_id
+                            character__character_id=eve_character.character_id
                         )
                         logger.debug(
                             f"CharacterOwnership trouvé: user_id={character_ownership.user_id} pour le personnage ID {eve_character.character_id}."
@@ -214,7 +213,7 @@ def check_purchased_tickets(self):
                         user_ticket_count = TicketPurchase.objects.filter(
                             lottery=lottery,
                             user=user,
-                            character__userprofile__main_character_id=user_profile.main_character_id,
+                            character__id=user_profile.main_character_id,
                         ).count()
                         logger.debug(
                             f"Utilisateur '{user.username}' possède actuellement {user_ticket_count} tickets "
@@ -295,15 +294,12 @@ def check_purchased_tickets(self):
                         logger.error(
                             f"Nombre maximal de tentatives dépassé pour le paiement ID {payment_id}."
                         )
-
-    except Exception as e:
+    except Exception as outer_e:
         logger.critical(
-            f"Erreur globale dans la tâche 'check_purchased_tickets': {e}",
+            f"Erreur générale dans la tâche 'check_purchased_tickets': {outer_e}",
             exc_info=True,
         )
         # Optionally, notify admins of failure
-
-    logger.info("Exécution de la tâche 'check_purchased_tickets' terminée avec succès.")
 
 
 @shared_task(bind=True)
@@ -467,14 +463,22 @@ def setup_periodic_tasks():
     """
     logger.info("Configuration des tâches périodiques globales pour FortunaIsk.")
     try:
+        # Récupérer les modèles nécessaires
+        IntervalScheduleModel = apps.get_model("django_celery_beat", "IntervalSchedule")
+        PeriodicTaskModel = apps.get_model("django_celery_beat", "PeriodicTask")
+
         # Vérifier si la tâche 'check_purchased_tickets' existe déjà
-        if not PeriodicTask.objects.filter(name="check_purchased_tickets").exists():
+        if not PeriodicTaskModel.objects.filter(
+            name="check_purchased_tickets"
+        ).exists():
             # check_purchased_tickets => toutes les 5 minutes
-            schedule_check_tickets, created = IntervalSchedule.objects.get_or_create(
-                every=5,
-                period=IntervalSchedule.MINUTES,
+            schedule_check_tickets, created = (
+                IntervalScheduleModel.objects.get_or_create(
+                    every=5,
+                    period=IntervalScheduleModel.MINUTES,
+                )
             )
-            PeriodicTask.objects.create(
+            PeriodicTaskModel.objects.create(
                 name="check_purchased_tickets",
                 task="fortunaisk.tasks.check_purchased_tickets",
                 interval=schedule_check_tickets,
@@ -488,13 +492,15 @@ def setup_periodic_tasks():
             logger.debug("La tâche périodique 'check_purchased_tickets' existe déjà.")
 
         # Vérifier si la tâche 'check_lottery_status' existe déjà
-        if not PeriodicTask.objects.filter(name="check_lottery_status").exists():
+        if not PeriodicTaskModel.objects.filter(name="check_lottery_status").exists():
             # check_lottery_status => toutes les 15 minutes
-            schedule_check_lottery, created = IntervalSchedule.objects.get_or_create(
-                every=15,
-                period=IntervalSchedule.MINUTES,
+            schedule_check_lottery, created = (
+                IntervalScheduleModel.objects.get_or_create(
+                    every=15,
+                    period=IntervalScheduleModel.MINUTES,
+                )
             )
-            PeriodicTask.objects.create(
+            PeriodicTaskModel.objects.create(
                 name="check_lottery_status",
                 task="fortunaisk.tasks.check_lottery_status",
                 interval=schedule_check_lottery,
