@@ -31,7 +31,7 @@ def check_purchased_tickets(self):
         ProcessedPayment = apps.get_model("fortunaisk", "ProcessedPayment")
         TicketAnomaly = apps.get_model("fortunaisk", "TicketAnomaly")
         Lottery = apps.get_model("fortunaisk", "Lottery")
-        EveCharacter = apps.get_model("allianceauth.eveonline", "EveCharacter")
+        EveCharacter = apps.get_model("eveonline", "EveCharacter")
         CharacterOwnership = apps.get_model(
             "allianceauth.authentication", "CharacterOwnership"
         )
