@@ -12,7 +12,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext as _
 
 # fortunaisk
-from fortunaisk.forms import AutoLotteryForm, LotteryCreateForm
+from fortunaisk.forms.autolottery_forms import AutoLotteryForm
+from fortunaisk.forms.lottery_forms import LotteryCreateForm
 from fortunaisk.models import (
     AutoLottery,
     Lottery,
@@ -24,7 +25,9 @@ from fortunaisk.notifications import (
     send_alliance_auth_notification,
     send_discord_notification,
 )
-from fortunaisk.tasks import create_lottery_from_auto_lottery  # Import correct
+from fortunaisk.tasks import (
+    create_lottery_from_auto_lottery,  # Assurez-vous que cette fonction est utilisée
+)
 
 logger = logging.getLogger(__name__)
 
@@ -226,8 +229,8 @@ def list_auto_lotteries(request):
     """
     Liste toutes les autolotteries actives.
     """
-    # Only list active AutoLotteries
-    autolotteries = AutoLottery.objects.filter(is_active=True)
+    # Liste toutes les AutoLotteries
+    autolotteries = AutoLottery.objects.all()
     return render(
         request, "fortunaisk/auto_lottery_list.html", {"autolotteries": autolotteries}
     )
@@ -239,7 +242,7 @@ def create_auto_lottery(request):
     """
     Vue pour créer une AutoLottery.
     Gère AutoLotteryForm.
-    Et crée immédiatement une Lottery quand c'est validé si is_active=True.
+    Et crée immédiatement une Lottery associée si la loterie automatique est active.
     """
     if request.method == "POST":
         form = AutoLotteryForm(request.POST)
@@ -260,7 +263,6 @@ def create_auto_lottery(request):
 
     context = {
         "form": form,
-        "is_auto_lottery": True,
         "distribution_range": distribution_range,
     }
     return render(request, "fortunaisk/auto_lottery_form.html", context)
@@ -276,8 +278,9 @@ def edit_auto_lottery(request, autolottery_id):
     if request.method == "POST":
         form = AutoLotteryForm(request.POST, instance=autolottery)
         if form.is_valid():
+            previous_is_active = autolottery.is_active
             auto_lottery = form.save()
-            if auto_lottery.is_active and not autolottery.is_active:
+            if auto_lottery.is_active and not previous_is_active:
                 # Si réactivé, créer une nouvelle loterie
                 create_lottery_from_auto_lottery.delay(auto_lottery.id)
             messages.success(request, _("Loterie automatique mise à jour avec succès."))
@@ -291,7 +294,6 @@ def edit_auto_lottery(request, autolottery_id):
 
     context = {
         "form": form,
-        "is_auto_lottery": True,
         "distribution_range": distribution_range,
     }
     return render(request, "fortunaisk/auto_lottery_form.html", context)
@@ -437,24 +439,21 @@ def create_lottery(request):
     Gère LotteryCreateForm.
     """
     if request.method == "POST":
-        form = LotteryCreateForm(request.POST, is_auto_lottery=False)
+        form = LotteryCreateForm(request.POST)
         if form.is_valid():
-            lottery_obj = form.save(commit=False)
-            # Exemple : lottery_obj.modified_by = request.user
-            lottery_obj.save()
+            form.save()
             messages.success(request, _("Loterie créée avec succès."))
             return redirect("fortunaisk:lottery")
         else:
             messages.error(request, _("Veuillez corriger les erreurs ci-dessous."))
             logger.error(f"Form errors in create_lottery: {form.errors}")
     else:
-        form = LotteryCreateForm(is_auto_lottery=False)
+        form = LotteryCreateForm()
 
     distribution_range = get_distribution_range(form.instance.winner_count or 1)
 
     context = {
         "form": form,
-        "is_auto_lottery": False,  # Indique que c'est une loterie standard
         "distribution_range": distribution_range,
     }
     return render(request, "fortunaisk/standard_lottery_form.html", context)
@@ -548,7 +547,7 @@ def terminate_lottery(request, lottery_id):
 
 
 @login_required
-@permission_required("fortunaisk.view_lotteryhistory", raise_exception=True)
+@permission_required("fortunaisk.lottery_participants", raise_exception=True)
 def lottery_participants(request, lottery_id):
     """
     Vue listant les participants d'une loterie.
