@@ -108,7 +108,7 @@ def check_purchased_tickets(self):
                         )
                         continue
 
-                    # Étape 3 : Trouver l'utilisateur
+                    # Étape 3 : Trouver l'utilisateur et le main character
                     try:
                         logger.debug(
                             f"Recherche de l'EveCharacter avec character_id={payment_locked.first_party_name_id}."
@@ -137,33 +137,17 @@ def check_purchased_tickets(self):
                             f"UserProfile trouvé: user_id={user_profile.user_id} associé au CharacterOwnership."
                         )
 
-                        # Vérifier le personnage principal
-                        if user_profile.main_character_id == eve_character.id:
-                            user = user_profile.user
-                            logger.debug(
-                                f"Personnage principal confirmé pour l'utilisateur '{user.username}'."
-                            )
-                        else:
-                            logger.warning(
-                                f"Personnage principal (ID {user_profile.main_character_id}) "
-                                f"ne correspond pas à EveCharacter.id ({eve_character.id}) pour paiement ID {payment_id}."
-                            )
-                            # Enregistrer une anomalie
-                            TicketAnomaly.objects.create(
-                                lottery=lottery,
-                                user=user_profile.user,
-                                character=eve_character,
-                                reason="Main character mismatch",
-                                payment_date=payment_locked.date,
-                                amount=amount,
-                                payment_id=payment_id,
-                            )
-                            # Marquer le paiement comme traité
-                            ProcessedPayment.objects.create(payment_id=payment_id)
-                            logger.info(
-                                f"Paiement ID {payment_id} marqué comme traité suite à une incompatibilité de personnage principal."
-                            )
-                            continue
+                        # Récupérer le personnage principal (Main Character)
+                        main_character_id = user_profile.main_character_id
+                        main_eve_character = EveCharacter.objects.get(
+                            id=main_character_id
+                        )
+                        main_character_name = main_eve_character.character_name
+
+                        user = user_profile.user
+                        logger.debug(
+                            f"Personnage principal récupéré: ID {main_character_id}, Nom '{main_character_name}' pour l'utilisateur '{user.username}'."
+                        )
 
                     except EveCharacter.DoesNotExist:
                         logger.warning(
@@ -224,18 +208,22 @@ def check_purchased_tickets(self):
                         )
                         continue
 
-                    # Étape 4 : Vérifier le nombre de tickets de l'utilisateur
+                    # Étape 4 : Vérifier le nombre de tickets de l'utilisateur (regroupé sur le main character)
                     lottery_max_tickets = lottery.max_tickets_per_user
                     if lottery_max_tickets:
                         user_ticket_count = TicketPurchase.objects.filter(
-                            lottery=lottery, user=user
+                            lottery=lottery,
+                            user=user,
+                            character__userprofile__main_character_id=user_profile.main_character_id,
                         ).count()
                         logger.debug(
-                            f"Utilisateur '{user.username}' possède actuellement {user_ticket_count} tickets pour la loterie '{lottery.lottery_reference}'."
+                            f"Utilisateur '{user.username}' possède actuellement {user_ticket_count} tickets "
+                            f"pour la loterie '{lottery.lottery_reference}' (Main Character: {main_character_name})."
                         )
                         if user_ticket_count >= lottery_max_tickets:
                             logger.warning(
-                                f"Utilisateur '{user.username}' a atteint le nombre maximum de tickets ({lottery_max_tickets}) pour la loterie '{lottery.lottery_reference}'."
+                                f"Utilisateur '{user.username}' a atteint le nombre maximum de tickets "
+                                f"({lottery_max_tickets}) pour la loterie '{lottery.lottery_reference}'."
                             )
                             # Enregistrer une anomalie
                             TicketAnomaly.objects.create(
