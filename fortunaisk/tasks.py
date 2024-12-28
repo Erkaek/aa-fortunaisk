@@ -27,10 +27,10 @@ def check_purchased_tickets():
     et marque les paiements comme traités.
     """
     try:
-        # Récupérer les paiements non traités
+        # Récupérer les paiements avec le motif contenant "lottery"
         pending_payments = CorporationWalletJournalEntry.objects.filter(
             reason__icontains="lottery"
-        )  # Tous les paiements avec "lottery" dans le champ reason
+        )
 
         logger.debug(f"Nombre de paiements en attente: {pending_payments.count()}")
 
@@ -54,9 +54,9 @@ def check_purchased_tickets():
                         )
                         continue
 
-                    # Étape 3 : Trouver l'utilisateur à partir des relations
+                    # Étape 3 : Trouver l'utilisateur
                     try:
-                        # Rechercher l'utilisateur via les relations décrites
+                        # Importer les modèles nécessaires
                         # Third Party
                         from authentication.models import (
                             CharacterOwnership,
@@ -66,19 +66,29 @@ def check_purchased_tickets():
                         # Alliance Auth
                         from allianceauth.eveonline.models import EveCharacter
 
+                        # Récupérer EveCharacter à partir du payment.first_party_name_id
                         eve_character = EveCharacter.objects.get(
                             character_id=payment.first_party_name_id
                         )
+
+                        # Trouver CharacterOwnership à partir du character_id
                         character_ownership = CharacterOwnership.objects.get(
                             character_id=eve_character.character_id
                         )
+
+                        # Trouver UserProfile lié
                         user_profile = UserProfile.objects.get(
                             user_id=character_ownership.user_id
                         )
+
+                        # Récupérer le main_character pour obtenir le nom
                         main_character = EveCharacter.objects.get(
                             id=user_profile.main_character_id
                         )
+
+                        # Récupérer l'utilisateur associé
                         user = main_character.user
+
                     except EveCharacter.DoesNotExist:
                         logger.warning(
                             f"Aucun EveCharacter trouvé pour first_party_name_id: {payment.first_party_name_id}"
@@ -86,7 +96,7 @@ def check_purchased_tickets():
                         continue
                     except CharacterOwnership.DoesNotExist:
                         logger.warning(
-                            f"Aucun CharacterOwnership trouvé pour character_id: {eve_character.character_id}"
+                            f"Aucun CharacterOwnership trouvé pour character_id: {payment.first_party_name_id}"
                         )
                         continue
                     except UserProfile.DoesNotExist:
@@ -100,7 +110,7 @@ def check_purchased_tickets():
                     ticket_purchase = TicketPurchase.objects.create(
                         lottery=lottery,
                         user=user,
-                        character=None,  # Remplacez par des informations sur le personnage si disponibles
+                        character=None,  # Ajouter des détails si le personnage est nécessaire
                         amount=amount,
                         payment_id=str(payment_id),
                         status="pending",
