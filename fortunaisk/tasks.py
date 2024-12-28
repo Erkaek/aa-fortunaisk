@@ -31,9 +31,12 @@ def check_purchased_tickets():
     et marque les paiements comme traités.
     """
     try:
-        # Récupérer les paiements non traités
-        pending_payments = CorporationWalletJournalEntry.objects.filter(
-            processed=False
+        # Obtenez les paiements non encore traités
+        processed_payment_ids = ProcessedPayment.objects.values_list(
+            "payment_id", flat=True
+        )
+        pending_payments = CorporationWalletJournalEntry.objects.exclude(
+            entry_id__in=processed_payment_ids
         )[
             :100
         ]  # Limiter à 100 paiements par exécution
@@ -44,15 +47,10 @@ def check_purchased_tickets():
             with transaction.atomic():
                 try:
                     # Extraire les informations nécessaires du paiement
-                    # Adaptez ces lignes en fonction de vos champs réels
-                    lottery_reference = (
-                        payment.payment_reference
-                    )  # Remplacez par le champ correct
-                    amount = payment.amount  # Assurez-vous que le champ 'amount' existe
-                    payment_id = (
-                        payment.id
-                    )  # Utilisez un identifiant unique du paiement
-                    username = payment.username  # Remplacez par la logique appropriée
+                    lottery_reference = payment.reason  # Adaptez selon vos champs réels
+                    amount = payment.amount
+                    payment_id = payment.entry_id
+                    username = payment.first_party_name  # Nom de l'utilisateur
 
                     # Rechercher la loterie correspondante
                     Lottery = apps.get_model("fortunaisk", "Lottery")
@@ -67,9 +65,7 @@ def check_purchased_tickets():
                         continue
 
                     # Rechercher l'utilisateur associé
-                    User = apps.get_model(
-                        "auth", "User"
-                    )  # Assurez-vous que le modèle utilisateur est correct
+                    User = apps.get_model("auth", "User")
                     try:
                         user = User.objects.get(username=username)
                     except User.DoesNotExist:
@@ -84,9 +80,7 @@ def check_purchased_tickets():
                         user=user,
                         character=None,  # Remplacez par des informations sur le personnage si disponibles
                         amount=Decimal(amount),
-                        payment_id=str(
-                            payment_id
-                        ),  # Assurez-vous que c'est une chaîne unique
+                        payment_id=str(payment_id),
                         status="pending",
                     )
 
@@ -94,16 +88,12 @@ def check_purchased_tickets():
                         f"Created TicketPurchase {ticket_purchase.id} for user '{user.username}' in lottery '{lottery.lottery_reference}'"
                     )
 
-                    # Marquer le paiement comme traité en enregistrant dans ProcessedPayment
+                    # Enregistrer le paiement comme traité
                     ProcessedPayment.objects.create(payment_id=str(payment_id))
-
-                    # Marquer le paiement comme traité dans corptools_corporationwalletjournalentry
-                    payment.processed = True
-                    payment.save(update_fields=["processed"])
 
                 except Exception as e:
                     logger.error(
-                        f"Erreur lors du traitement du paiement {payment.id}: {e}"
+                        f"Erreur lors du traitement du paiement {payment.entry_id}: {e}"
                     )
 
         logger.info("check_purchased_tickets exécutée avec succès.")
