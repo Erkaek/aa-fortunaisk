@@ -20,11 +20,12 @@ def notify_ticket_purchase(sender, instance, created, **kwargs):
         try:
             send_alliance_auth_notification(
                 user=instance.user,
-                title="Ticket Purchase Confirmation",
+                title="🍀🎫 **Ticket Purchase Confirmation** 🍀🎫",
                 message=(
-                    f"Hello {instance.user.username},\n\n"
-                    f"You have successfully purchased a ticket for the lottery '{instance.lottery.lottery_reference}' "
-                    f"at the price of {instance.amount} ISK. Good luck !"
+                    f"**Hello {instance.user.username},**\n\n"
+                    f"You have successfully purchased a ticket 🎫 for the lottery **'{instance.lottery.lottery_reference}'** "
+                    f"at the price of **{instance.amount} ISK** 💰.\n\n"
+                    f"🍀 **Good luck!** 🍀"
                 ),
                 level="info",
             )
@@ -44,12 +45,12 @@ def notify_winner(sender, instance, created, **kwargs):
         try:
             send_alliance_auth_notification(
                 user=instance.ticket.user,
-                title="Congratulations, You Won!",
+                title="🎉🏆 **Congratulations, You Won!** 🏆🎉",
                 message=(
                     f"Hello {instance.ticket.user.username},\n\n"
-                    f"Congratulations ! You won {instance.prize_amount} ISK in the lottery "
-                    f"'{instance.ticket.lottery.lottery_reference}'. Your character {instance.character.character_name} "
-                    f"is now a winner. Thank you for your participation!"
+                    f"Congratulations! 🎉 You won **{instance.prize_amount} ISK** 🏆 in the lottery "
+                    f"**'{instance.ticket.lottery.lottery_reference}'**. Your character **{instance.character.character_name}** "
+                    f"is now a winner. Thank you for your participation! 🙌"
                 ),
                 level="success",
             )
@@ -67,13 +68,13 @@ def notify_ticket_anomaly(sender, instance, created, **kwargs):
         try:
             send_alliance_auth_notification(
                 user=instance.user,
-                title="Anomaly during Ticket Purchase",
+                title="⚠️ **Anomaly during Ticket Purchase** ⚠️",
                 message=(
                     f"Hello {instance.user.username},\n\n"
-                    f"An anomaly was detected during your lottery ticket purchase '{instance.lottery.lottery_reference}'.\n"
-                    f"Reason : {instance.reason}\n"
-                    f"Amount : {instance.amount} ISK\n\n"
-                    f"Please verify and contact admin."
+                    f"An anomaly was detected during your lottery ticket purchase **'{instance.lottery.lottery_reference}'**. 🚨\n"
+                    f"**Reason**: {instance.reason}\n"
+                    f"**Amount**: {instance.amount} ISK 💸\n\n"
+                    f"Please verify and contact admin. 🛠️"
                 ),
                 level="error",
             )

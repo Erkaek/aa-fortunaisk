@@ -288,11 +288,11 @@ def check_purchased_tickets(self):
                             # Notify the user of the anomaly
                             send_alliance_auth_notification(
                                 user=user,
-                                title="Ticket Limit Reached",
+                                title="⚠️ **Ticket Limit Reached** ⚠️",
                                 message=(
                                     f"Hello {user.username},\n\n"
-                                    f"You have reached the maximum number of tickets ({lottery_max_tickets}) pour la loterie '{lottery.lottery_reference}'. "
-                                    f"Your payment of {amount} ISK could not be processed."
+                                    f"You have reached the maximum number of tickets ({lottery_max_tickets}) pour la loterie **'{lottery.lottery_reference}'**. 🚫 "
+                                    f"Your payment of **{amount} ISK** 💸 could not be processed."
                                 ),
                                 level="warning",
                             )
