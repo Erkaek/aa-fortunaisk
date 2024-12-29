@@ -330,7 +330,7 @@ def winner_list(request):
         "ticket__user", "ticket__lottery", "character"
     ).order_by("-won_at")
 
-    # Top 3 utilisateurs par montant total gagné
+    # Top 3 utilisateurs par montant total gagné avec total_prize > 0
     top_3 = (
         User.objects.annotate(
             total_prize=Coalesce(
@@ -342,7 +342,8 @@ def winner_list(request):
                 "profile__main_character__character_name"
             ),  # Accès via profile
         )
-        .order_by("-total_prize")[:3]
+        .filter(total_prize__gt=0)  # Exclure les utilisateurs avec total_prize <= 0
+        .order_by("-total_prize")[:3]  # Limiter aux 3 premiers
         .select_related("profile__main_character")
     )
 
@@ -353,7 +354,7 @@ def winner_list(request):
 
     context = {
         "page_obj": page_obj,  # Gagnants paginés
-        "top_3": top_3,  # Top 3 utilisateurs par montant total
+        "top_3": top_3,  # Top 3 utilisateurs par montant total avec total_prize > 0
     }
     return render(request, "fortunaisk/winner_list.html", context)
 
