@@ -373,9 +373,6 @@ def lottery_history(request):
 @login_required
 @permission_required("fortunaisk.admin", raise_exception=True)
 def create_lottery(request):
-    """
-    Create a one-shot lottery (non-automatic).
-    """
     if request.method == "POST":
         form = LotteryCreateForm(request.POST)
         if form.is_valid():
@@ -383,21 +380,32 @@ def create_lottery(request):
             messages.success(request, "Lottery successfully created.")
             return redirect("fortunaisk:lottery")
         else:
-            messages.error(request, "Please correct the errors below.")
-            winner_count = form.cleaned_data.get("winner_count", 1)
-            distribution_range = get_distribution_range(winner_count)
+            # Form invalide -> on recalcule distribution_range
+            # à partir de la donnée POST (nouvelle valeur).
+            winner_count = form.data.get("winner_count", 1)
+            try:
+                winner_count = int(winner_count)
+            except ValueError:
+                winner_count = 1
+
+            distribution_range = range(winner_count)
+
+            # On rend le template en passant ce distribution_range
+            return render(
+                request,
+                "fortunaisk/standard_lottery_form.html",
+                {"form": form, "distribution_range": distribution_range},
+            )
+
     else:
+        # GET initial -> l’utilisateur vient pour la 1ère fois
         form = LotteryCreateForm()
         distribution_range = get_distribution_range(form.instance.winner_count or 1)
-
-    if form.instance.winners_distribution:
-        distribution_range = range(len(form.instance.winners_distribution))
-
-    return render(
-        request,
-        "fortunaisk/standard_lottery_form.html",
-        {"form": form, "distribution_range": distribution_range},
-    )
+        return render(
+            request,
+            "fortunaisk/standard_lottery_form.html",
+            {"form": form, "distribution_range": distribution_range},
+        )
 
 
 @login_required
