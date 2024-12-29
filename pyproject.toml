@@ -1,24 +1,23 @@
 [build-system]
 build-backend = "flit_core.buildapi"
-
 requires = [
     "flit-core>=3.2,<4",
 ]
 
 [project]
 name = "fortunaisk"
+version = "0.1.0"
 description = "fortunaisk Plugin for Alliance Auth"
 readme = "README.md"
 keywords = [
     "allianceauth",
-    "fortunaisk",
     "eveonline",
+    "fortunaisk",
 ]
 license = { file = "LICENSE" }
 authors = [
     { name = "erka Ekanon", email = "erkaekanon@outlook.com" },
 ]
-
 requires-python = ">=3.8"
 classifiers = [
     "Environment :: Web Environment",
@@ -36,6 +35,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: Implementation :: CPython",
     "Topic :: Internet :: WWW/HTTP",
     "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
@@ -44,15 +44,12 @@ dependencies = [
     "allianceauth>=3,<5",
     "allianceauth-corptools>=2.5.5",
 ]
-
-
 urls.Home = "https://github.com/Erkaek/aa-fortunaisk"
 urls.Source = "https://github.com/Erkaek/aa-fortunaisk"
 urls.Tracker = "https://github.com/Erkaek/aa-fortunaisk/issues"
 
 [tool.flit.module]
 name = "FortunaIsk"
-
 known_allianceauth = [ "allianceauth", "esi" ]
 known_django = [ "django" ]
 skip_gitignore = true
@@ -61,7 +58,7 @@ skip_gitignore = true
 exclude = [ ".git", "*migrations*", ".tox", "dist", "htmlcov" ]
 max-line-length = 119
 select = [ "C", "E", "F", "W", "B", "B950" ]
-ignore = [ 'E203', 'E231', 'E501', 'W503', 'W291', 'W293' ]
+ignore = [ "E203", "E231", "E501", "W503", "W291", "W293" ]
 
 [tool.djlint]
 max_attribute_length = 119
