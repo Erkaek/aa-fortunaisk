@@ -101,21 +101,19 @@ class LotteryCreateForm(forms.ModelForm):
             distribution_list = [int(x) for x in distribution_list]
         except (ValueError, TypeError, json.JSONDecodeError):
             raise ValidationError(
-                _(
-                    "Veuillez fournir des pourcentages valides sous forme de liste JSON d'entiers."
-                )
+                _("Please provide valid percentages as a JSON list of integers.")
             )
 
         # Vérification de la taille
         if len(distribution_list) != winner_count:
             raise ValidationError(
-                _("La distribution ne correspond pas au nombre de gagnants.")
+                _("Distribution does not match the number of winners")
             )
 
         # Vérification de la somme = 100
         total = sum(distribution_list)
         if total != 100:
-            raise ValidationError(_("La somme des pourcentages doit être de 100."))
+            raise ValidationError(_("The sum of the percentages must be 100."))
 
         logger.debug("[STANDARD LOTTERY] distribution final = %s", distribution_list)
         return distribution_list
@@ -133,9 +131,9 @@ class LotteryCreateForm(forms.ModelForm):
         duration_unit = cleaned_data.get("duration_unit")
         if duration_value and duration_unit:
             if duration_unit not in ["hours", "days", "months"]:
-                self.add_error("duration_unit", _("Unité de durée invalide."))
+                self.add_error("duration_unit", _("Duration must be positive."))
         else:
-            self.add_error("duration_value", _("La durée et son unité sont requises."))
+            self.add_error("duration_value", _("Duration and its unit are required."))
 
         return cleaned_data
 

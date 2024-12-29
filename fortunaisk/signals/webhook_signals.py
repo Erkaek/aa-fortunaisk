@@ -1,3 +1,10 @@
+"""
+Signals for handling WebhookConfiguration model events.
+
+When a WebhookConfiguration instance is saved or deleted, this clears the
+'discord_webhook_url' cache to ensure the latest webhook URL is used.
+"""
+
 # fortunaisk/signals/webhook_signals.py
 
 # Standard Library

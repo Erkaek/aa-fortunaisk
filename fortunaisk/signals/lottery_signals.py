@@ -17,6 +17,110 @@ from fortunaisk.notifications import send_discord_notification
 logger = logging.getLogger(__name__)
 
 
+def create_winners_embed(lottery, winners):
+    winner_list = []
+    for winner in winners:
+        username = winner.ticket.user.username if winner.ticket.user else "Unknown User"
+        character_name = (
+            winner.character.character_name if winner.character else "Unknown Character"
+        )
+        prize_amount = f"{winner.prize_amount} ISK"
+        winner_list.append(
+            f"• **{username}** avec le personnage **{character_name}** a gagné **{prize_amount}**."
+        )
+
+    embed = {
+        "title": "🏆 **Lottery Completed!** 🏆",
+        "description": f"La loterie **{lottery.lottery_reference}** est terminée et voici les gagnants :",
+        "color": 15844367,  # Orange color
+        "fields": [
+            {
+                "name": "📌 **Reference**",
+                "value": lottery.lottery_reference,
+                "inline": False,
+            },
+            {
+                "name": "💰 **Total Pot**",
+                "value": f"{lottery.total_pot} ISK",
+                "inline": False,
+            },
+            {
+                "name": "📅 **End Date**",
+                "value": lottery.end_date.strftime("%Y-%m-%d %H:%M:%S"),
+                "inline": False,
+            },
+            {
+                "name": "🔑 **Payment Receiver**",
+                "value": (
+                    lottery.payment_receiver.corporation_name
+                    if lottery.payment_receiver
+                    else "Unknown Corporation"
+                ),
+                "inline": False,
+            },
+            {
+                "name": "🎖️ **Winners**",
+                "value": "\n".join(winner_list) if winner_list else "No winners.",
+                "inline": False,
+            },
+        ],
+        "footer": {
+            "text": "Congratulations to all winners! 🎉",
+            "icon_url": "https://i.imgur.com/4M34hi2.png",
+        },
+        "timestamp": lottery.end_date.isoformat(),
+    }
+
+    return embed
+
+
+def create_no_winners_embed(lottery):
+    try:
+        corp_name = (
+            lottery.payment_receiver.corporation_name
+            if lottery.payment_receiver
+            else "Unknown Corporation"
+        )
+    except EveCorporationInfo.DoesNotExist:
+        corp_name = "Unknown Corporation"
+
+    embed = {
+        "title": "🎉 **Lottery Completed Without Winners** 🎉",
+        "description": (
+            f"La loterie **{lottery.lottery_reference}** est terminée sans aucun gagnant. 😞"
+        ),
+        "color": 0xFF0000,  # Red color
+        "fields": [
+            {
+                "name": "📌 **Reference**",
+                "value": lottery.lottery_reference,
+                "inline": False,
+            },
+            {
+                "name": "💰 **Total Pot**",
+                "value": f"{lottery.total_pot} ISK",
+                "inline": False,
+            },
+            {
+                "name": "📅 **End Date**",
+                "value": lottery.end_date.strftime("%Y-%m-%d %H:%M:%S"),
+                "inline": False,
+            },
+            {
+                "name": "🔑 **Payment Receiver**",
+                "value": corp_name,
+                "inline": False,
+            },
+        ],
+        "footer": {
+            "text": "Better luck next time! 🍀",
+            "icon_url": "https://i.imgur.com/4M34hi2.png",
+        },
+        "timestamp": lottery.end_date.isoformat(),
+    }
+    return embed
+
+
 @receiver(pre_save, sender=Lottery)
 def lottery_pre_save(sender, instance, **kwargs):
     """
@@ -87,55 +191,19 @@ def lottery_post_save(sender, instance, created, **kwargs):
         old_status = getattr(instance, "_old_status", None)
         if old_status and old_status != instance.status:
             if instance.status == "completed":
-                # Check if there are winners - handled via Winner signals
-                # If no winners, send a notification
+                # Vérifier s'il y a des gagnants
                 winners_exist = instance.winners.exists()
-                if not winners_exist:
-                    try:
-                        corp_name = (
-                            instance.payment_receiver.corporation_name
-                            if instance.payment_receiver
-                            else "Unknown Corporation"
-                        )
-                    except EveCorporationInfo.DoesNotExist:
-                        corp_name = "Unknown Corporation"
-
-                    embed = {
-                        "title": "🎉 **Lottery Completed Without Winners** 🎉",
-                        "description": (
-                            f"The lottery **{instance.lottery_reference}** has ended without any winners. 😞"
-                        ),
-                        "color": 0xFF0000,  # Red color
-                        "fields": [
-                            {
-                                "name": "📌 **Reference**",
-                                "value": instance.lottery_reference,
-                                "inline": False,
-                            },
-                            {
-                                "name": "💰 **Total Pot**",
-                                "value": f"{instance.total_pot} ISK",
-                                "inline": False,
-                            },
-                            {
-                                "name": "📅 **End Date**",
-                                "value": instance.end_date.strftime(
-                                    "%Y-%m-%d %H:%M:%S"
-                                ),
-                                "inline": False,
-                            },
-                            {
-                                "name": "🔑 **Payment Receiver**",
-                                "value": corp_name,
-                                "inline": False,
-                            },
-                        ],
-                        "footer": {
-                            "text": "Better luck next time! 🍀",
-                            "icon_url": "https://i.imgur.com/4M34hi2.png",
-                        },
-                        "timestamp": instance.end_date.isoformat(),
-                    }
+                if winners_exist:
+                    # Récupérer tous les gagnants
+                    winners = instance.winners.select_related(
+                        "ticket__user", "character"
+                    ).all()
+                    embed = create_winners_embed(instance, winners)
+                    logger.debug(f"Sending winners embed: {embed}")
+                    send_discord_notification(embed=embed)
+                else:
+                    # Notification de complétion sans gagnants
+                    embed = create_no_winners_embed(instance)
                     logger.debug(f"Sending completion without winners embed: {embed}")
                     send_discord_notification(embed=embed)
 
@@ -153,7 +221,7 @@ def lottery_post_save(sender, instance, created, **kwargs):
                 embed = {
                     "title": "🚫 **Lottery Cancelled** 🚫",
                     "description": (
-                        f"The lottery **{instance.lottery_reference}** has been cancelled. 🛑"
+                        f"La loterie **{instance.lottery_reference}** a été annulée. 🛑"
                     ),
                     "color": 0xFF0000,  # Red color
                     "fields": [
@@ -185,7 +253,7 @@ def lottery_post_save(sender, instance, created, **kwargs):
             else:
                 # Other status updates
                 message = (
-                    f"The lottery **{instance.lottery_reference}** has been updated. 📝"
+                    f"La loterie **{instance.lottery_reference}** a été mise à jour. 📝"
                 )
                 logger.debug(f"Sending status update message: {message}")
                 send_discord_notification(message=message)

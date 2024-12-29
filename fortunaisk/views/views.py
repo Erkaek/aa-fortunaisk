@@ -322,39 +322,37 @@ def lottery(request):
 @permission_required("fortunaisk.admin", raise_exception=True)
 def winner_list(request):
     """
-    Liste tous les gagnants avec pagination, plus un podium des 3 meilleurs par montant total.
-    Affiche le nom du personnage principal pour chaque meilleur gagnant.
+    Lists all winners with pagination, plus a podium of the best 3 by total amount.
+    Shows the main character's name for each top winner.
     """
-    # Tous les gagnants, ordonnés par date de gain DESC
+    # All winners, ordered by win date DESC
     winners_qs = Winner.objects.select_related(
         "ticket__user", "ticket__lottery", "character"
     ).order_by("-won_at")
 
-    # Top 3 utilisateurs par montant total gagné avec total_prize > 0
+    # Top 3 users by total amount won with total_prize > 0
     top_3 = (
         User.objects.annotate(
             total_prize=Coalesce(
                 Sum("ticket_purchases__winners__prize_amount"),
-                Decimal("0"),  # Utiliser Decimal('0') au lieu de 0
-                output_field=DecimalField(),  # Spécifier l'output_field
+                Decimal("0"),
+                output_field=DecimalField(),
             ),
-            main_character_name=F(
-                "profile__main_character__character_name"
-            ),  # Accès via profile
+            main_character_name=F("profile__main_character__character_name"),
         )
-        .filter(total_prize__gt=0)  # Exclure les utilisateurs avec total_prize <= 0
-        .order_by("-total_prize")[:3]  # Limiter aux 3 premiers
+        .filter(total_prize__gt=0)
+        .order_by("-total_prize")[:3]
         .select_related("profile__main_character")
     )
 
-    # Pagination pour le tableau général
+    # Pagination for the general table
     paginator = Paginator(winners_qs, 25)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
     context = {
-        "page_obj": page_obj,  # Gagnants paginés
-        "top_3": top_3,  # Top 3 utilisateurs par montant total avec total_prize > 0
+        "page_obj": page_obj,
+        "top_3": top_3,
     }
     return render(request, "fortunaisk/winner_list.html", context)
 
