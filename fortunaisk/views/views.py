@@ -346,12 +346,8 @@ def winner_list(request):
 
 
 @login_required
-@permission_required("fortunaisk.admin", raise_exception=True)
 def lottery_history(request):
-    """
-    Lists all past lotteries (completed or cancelled) with dynamic pagination.
-    """
-    per_page = request.GET.get("per_page", 6)  # default 6
+    per_page = request.GET.get("per_page", 6)
     try:
         per_page = int(per_page)
     except ValueError:
@@ -362,10 +358,14 @@ def lottery_history(request):
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
+    # Définir tes choix directement ici
+    per_page_choices = [6, 12, 24, 48]
+
     context = {
         "past_lotteries": page_obj,
         "page_obj": page_obj,
         "per_page": per_page,
+        "per_page_choices": per_page_choices,
     }
     return render(request, "fortunaisk/lottery_history.html", context)
 
