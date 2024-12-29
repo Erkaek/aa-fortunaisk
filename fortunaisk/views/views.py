@@ -339,7 +339,7 @@ def winner_list(request):
                 output_field=DecimalField(),  # Spécifier l'output_field
             ),
             main_character_name=F(
-                "user_settings__main_character__character_name"
+                "profile__main_character__character_name"
             ),  # Utiliser 'user_settings' pour accéder au personnage principal via Alliance Auth
         )
         .order_by("-total_prize")[:3]
