@@ -22,6 +22,7 @@ def create_or_update_periodic_task(sender, instance, created, **kwargs):
     """
     Crée ou met à jour une tâche périodique pour chaque AutoLottery active.
     La tâche crée une Lottery à la fréquence définie.
+    De plus, crée immédiatement la première Lottery lors de la création de l'AutoLottery.
     """
     if instance.is_active:
         try:
@@ -63,8 +64,15 @@ def create_or_update_periodic_task(sender, instance, created, **kwargs):
                 },
             )
             logger.info(
-                f"Tâche périodique '{task_name}' créée/mise à jour pour AutoLottery '{instance.name}'"
+                f"Tâche périodique '{task_name}' créée/mise à jour pour AutoLottery '{instance.name}'."
             )
+
+            # Si l'AutoLottery vient d'être créée, créer immédiatement la première Lottery
+            if created:
+                instance.create_lottery()
+                logger.info(
+                    f"Première Lottery créée pour AutoLottery '{instance.name}' lors de sa création."
+                )
         except Exception as e:
             logger.error(
                 f"Erreur lors de la création/mise à jour de la tâche périodique pour AutoLottery '{instance.name}': {e}"
@@ -76,11 +84,11 @@ def create_or_update_periodic_task(sender, instance, created, **kwargs):
             periodic_task = PeriodicTask.objects.get(name=task_name)
             periodic_task.delete()
             logger.info(
-                f"Tâche périodique '{task_name}' supprimée pour AutoLottery '{instance.name}'"
+                f"Tâche périodique '{task_name}' supprimée pour AutoLottery '{instance.name}'."
             )
         except PeriodicTask.DoesNotExist:
             logger.warning(
-                f"Tâche périodique '{task_name}' inexistante pour AutoLottery '{instance.name}'"
+                f"Tâche périodique '{task_name}' inexistante pour AutoLottery '{instance.name}'."
             )
         except Exception as e:
             logger.error(
@@ -98,11 +106,11 @@ def delete_periodic_task_on_autolottery_delete(sender, instance, **kwargs):
         periodic_task = PeriodicTask.objects.get(name=task_name)
         periodic_task.delete()
         logger.info(
-            f"Tâche périodique '{task_name}' supprimée pour AutoLottery '{instance.name}'"
+            f"Tâche périodique '{task_name}' supprimée pour AutoLottery '{instance.name}'."
         )
     except PeriodicTask.DoesNotExist:
         logger.warning(
-            f"Tâche périodique '{task_name}' inexistante pour AutoLottery '{instance.name}'"
+            f"Tâche périodique '{task_name}' inexistante pour AutoLottery '{instance.name}'."
         )
     except Exception as e:
         logger.error(
