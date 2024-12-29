@@ -1,5 +1,3 @@
-# fortunaisk/forms/lottery_forms.py
-
 # Standard Library
 import json
 import logging
@@ -7,7 +5,7 @@ import logging
 # Django
 from django import forms
 from django.core.exceptions import ValidationError
-from django.utils import timezone  # Import nécessaire pour les manipulations de temps
+from django.utils import timezone
 from django.utils.translation import gettext as _
 
 # fortunaisk
@@ -18,23 +16,23 @@ logger = logging.getLogger(__name__)
 
 class LotteryCreateForm(forms.ModelForm):
     """
-    Formulaire pour créer une loterie standard (non automatique).
+    Form to create a one-time (standard) lottery.
     """
 
     winners_distribution = forms.CharField(
         widget=forms.HiddenInput(),
         required=True,
-        help_text=_("Liste des répartitions des gagnants en pourcentages (JSON)."),
+        help_text=_("List of winners distribution percentages (JSON)."),
     )
 
     class Meta:
         model = Lottery
-        # Exclusion des champs gérés automatiquement
+        # Exclude fields managed automatically
         exclude = ["start_date", "end_date", "status", "total_pot"]
         widgets = {
             "ticket_price": forms.NumberInput(
                 attrs={
-                    "step": "1",  # Utilisation de pas de 1 pour des entiers
+                    "step": "1",
                     "class": "form-control",
                     "placeholder": _("Ex. 100"),
                 }
@@ -58,7 +56,7 @@ class LotteryCreateForm(forms.ModelForm):
                 attrs={
                     "min": "1",
                     "class": "form-control",
-                    "placeholder": _("Illimité si laissé vide"),
+                    "placeholder": _("Leave blank for unlimited"),
                 }
             ),
             "payment_receiver": forms.Select(attrs={"class": "form-select"}),
@@ -69,7 +67,7 @@ class LotteryCreateForm(forms.ModelForm):
         winner_count = self.cleaned_data.get("winner_count", 1)
 
         if not distribution_str:
-            raise ValidationError(_("La répartition des gagnants est requise."))
+            raise ValidationError(_("Winners distribution is required."))
 
         try:
             distribution_list = json.loads(distribution_str)
@@ -78,69 +76,55 @@ class LotteryCreateForm(forms.ModelForm):
             distribution_list = [int(x) for x in distribution_list]
         except (ValueError, TypeError, json.JSONDecodeError):
             raise ValidationError(
-                _(
-                    "Veuillez entrer des pourcentages valides en tant que liste JSON d'entiers."
-                )
+                _("Please provide valid percentages as a JSON list of integers.")
             )
 
         if len(distribution_list) != winner_count:
             raise ValidationError(
-                _("La répartition doit correspondre au nombre de gagnants.")
+                _("Distribution does not match the number of winners.")
             )
 
         total = sum(distribution_list)
         if total != 100:
-            raise ValidationError(_("La somme des pourcentages doit être égale à 100."))
+            raise ValidationError(_("Sum of percentages must be 100."))
 
-        # Ajout de logs pour débogage
-        logger.debug(f"Répartition des gagnants nettoyée: {distribution_list}")
-
+        logger.debug(f"Lottery standard distribution cleaned: {distribution_list}")
         return distribution_list
 
     def clean_max_tickets_per_user(self):
         max_tickets = self.cleaned_data.get("max_tickets_per_user")
         if max_tickets == 0:
-            return None  # Illimité
+            return None
         return max_tickets
 
     def clean(self):
         cleaned_data = super().clean()
-        # Retirer les références au champ 'name' qui n'existe pas dans le modèle
-
-        # Supprimer les assignations inutiles
-        # frequency = cleaned_data.get("frequency")  # Supprimé
-        # frequency_unit = cleaned_data.get("frequency_unit")  # Supprimé
 
         duration_value = cleaned_data.get("duration_value")
         duration_unit = cleaned_data.get("duration_unit")
-
-        # Valider la durée
         if duration_value and duration_unit:
             if duration_unit == "hours":
                 delta = timezone.timedelta(hours=duration_value)
             elif duration_unit == "days":
                 delta = timezone.timedelta(days=duration_value)
             elif duration_unit == "months":
-                # Approximation: 1 mois = 30 jours
-                delta = timezone.timedelta(days=duration_value * 30)
+                delta = timezone.timedelta(days=30 * duration_value)
             else:
                 delta = timezone.timedelta()
 
             if delta <= timezone.timedelta():
-                self.add_error("duration_value", _("La durée doit être positive."))
+                self.add_error("duration_value", _("Duration must be positive."))
         else:
-            self.add_error("duration_value", _("La durée et son unité sont requises."))
+            self.add_error("duration_value", _("Duration and unit are required."))
 
         return cleaned_data
 
     def save(self, commit=True):
         instance = super().save(commit=False)
 
-        # Gérer max_tickets_per_user
         if instance.max_tickets_per_user == 0:
             instance.max_tickets_per_user = None
 
-        # Assigner la liste directement au champ JSONField
         instance.winners_distribution = self.cleaned_data.get("winners_distribution")
 
         if commit:

@@ -1,5 +1,3 @@
-# fortunaisk/forms/autolottery_forms.py
-
 # Standard Library
 import json
 import logging
@@ -21,20 +19,20 @@ logger = logging.getLogger(__name__)
 
 class AutoLotteryForm(forms.ModelForm):
     """
-    Formulaire pour créer ou éditer une AutoLottery (loterie récurrente).
+    Form to create or edit a recurring (auto) lottery.
     """
 
     winners_distribution = forms.CharField(
         widget=forms.HiddenInput(),
         required=True,
-        help_text=_("Liste des répartitions des gagnants en pourcentages (JSON)."),
+        help_text=_("List of winners' distribution percentages (JSON)."),
     )
 
     payment_receiver = forms.ModelChoiceField(
         queryset=EveCorporationInfo.objects.all(),
         required=False,
-        label=_("Receveur du Paiement (Corporation)"),
-        help_text=_("Choisissez la corporation qui recevra les paiements."),
+        label=_("Payment Receiver (Corporation)"),
+        help_text=_("Choose the corporation that will receive payments."),
         widget=forms.Select(attrs={"class": "form-select"}),
     )
 
@@ -54,7 +52,7 @@ class AutoLotteryForm(forms.ModelForm):
         ]
         widgets = {
             "name": forms.TextInput(
-                attrs={"class": "form-control", "placeholder": _("Nom de la loterie")}
+                attrs={"class": "form-control", "placeholder": _("Lottery name")}
             ),
             "frequency": forms.NumberInput(
                 attrs={
@@ -66,7 +64,7 @@ class AutoLotteryForm(forms.ModelForm):
             "frequency_unit": forms.Select(attrs={"class": "form-select"}),
             "ticket_price": forms.NumberInput(
                 attrs={
-                    "step": "1",  # Align with standard Lottery
+                    "step": "1",
                     "class": "form-control",
                     "placeholder": _("Ex. 100"),
                 }
@@ -90,7 +88,7 @@ class AutoLotteryForm(forms.ModelForm):
                 attrs={
                     "min": "1",
                     "class": "form-control",
-                    "placeholder": _("Illimité si laissé vide"),
+                    "placeholder": _("Leave blank for unlimited"),
                 }
             ),
         }
@@ -100,7 +98,7 @@ class AutoLotteryForm(forms.ModelForm):
         winner_count = self.cleaned_data.get("winner_count", 1)
 
         if not distribution_str:
-            raise ValidationError(_("La répartition des gagnants est requise."))
+            raise ValidationError(_("The winners distribution is required."))
 
         try:
             distribution_list = json.loads(distribution_str)
@@ -109,29 +107,25 @@ class AutoLotteryForm(forms.ModelForm):
             distribution_list = [int(x) for x in distribution_list]
         except (ValueError, TypeError, json.JSONDecodeError):
             raise ValidationError(
-                _(
-                    "Veuillez entrer des pourcentages valides en tant que liste JSON d'entiers."
-                )
+                _("Please provide valid percentages as a JSON list of integers.")
             )
 
         if len(distribution_list) != winner_count:
             raise ValidationError(
-                _("La répartition doit correspondre au nombre de gagnants.")
+                _("Distribution does not match the number of winners.")
             )
 
         total = sum(distribution_list)
         if total != 100:
-            raise ValidationError(_("La somme des pourcentages doit être égale à 100."))
+            raise ValidationError(_("The sum of percentages must be 100."))
 
-        # Ajout de logs pour débogage
-        logger.debug(f"Répartition des gagnants nettoyée: {distribution_list}")
-
+        logger.debug(f"AutoLottery distribution cleaned: {distribution_list}")
         return distribution_list
 
     def clean_max_tickets_per_user(self):
         max_tickets = self.cleaned_data.get("max_tickets_per_user")
         if max_tickets == 0:
-            return None  # Illimité
+            return None  # Unlimited
         return max_tickets
 
     def clean(self):
@@ -143,49 +137,47 @@ class AutoLotteryForm(forms.ModelForm):
         duration_unit = cleaned_data.get("duration_unit")
 
         if not name:
-            self.add_error("name", _("Le nom de la loterie est requis."))
+            self.add_error("name", _("Lottery name is required."))
 
+        # Check frequency
         if frequency and frequency_unit:
             if frequency < 1:
-                self.add_error("frequency", _("La fréquence doit être au moins de 1."))
+                self.add_error("frequency", _("Frequency must be >= 1."))
         else:
-            self.add_error("frequency", _("La fréquence et son unité sont requises."))
+            self.add_error("frequency", _("Frequency and its unit are required."))
 
+        # Check duration
         if duration_value and duration_unit:
             if duration_unit == "hours":
                 delta = timezone.timedelta(hours=duration_value)
             elif duration_unit == "days":
                 delta = timezone.timedelta(days=duration_value)
             elif duration_unit == "months":
-                # Approximation: 1 mois = 30 jours
-                delta = timezone.timedelta(days=duration_value * 30)
+                delta = timezone.timedelta(days=30 * duration_value)
             else:
                 delta = timezone.timedelta()
 
             if delta <= timezone.timedelta():
-                self.add_error("duration_value", _("La durée doit être positive."))
+                self.add_error("duration_value", _("Duration must be positive."))
         else:
-            self.add_error("duration_value", _("La durée et son unité sont requises."))
+            self.add_error("duration_value", _("Duration and its unit are required."))
 
         return cleaned_data
 
     def save(self, commit=True):
         instance = super().save(commit=False)
 
-        # Gérer max_tickets_per_user
         if instance.max_tickets_per_user == 0:
             instance.max_tickets_per_user = None
 
-        # S'assurer que winners_distribution est une liste de ints
+        # Ensure distribution is a list of ints
         if isinstance(instance.winners_distribution, str):
             try:
                 instance.winners_distribution = json.loads(
                     instance.winners_distribution
                 )
             except json.JSONDecodeError:
-                raise ValidationError(
-                    _("La répartition des gagnants est mal formatée.")
-                )
+                raise ValidationError(_("Invalid JSON distribution format."))
 
         if commit:
             instance.save()
