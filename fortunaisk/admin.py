@@ -1,3 +1,5 @@
+# fortunaisk/admin.py
+
 # Standard Library
 import csv
 import json
@@ -67,7 +69,6 @@ class LotteryAdmin(ExportCSVMixin, admin.ModelAdmin):
         "export_as_csv",
         "terminate_lottery",
     ]
-    # Removed from readonly_fields to allow editing:
     readonly_fields = (
         "id",
         "lottery_reference",
@@ -110,7 +111,7 @@ class LotteryAdmin(ExportCSVMixin, admin.ModelAdmin):
     ]
 
     def has_add_permission(self, request):
-        # We do not allow creation via the admin for standard lotteries
+        # Nous n'autorisons pas la création via l'admin pour les loteries standards
         return False
 
     def save_model(self, request, obj, form, change):
@@ -191,6 +192,14 @@ class LotteryAdmin(ExportCSVMixin, admin.ModelAdmin):
             level="warning",
         )
 
+    @admin.display(description="Number of Participants")
+    def participant_count(self, obj):
+        """
+        Affiche le nombre de participants dans la loterie.
+        """
+        count = obj.ticket_purchases.count()
+        return count
+
 
 @admin.register(TicketAnomaly)
 class TicketAnomalyAdmin(ExportCSVMixin, admin.ModelAdmin):
@@ -257,7 +266,6 @@ class AutoLotteryAdmin(ExportCSVMixin, admin.ModelAdmin):
     )
     search_fields = ("name",)
     actions = ["export_as_csv"]
-    # Previously it was readonly; we remove it so it can be edited:
     readonly_fields = ()
     fields = (
         "is_active",
@@ -293,7 +301,7 @@ class AutoLotteryAdmin(ExportCSVMixin, admin.ModelAdmin):
             if obj.is_active:
                 message = f"AutoLottery {obj.name} is now active."
 
-                # We create or update the periodic task
+                # Définir la période basée sur la fréquence et l'unité
                 if obj.frequency_unit == "minutes":
                     period = IntervalSchedule.MINUTES
                 elif obj.frequency_unit == "hours":
@@ -301,9 +309,9 @@ class AutoLotteryAdmin(ExportCSVMixin, admin.ModelAdmin):
                 elif obj.frequency_unit == "days":
                     period = IntervalSchedule.DAYS
                 else:
-                    # default fallback
+                    # fallback par défaut
                     period = IntervalSchedule.DAYS
-                interval, _ = IntervalSchedule.objects.get_or_create(
+                interval, created = IntervalSchedule.objects.get_or_create(
                     every=obj.frequency,
                     period=period,
                 )

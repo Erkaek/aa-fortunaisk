@@ -7,8 +7,9 @@ import logging
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from .models import TicketPurchase, Winner
-from .notifications import send_alliance_auth_notification
+# fortunaisk
+from fortunaisk.models import TicketPurchase, Winner
+from fortunaisk.notifications import send_alliance_auth_notification
 
 logger = logging.getLogger(__name__)
 
