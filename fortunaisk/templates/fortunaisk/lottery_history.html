@@ -23,15 +23,18 @@
             <label for="perPageSelect" class="me-2 fw-bold">
                 {% trans "Results per page" %}:
             </label>
-            <select id="perPageSelect" name="per_page" class="form-select w-auto me-2" onchange="this.form.submit()">
+            <select id="perPageSelect" name="per_page" class="form-select w-auto me-2"
+                    onchange="this.form.submit()">
                 {% comment %}
-                    On concatène "6", " 12", " 24", " 48" dans la chaîne,
-                    puis on "split" pour obtenir [6, 12, 24, 48].
-                    Filtre "split" défini dans my_filters.py
+                    On concatène "6", " 12", " 24", " 48"
+                    puis on "split" => [6,12,24,48].
+                    Filtre `split` défini dans my_filters.py
                 {% endcomment %}
                 {% for choice in "6"|add:" 12"|add:" 24"|add:" 48"|split:" " %}
                     <option value="{{ choice }}"
-                            {% if per_page == choice|stringformat:"s" %}selected{% endif %}>
+                            {% if per_page == choice|stringformat:"s" %}
+                                selected
+                            {% endif %}>
                         {{ choice }}
                     </option>
                 {% endfor %}
@@ -54,7 +57,6 @@
                         {{ lottery.lottery_reference }}
                     </h5>
                 </div>
-
                 <div class="card-body">
                     <p class="mb-2">
                         <strong>{% trans "Ticket Price" %}:</strong>
@@ -106,10 +108,12 @@
                                     {% for winner in winners_list %}
                                     <li>
                                         <i class="fas fa-crown text-warning me-1"></i>
-                                        <span class="fw-semibold">{{ winner.character.character_name }}</span>
-                                        <small class="text-muted">(
-                                            {{ winner.prize_amount|intcomma }} ISK
-                                        )</small>
+                                        <span class="fw-semibold">
+                                            {{ winner.character.character_name }}
+                                        </span>
+                                        <small class="text-muted">
+                                            ({{ winner.prize_amount|intcomma }} ISK)
+                                        </small>
                                     </li>
                                     {% endfor %}
                                 </ul>
@@ -122,12 +126,13 @@
                     </div>
                 </div>
 
-                <!-- Footer : bouton "Details" uniquement visible pour les admins -->
+                <!-- Footer : bouton "Details" (admins only) -->
                 {% if perms.fortunaisk.admin %}
                 <div class="card-footer text-end">
                     <a href="{% url 'fortunaisk:lottery_detail' lottery.id %}"
                         class="btn btn-sm btn-info">
-                        <i class="fas fa-eye"></i> {% trans "Details" %}
+                        <i class="fas fa-eye"></i>
+                        {% trans "Details" %}
                     </a>
                 </div>
                 {% endif %}
@@ -154,7 +159,9 @@
 
                 {% for num in page_obj.paginator.page_range %}
                     {% if page_obj.number == num %}
-                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
                     {% else %}
                         <li class="page-item">
                             <a class="page-link"
