@@ -17,16 +17,21 @@
         </p>
     </div>
 
+    <!-- Menu déroulant pour la pagination -->
     <div class="d-flex justify-content-end mb-3">
-        <!-- Results per page dropdown -->
         <form method="get" class="d-flex align-items-center">
             <label for="perPageSelect" class="me-2 fw-bold">
                 {% trans "Results per page" %}:
             </label>
             <select id="perPageSelect" name="per_page" class="form-select w-auto me-2" onchange="this.form.submit()">
-                {% for choice in 6|add:" 12"|add:" 24"|add:" 48"|split:" " %}
+                {% comment %}
+                    On concatène "6", " 12", " 24", " 48" dans la chaîne,
+                    puis on "split" pour obtenir [6, 12, 24, 48].
+                    Filtre "split" défini dans my_filters.py
+                {% endcomment %}
+                {% for choice in "6"|add:" 12"|add:" 24"|add:" 48"|split:" " %}
                     <option value="{{ choice }}"
-                        {% if per_page == choice|stringformat:"s" %}selected{% endif %}>
+                            {% if per_page == choice|stringformat:"s" %}selected{% endif %}>
                         {{ choice }}
                     </option>
                 {% endfor %}
@@ -45,9 +50,11 @@
             <div class="card shadow border-0" style="width: 22rem;">
                 <div class="card-header bg-secondary text-white">
                     <h5 class="mb-0">
-                        <i class="fas fa-ticket-alt me-2"></i> {{ lottery.lottery_reference }}
+                        <i class="fas fa-ticket-alt me-2"></i>
+                        {{ lottery.lottery_reference }}
                     </h5>
                 </div>
+
                 <div class="card-body">
                     <p class="mb-2">
                         <strong>{% trans "Ticket Price" %}:</strong>
@@ -114,7 +121,8 @@
                         {% endwith %}
                     </div>
                 </div>
-                <!-- Footer: Only show "Details" if user is admin -->
+
+                <!-- Footer : bouton "Details" uniquement visible pour les admins -->
                 {% if perms.fortunaisk.admin %}
                 <div class="card-footer text-end">
                     <a href="{% url 'fortunaisk:lottery_detail' lottery.id %}"
