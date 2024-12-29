@@ -154,10 +154,10 @@
         </div>
     </div>
 
-    <!-- Winners -->
+    <!-- Winners (Only show undistributed) -->
     <div class="row mb-4">
         <div class="col-md-12">
-            <h4>{% trans "Winners and Prizes" %}</h4>
+            <h4>{% trans "Winners and Prizes (Undistributed Only)" %}</h4>
             {% if winners %}
                 <div class="table-responsive">
                     <table class="table table-bordered table-hover">
@@ -173,28 +173,31 @@
                             </tr>
                         </thead>
                         <tbody>
+                            {% comment %}
+                                We only display winners where distributed=False,
+                                so we skip the row if distributed is True.
+                            {% endcomment %}
                             {% for winner in winners %}
-                            <tr>
-                                <td>{{ winner.ticket.lottery.lottery_reference }}</td>
-                                <td>{{ winner.ticket.user.username }}</td>
-                                <td>
-                                    {% if winner.character %}
-                                        {{ winner.character }}
-                                    {% else %}
-                                        N/A
-                                    {% endif %}
-                                </td>
-                                <td>{{ winner.prize_amount|floatformat:2 }}</td>
-                                <td>{{ winner.won_at|date:"Y-m-d H:i" }}</td>
-                                <td>
-                                    {% if winner.distributed %}
-                                        <span class="badge bg-success">{% trans "Yes" %}</span>
-                                    {% else %}
-                                        <span class="badge bg-warning">{% trans "No" %}</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if not winner.distributed %}
+                                {% if not winner.distributed %}
+                                <tr>
+                                    <td>{{ winner.ticket.lottery.lottery_reference }}</td>
+                                    <td>{{ winner.ticket.user.username }}</td>
+                                    <td>
+                                        {% if winner.character %}
+                                            {{ winner.character }}
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ winner.prize_amount|floatformat:2 }}</td>
+                                    <td>{{ winner.won_at|date:"Y-m-d H:i" }}</td>
+                                    <td>
+                                        <span class="badge bg-warning">
+                                            {% trans "No" %}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <!-- Distribute form -->
                                         <form action="{% url 'fortunaisk:distribute_prize' winner.id %}"
                                                 method="post"
                                                 style="display:inline;">
@@ -206,11 +209,9 @@
                                                 {% trans "Distribute Prize" %}
                                             </button>
                                         </form>
-                                    {% else %}
-                                        <span class="badge bg-success">{% trans "Distributed" %}</span>
-                                    {% endif %}
-                                </td>
-                            </tr>
+                                    </td>
+                                </tr>
+                                {% endif %}
                             {% endfor %}
                         </tbody>
                     </table>
