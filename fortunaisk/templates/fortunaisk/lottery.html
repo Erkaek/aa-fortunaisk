@@ -1,4 +1,3 @@
-<!-- fortunaisk/templates/fortunaisk/lottery.html -->
 {% extends "fortunaisk/base.html" %}
 {% load i18n %}
 
@@ -7,52 +6,111 @@
 {% endblock page_title %}
 
 {% block details %}
-<div class="text-center mt-4">
-    <h2 class="mb-4">{% trans "Current Lotteries" %}</h2>
+<div class="container mt-4">
+
+    <div class="text-center mb-4">
+        <h2 class="fw-bold">
+            <i class="fas fa-gamepad me-2 text-primary"></i>
+            {% trans "Current Lotteries" %}
+        </h2>
+        <p class="text-muted">
+            {% trans "Discover all currently active lotteries. Good luck!" %}
+        </p>
+    </div>
 
     {% if active_lotteries %}
     <div class="d-flex flex-wrap justify-content-center gap-4">
         {% for info in active_lotteries %}
         <div class="card shadow-lg" style="width: 22rem;">
             <div class="card-header bg-primary text-white">
-                <h5>{% trans "Lottery:" %} {{ info.lottery.lottery_reference }}</h5>
+                <h5 class="mb-0">
+                    <i class="fas fa-ticket-alt me-2"></i>
+                    {{ info.lottery.lottery_reference }}
+                </h5>
             </div>
             <div class="card-body">
-                <p><strong>{% trans "Start Date" %}:</strong> {{ info.lottery.start_date|date:"Y-m-d H:i" }}</p>
-                <p><strong>{% trans "End Date" %}:</strong> {{ info.lottery.end_date|date:"Y-m-d H:i" }}</p>
-                <p><strong>{% trans "Ticket Price" %}:</strong> {{ info.lottery.ticket_price }} ISK</p>
-                <p><strong>{% trans "Payment Receiver" %}:</strong> {{ info.corporation_name }}</p>
-                <p><strong>{% trans "Number of Winners" %}:</strong> {{ info.lottery.winner_count }}</p>
-                <p><strong>{% trans "Max Tickets/User" %}:</strong> {{ info.lottery.max_tickets_per_user }} ({% trans "You have" %} {{ info.user_ticket_count }})</p>
-                <hr>
-                <h5 class="mt-3">{% trans "How to Participate:" %}</h5>
-                <p>
-                    {{ info.instructions }}
-                    <span class="ms-1" data-bs-toggle="tooltip" title="{% trans 'Send the ISK in-game via a corp wallet specifying the reference in the reason.' %}">
-                        <i class="fas fa-question-circle"></i>
+                <p class="mb-2">
+                    <strong>{% trans "Start Date" %}:</strong>
+                    <i class="far fa-clock me-1"></i>
+                    {{ info.lottery.start_date|date:"Y-m-d H:i" }}
+                </p>
+                <p class="mb-2">
+                    <strong>{% trans "End Date" %}:</strong>
+                    <i class="far fa-clock me-1"></i>
+                    {{ info.lottery.end_date|date:"Y-m-d H:i" }}
+                </p>
+                <p class="mb-2">
+                    <strong>{% trans "Ticket Price" %}:</strong>
+                    <span class="text-warning fw-bold">
+                        {{ info.lottery.ticket_price }} ISK
                     </span>
                 </p>
-                <p><strong>{% trans "Do you have a ticket?" %}:</strong>
-                    {% if info.has_ticket %}
-                        <span class="badge bg-success">{% trans "Yes" %}</span>
-                    {% else %}
-                        <span class="badge bg-danger">{% trans "No" %}</span>
-                    {% endif %}
+                <p class="mb-2">
+                    <strong>{% trans "Payment Receiver" %}:</strong>
+                    <span class="text-primary fw-bold">
+                        {{ info.corporation_name }}
+                    </span>
                 </p>
+                <p class="mb-2">
+                    <strong>{% trans "Number of Winners" %}:</strong>
+                    <span class="badge bg-success">
+                        {{ info.lottery.winner_count }}
+                    </span>
+                </p>
+                <p class="mb-2">
+                    <strong>{% trans "Max Tickets/User" %}:</strong>
+                    {% if info.lottery.max_tickets_per_user %}
+                        {{ info.lottery.max_tickets_per_user }}
+                    {% else %}
+                        {% trans "Unlimited" %}
+                    {% endif %}
+                    <small class="text-muted">(
+                        {% trans "You have" %} {{ info.user_ticket_count }}
+                    )</small>
+                </p>
+                <hr>
+                <div class="mt-3">
+                    <h5 class="fw-bold">
+                        <i class="fas fa-question-circle text-info me-2"></i>
+                        {% trans "How to Participate" %}:
+                    </h5>
+                    <p>
+                        {{ info.instructions }}
+                        <span class="ms-1" data-bs-toggle="tooltip" title="{% trans 'Send the ISK in-game via a corp wallet specifying the reference in the reason.' %}">
+                            <i class="fas fa-info-circle"></i>
+                        </span>
+                    </p>
+                    <p>
+                        <strong>{% trans "Do you have a ticket" %}? </strong>
+                        {% if info.has_ticket %}
+                            <span class="badge bg-success ms-2">
+                                {% trans "Yes" %}
+                            </span>
+                        {% else %}
+                            <span class="badge bg-danger ms-2">
+                                {% trans "No" %}
+                            </span>
+                        {% endif %}
+                    </p>
+                </div>
             </div>
-            <div class="card-footer text-muted">
-                <small>{% trans "Good luck!" %}</small>
+            <div class="card-footer text-center text-muted">
+                <small>
+                    <i class="fas fa-hat-wizard me-1"></i>
+                    {% trans "Good luck!" %}
+                </small>
             </div>
         </div>
         {% endfor %}
     </div>
     {% else %}
-    <div class="alert alert-warning">
-        <i class="fas fa-exclamation-circle alert-icon"></i>
+    <div class="alert alert-warning text-center">
+        <i class="fas fa-exclamation-circle alert-icon me-2"></i>
         {% trans "No lottery is currently available." %}
     </div>
     {% endif %}
 </div>
+
 <script>
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {

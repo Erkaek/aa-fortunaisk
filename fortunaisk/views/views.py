@@ -321,34 +321,53 @@ def lottery(request):
 @permission_required("fortunaisk.admin", raise_exception=True)
 def winner_list(request):
     """
-    Lists all winners with pagination.
+    Lists all winners with pagination, plus a top-3 podium by prize_amount.
     """
+    # L'intégralité des winners, ordonnés par date de gain DESC
     winners_qs = Winner.objects.select_related(
         "ticket__user", "ticket__lottery", "character"
     ).order_by("-won_at")
+
+    # Top 3 par plus gros prize_amount
+    top_3 = Winner.objects.select_related(
+        "ticket__user", "ticket__lottery", "character"
+    ).order_by("-prize_amount")[:3]
+
+    # Pagination pour la table générale
     paginator = Paginator(winners_qs, 25)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
-    return render(request, "fortunaisk/winner_list.html", {"page_obj": page_obj})
+    context = {
+        "page_obj": page_obj,  # Les winners paginés
+        "top_3": top_3,  # Les 3 plus gros gains
+    }
+    return render(request, "fortunaisk/winner_list.html", context)
 
 
 @login_required
 @permission_required("fortunaisk.admin", raise_exception=True)
 def lottery_history(request):
     """
-    Lists all past lotteries (completed or cancelled).
+    Lists all past lotteries (completed or cancelled) with dynamic pagination.
     """
+    per_page = request.GET.get("per_page", 6)  # default 6
+    try:
+        per_page = int(per_page)
+    except ValueError:
+        per_page = 6
+
     past_lotteries_qs = Lottery.objects.exclude(status="active").order_by("-end_date")
-    paginator = Paginator(past_lotteries_qs, 6)
+    paginator = Paginator(past_lotteries_qs, per_page)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
-    return render(
-        request,
-        "fortunaisk/lottery_history.html",
-        {"past_lotteries": page_obj, "page_obj": page_obj},
-    )
+    context = {
+        "past_lotteries": page_obj,
+        "page_obj": page_obj,
+        "per_page": per_page,
+    }
+    return render(request, "fortunaisk/lottery_history.html", context)
 
 
 @login_required

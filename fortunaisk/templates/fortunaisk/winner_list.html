@@ -9,6 +9,8 @@
 
 {% block details %}
 <div class="container mt-4">
+
+    <!-- Titre principal -->
     <div class="text-center mb-4">
         <h2 class="fw-bold">
             <i class="fas fa-trophy text-warning me-2"></i>
@@ -19,109 +21,159 @@
         </p>
     </div>
 
+    <!-- Podium: Top 3 by prize_amount -->
+    {% if top_3 %}
+        <div class="mb-5">
+            <h3 class="text-center mb-3 fw-bold">
+                <i class="fas fa-medal me-2 text-warning"></i> Podium
+            </h3>
+            <div class="d-flex justify-content-center gap-4">
+                {% for top_winner in top_3 %}
+                <div class="card text-center border-0" style="width: 12rem;">
+                    <div class="card-body">
+                        {% if forloop.counter == 1 %}
+                            <!-- 1st place -->
+                            <i class="fas fa-award fa-3x text-warning"></i>
+                            <p class="mt-2 fw-bold text-warning">1st Place</p>
+                        {% elif forloop.counter == 2 %}
+                            <!-- 2nd place -->
+                            <i class="fas fa-medal fa-3x text-secondary"></i>
+                            <p class="mt-2 fw-bold text-secondary">2nd Place</p>
+                        {% else %}
+                            <!-- 3rd place -->
+                            <i class="fas fa-medal fa-3x" style="color:saddlebrown;"></i>
+                            <p class="mt-2 fw-bold" style="color:saddlebrown;">3rd Place</p>
+                        {% endif %}
+
+                        <hr>
+
+                        <p class="mb-1">
+                            <strong class="text-primary">
+                                {{ top_winner.ticket.user.username }}
+                            </strong>
+                        </p>
+                        <p class="small text-muted">
+                            {{ top_winner.character.character_name }}
+                        </p>
+                        <p class="fw-bold text-warning">
+                            {{ top_winner.prize_amount|floatformat:2 }} ISK
+                        </p>
+                        <span class="badge bg-info">
+                            {{ top_winner.ticket.lottery.lottery_reference }}
+                        </span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Message global -->
     {% if page_obj.object_list %}
-        <!-- Petite alerte "Congratulations" -->
         <div class="alert alert-success d-flex align-items-center" role="alert">
             <i class="fas fa-star me-2"></i>
             <div>
                 {% trans "Congratulations to all our winners! Keep participating for your chance to shine!" %}
             </div>
         </div>
+    {% endif %}
 
-        <div class="table-responsive">
-            <table class="table table-striped table-hover align-middle">
-                <thead class="table-dark">
-                    <tr>
-                        <th scope="col">
-                            <i class="fas fa-ticket-alt"></i> {% trans "Lottery Reference" %}
-                        </th>
-                        <th scope="col">
-                            <i class="fas fa-user"></i> {% trans "User" %}
-                        </th>
-                        <th scope="col">
-                            <i class="fas fa-portrait"></i> {% trans "Character" %}
-                        </th>
-                        <th scope="col">
-                            <i class="fas fa-coins"></i> {% trans "Prize Amount (ISK)" %}
-                        </th>
-                        <th scope="col">
-                            <i class="fas fa-calendar-check"></i> {% trans "Won At" %}
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for winner in page_obj.object_list %}
-                    <tr>
-                        <td>
-                            <span class="badge bg-primary me-1">
-                                <i class="fas fa-ticket-alt"></i>
-                            </span>
-                            {{ winner.ticket.lottery.lottery_reference }}
-                        </td>
-                        <td class="fw-bold text-primary">
-                            {{ winner.ticket.user.username }}
-                        </td>
-                        <td>
-                            <span class="badge bg-info text-dark">
-                                {{ winner.character.character_name }}
-                            </span>
-                        </td>
-                        <td>
-                            <span class="text-warning fw-bold">
-                                {{ winner.prize_amount|floatformat:2 }} ISK
-                            </span>
-                        </td>
-                        <td>
-                            <i class="far fa-clock text-secondary me-1"></i>
-                            {{ winner.won_at|date:"Y-m-d H:i" }}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Pagination -->
-        <nav aria-label="Page navigation" class="my-3">
-            <ul class="pagination justify-content-center">
-                {% if page_obj.has_previous %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
-                        <span aria-hidden="true">&laquo;</span>
-                    </a>
-                </li>
-                {% else %}
-                <li class="page-item disabled">
-                    <span class="page-link" aria-hidden="true">&laquo;</span>
-                </li>
-                {% endif %}
-
-                {% for num in page_obj.paginator.page_range %}
-                    {% if page_obj.number == num %}
-                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
-                    {% else %}
-                        <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
-                    {% endif %}
+    <!-- Table paginée pour tous les autres winners -->
+    {% if page_obj.object_list %}
+    <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th scope="col">
+                        <i class="fas fa-ticket-alt"></i> {% trans "Lottery Reference" %}
+                    </th>
+                    <th scope="col">
+                        <i class="fas fa-user"></i> {% trans "User" %}
+                    </th>
+                    <th scope="col">
+                        <i class="fas fa-portrait"></i> {% trans "Character" %}
+                    </th>
+                    <th scope="col">
+                        <i class="fas fa-coins"></i> {% trans "Prize Amount (ISK)" %}
+                    </th>
+                    <th scope="col">
+                        <i class="fas fa-calendar-check"></i> {% trans "Won At" %}
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for winner in page_obj.object_list %}
+                <tr>
+                    <td>
+                        <span class="badge bg-primary me-1">
+                            <i class="fas fa-ticket-alt"></i>
+                        </span>
+                        {{ winner.ticket.lottery.lottery_reference }}
+                    </td>
+                    <td class="fw-bold text-primary">
+                        {{ winner.ticket.user.username }}
+                    </td>
+                    <td>
+                        <span class="badge bg-info text-dark">
+                            {{ winner.character.character_name }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="text-warning fw-bold">
+                            {{ winner.prize_amount|floatformat:2 }} ISK
+                        </span>
+                    </td>
+                    <td>
+                        <i class="far fa-clock text-secondary me-1"></i>
+                        {{ winner.won_at|date:"Y-m-d H:i" }}
+                    </td>
+                </tr>
                 {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
-                {% if page_obj.has_next %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
-                        <span aria-hidden="true">&raquo;</span>
-                    </a>
-                </li>
+    <!-- Pagination -->
+    <nav aria-label="Page navigation" class="my-3">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link" aria-hidden="true">&laquo;</span>
+            </li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
                 {% else %}
-                <li class="page-item disabled">
-                    <span class="page-link" aria-hidden="true">&raquo;</span>
-                </li>
+                    <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
                 {% endif %}
-            </ul>
-        </nav>
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link" aria-hidden="true">&raquo;</span>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
     {% else %}
-        <div class="alert alert-info text-center">
-            <i class="fas fa-info-circle alert-icon me-2"></i>
-            {% trans "No winners found." %}
-        </div>
+    <div class="alert alert-info text-center">
+        <i class="fas fa-info-circle alert-icon me-2"></i>
+        {% trans "No winners found." %}
+    </div>
     {% endif %}
 </div>
 {% endblock details %}
