@@ -97,6 +97,9 @@ def admin_dashboard(request):
     # Automatic Lotteries
     autolotteries = AutoLottery.objects.all()
 
+    # Dernières Anomalies
+    latest_anomalies = anomalies[:5]  # Afficher les 5 dernières anomalies
+
     context = {
         "active_lotteries": active_lotteries,
         "winners": winners,
@@ -108,6 +111,7 @@ def admin_dashboard(request):
         "top_users_anomalies": top_users_anomalies,
         "top_active_users": top_active_users,
         "autolotteries": autolotteries,  # integrated from old auto_lottery_list
+        "latest_anomalies": latest_anomalies,  # Ajout des dernières anomalies
     }
     return render(request, "fortunaisk/admin.html", context)
 

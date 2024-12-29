@@ -13,6 +13,9 @@ from django.db import transaction
 from django.db.models import Sum
 from django.utils import timezone
 
+# fortunaisk
+from fortunaisk.notifications import send_alliance_auth_notification
+
 logger = logging.getLogger(__name__)
 
 
@@ -71,6 +74,7 @@ def check_purchased_tickets(self):
                     lottery_reference = payment_locked.reason.strip().lower()
                     amount = payment_locked.amount
                     payment_id = payment_locked.entry_id
+                    payment_date = payment_locked.date
 
                     logger.debug(
                         f"Extracted payment ID {payment_id}: lottery_reference='{lottery_reference}', amount={amount}"
@@ -92,7 +96,7 @@ def check_purchased_tickets(self):
                         TicketAnomaly.objects.create(
                             lottery=None,
                             reason=f"No active lottery found for reference '{lottery_reference}'.",
-                            payment_date=payment_locked.date,
+                            payment_date=payment_date,
                             amount=amount,
                             payment_id=payment_id,
                         )
@@ -103,7 +107,53 @@ def check_purchased_tickets(self):
                         )
                         continue
 
-                    # Step 3: Find the user and main character
+                    # Step 3: Check if the payment date is within the lottery period
+                    if not (lottery.start_date <= payment_date <= lottery.end_date):
+                        logger.warning(
+                            f"Payment date {payment_date} is outside the lottery period "
+                            f"({lottery.start_date} - {lottery.end_date}) for lottery '{lottery.lottery_reference}'."
+                        )
+                        # Record an anomaly
+                        TicketAnomaly.objects.create(
+                            lottery=lottery,
+                            user=None,
+                            character=None,
+                            reason=f"Payment date {payment_date} is outside the lottery period.",
+                            payment_date=payment_date,
+                            amount=amount,
+                            payment_id=payment_id,
+                        )
+                        # Mark the payment as processed
+                        ProcessedPayment.objects.create(payment_id=payment_id)
+                        logger.info(
+                            f"Payment ID {payment_id} marked as processed due to date mismatch."
+                        )
+                        continue
+
+                    # Step 4: Check if the payment amount matches the lottery's ticket price
+                    if amount != lottery.ticket_price:
+                        logger.warning(
+                            f"Payment amount {amount} ISK does not match the ticket price "
+                            f"{lottery.ticket_price} ISK for lottery '{lottery.lottery_reference}'."
+                        )
+                        # Record an anomaly
+                        TicketAnomaly.objects.create(
+                            lottery=lottery,
+                            user=None,
+                            character=None,
+                            reason=f"Payment amount {amount} ISK does not match the ticket price {lottery.ticket_price} ISK.",
+                            payment_date=payment_date,
+                            amount=amount,
+                            payment_id=payment_id,
+                        )
+                        # Mark the payment as processed
+                        ProcessedPayment.objects.create(payment_id=payment_id)
+                        logger.info(
+                            f"Payment ID {payment_id} marked as processed due to incorrect amount."
+                        )
+                        continue
+
+                    # Step 5: Find the user and main character
                     try:
                         logger.debug(
                             f"Looking up EveCharacter with character_id={payment_locked.first_party_name_id}."
@@ -152,7 +202,7 @@ def check_purchased_tickets(self):
                         TicketAnomaly.objects.create(
                             lottery=lottery,
                             reason="EveCharacter does not exist",
-                            payment_date=payment_locked.date,
+                            payment_date=payment_date,
                             amount=amount,
                             payment_id=payment_id,
                         )
@@ -172,7 +222,7 @@ def check_purchased_tickets(self):
                             user=None,
                             character=eve_character,
                             reason="CharacterOwnership does not exist",
-                            payment_date=payment_locked.date,
+                            payment_date=payment_date,
                             amount=amount,
                             payment_id=payment_id,
                         )
@@ -192,7 +242,7 @@ def check_purchased_tickets(self):
                             user=None,
                             character=eve_character,
                             reason="UserProfile does not exist",
-                            payment_date=payment_locked.date,
+                            payment_date=payment_date,
                             amount=amount,
                             payment_id=payment_id,
                         )
@@ -203,7 +253,7 @@ def check_purchased_tickets(self):
                         )
                         continue
 
-                    # Step 4: Check the number of tickets the user has (grouped by main character)
+                    # Step 6: Check the number of tickets the user has (grouped by main character)
                     lottery_max_tickets = lottery.max_tickets_per_user
                     if lottery_max_tickets:
                         user_ticket_count = TicketPurchase.objects.filter(
@@ -226,7 +276,7 @@ def check_purchased_tickets(self):
                                 user=user,
                                 character=eve_character,
                                 reason="Max tickets per user exceeded",
-                                payment_date=payment_locked.date,
+                                payment_date=payment_date,
                                 amount=amount,
                                 payment_id=payment_id,
                             )
@@ -235,9 +285,20 @@ def check_purchased_tickets(self):
                             logger.info(
                                 f"Payment ID {payment_id} marked as processed due to ticket limit exceeded."
                             )
+                            # Notifier l'utilisateur de l'anomalie
+                            send_alliance_auth_notification(
+                                user=user,
+                                title="Limite de Tickets Atteinte",
+                                message=(
+                                    f"Bonjour {user.username},\n\n"
+                                    f"Vous avez atteint le nombre maximum de tickets ({lottery_max_tickets}) pour la loterie '{lottery.lottery_reference}'. "
+                                    f"Votre paiement de {amount} ISK n'a pas pu être traité."
+                                ),
+                                level="warning",
+                            )
                             continue
 
-                    # Step 5: Create a TicketPurchase entry
+                    # Step 7: Create a TicketPurchase entry
                     ticket_purchase = TicketPurchase.objects.create(
                         lottery=lottery,
                         user=user,
@@ -263,7 +324,7 @@ def check_purchased_tickets(self):
                         f"Updated lottery '{lottery.lottery_reference}': total_pot updated."
                     )
 
-                    # Step 6: Mark the payment as processed by creating a ProcessedPayment entry
+                    # Step 8: Mark the payment as processed by creating a ProcessedPayment entry
                     ProcessedPayment.objects.create(payment_id=payment_id)
                     logger.info(
                         f"Payment ID {payment_id} marked as processed successfully."
@@ -315,10 +376,10 @@ def check_lottery_status(self):
                     f"Rechecking tickets for lottery '{lottery.lottery_reference}'."
                 )
 
-                # Here, add any specific ticket checks if needed
-                # For example, verify if the amount corresponds to a valid ticket
+                # Ici, ajoutez des vérifications spécifiques des tickets si nécessaire
+                # Par exemple, vérifier si le montant correspond à un ticket valide
 
-                # Close the lottery
+                # Fermer la loterie
                 lottery.complete_lottery()
                 logger.info(
                     f"Lottery '{lottery.lottery_reference}' (ID {lottery.id}) successfully closed."
