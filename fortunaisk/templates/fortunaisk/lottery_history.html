@@ -30,7 +30,7 @@
                     puis on "split" => [6,12,24,48].
                     Filtre `split` défini dans my_filters.py
                 {% endcomment %}
-                {% for choice in "6"|add:" 12"|add:" 24"|add:" 48"|split:" " %}
+                {% for choice in "6 12 24 48"|split:" " %}
                     <option value="{{ choice }}"
                             {% if per_page == choice|stringformat:"s" %}
                                 selected
