@@ -473,3 +473,24 @@ def terminate_lottery(request, lottery_id):
     return render(
         request, "fortunaisk/terminate_lottery_confirm.html", {"lottery": lottery_obj}
     )
+
+
+@login_required
+@permission_required("fortunaisk.admin", raise_exception=True)
+def anomalies_list(request):
+    """
+    Lists all anomalies, optionally with pagination.
+    """
+    anomalies_qs = TicketAnomaly.objects.select_related(
+        "lottery", "user", "character"
+    ).order_by("-recorded_at")
+
+    # Pagination
+    paginator = Paginator(anomalies_qs, 25)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        "page_obj": page_obj,
+    }
+    return render(request, "fortunaisk/anomalies_list.html", context)

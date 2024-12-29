@@ -1,10 +1,14 @@
 # fortunaisk/signals/ticket_signals.py
 
+# Standard Library
+import logging
+
+# Django
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+
 from .models import TicketPurchase, Winner
 from .notifications import send_alliance_auth_notification
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -23,9 +27,14 @@ def notify_ticket_purchase(sender, instance, created, **kwargs):
                 ),
                 level="info",
             )
-            logger.info(f"Ticket purchase notification sent to {instance.user.username}.")
+            logger.info(
+                f"Ticket purchase notification sent to {instance.user.username}."
+            )
         except Exception as e:
-            logger.error(f"Failed to send ticket purchase notification to {instance.user.username}: {e}", exc_info=True)
+            logger.error(
+                f"Failed to send ticket purchase notification to {instance.user.username}: {e}",
+                exc_info=True,
+            )
 
 
 @receiver(post_save, sender=Winner)
@@ -45,4 +54,7 @@ def notify_winner(sender, instance, created, **kwargs):
             )
             logger.info(f"Winner notification sent to {instance.ticket.user.username}.")
         except Exception as e:
-            logger.error(f"Failed to send winner notification to {instance.ticket.user.username}: {e}", exc_info=True)
+            logger.error(
+                f"Failed to send winner notification to {instance.ticket.user.username}: {e}",
+                exc_info=True,
+            )
