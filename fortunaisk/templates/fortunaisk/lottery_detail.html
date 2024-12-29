@@ -18,7 +18,7 @@
                 method="post" style="display:inline;">
             {% csrf_token %}
             <button type="submit" class="btn btn-sm btn-danger"
-                onclick="return confirm('{% trans "Are you sure you want to terminate this lottery prematurely?" %}');">
+                    onclick="return confirm('{% trans "Are you sure you want to terminate this lottery prematurely?" %}');">
                 <i class="fas fa-stop-circle"></i>
                 {% trans "Terminate" %}
             </button>
@@ -107,7 +107,7 @@
                         {{ percentage }}{% if not forloop.last %}, {% endif %}
                     {% endfor %}
                 </li>
-                <!-- Number of Participants (just a quick reference) -->
+                <!-- Number of Participants -->
                 <li class="list-group-item">
                     <strong>{% trans "Number of Participants" %}:</strong>
                     {{ lottery.ticket_purchases.count }}

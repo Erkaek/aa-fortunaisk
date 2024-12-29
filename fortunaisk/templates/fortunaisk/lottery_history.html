@@ -17,7 +17,7 @@
         </p>
     </div>
 
-    <!-- Menu déroulant pour la pagination -->
+    <!-- Results per page dropdown -->
     <div class="d-flex justify-content-end mb-3">
         <form method="get" class="d-flex align-items-center">
             <label for="perPageSelect" class="me-2 fw-bold">
@@ -25,11 +25,6 @@
             </label>
             <select id="perPageSelect" name="per_page" class="form-select w-auto me-2"
                     onchange="this.form.submit()">
-                {% comment %}
-                    On concatène "6", " 12", " 24", " 48"
-                    puis on "split" => [6,12,24,48].
-                    Filtre `split` défini dans my_filters.py
-                {% endcomment %}
                 {% for choice in "6 12 24 48"|split:" " %}
                     <option value="{{ choice }}"
                             {% if per_page == choice|stringformat:"s" %}
@@ -126,7 +121,6 @@
                     </div>
                 </div>
 
-                <!-- Footer : bouton "Details" (admins only) -->
                 {% if perms.fortunaisk.admin %}
                 <div class="card-footer text-end">
                     <a href="{% url 'fortunaisk:lottery_detail' lottery.id %}"

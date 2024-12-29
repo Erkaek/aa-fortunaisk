@@ -1,9 +1,5 @@
-<!-- fortunaisk/templates/fortunaisk/terminate_lottery_confirm.html -->
 {% extends "fortunaisk/base.html" %}
-{% load i18n %}
-{% load humanize %}
-{% load fortunaisk_tags %}
-{% load static %}
+{% load i18n humanize fortunaisk_tags static %}
 
 {% block page_title %}
     {% trans "Terminate Lottery" %}
@@ -11,16 +7,24 @@
 
 {% block details %}
 <div class="container mt-4">
-    <h2 class="text-center mb-4">{% trans "Terminate Lottery" %}: {{ lottery.lottery_reference }}</h2>
+    <h2 class="text-center mb-4">
+        {% trans "Terminate Lottery" %}: {{ lottery.lottery_reference }}
+    </h2>
 
     <div class="alert alert-danger">
-        <p>{% trans "Are you sure you want to terminate this lottery prematurely? This action cannot be undone." %}</p>
+        <p>
+            {% trans "Are you sure you want to terminate this lottery prematurely? This action cannot be undone." %}
+        </p>
     </div>
 
     <form method="post">
         {% csrf_token %}
-        <button type="submit" class="btn btn-danger">{% trans "Yes, Terminate" %}</button>
-        <a href="{% url 'fortunaisk:admin_dashboard' %}" class="btn btn-secondary">{% trans "Cancel" %}</a>
+        <button type="submit" class="btn btn-danger">
+            {% trans "Yes, Terminate" %}
+        </button>
+        <a href="{% url 'fortunaisk:admin_dashboard' %}" class="btn btn-secondary">
+            {% trans "Cancel" %}
+        </a>
     </form>
 </div>
 {% endblock details %}

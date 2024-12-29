@@ -1,8 +1,5 @@
-<!-- fortunaisk/templates/fortunaisk/user_dashboard.html -->
 {% extends "fortunaisk/base.html" %}
-{% load i18n %}
-{% load humanize %}
-{% load fortunaisk_tags %}
+{% load i18n humanize fortunaisk_tags %}
 
 {% block page_title %}
     {% trans "My Dashboard" %}
@@ -11,19 +8,35 @@
 {% block details %}
 <div class="container mt-4">
     <h2 class="text-center mb-4">{% trans "My Dashboard" %}</h2>
+
     <h3 class="mb-3">{% trans "My Ticket Purchases" %}</h3>
     {% if ticket_purchases %}
     <div class="d-flex flex-wrap justify-content-center gap-4 mb-4">
         {% for purchase in ticket_purchases %}
         <div class="card shadow" style="width: 20rem;">
             <div class="card-header bg-info text-white">
-                <h5 class="mb-0"><i class="fas fa-ticket-alt"></i> {% trans "Ticket" %}</h5>
+                <h5 class="mb-0">
+                    <i class="fas fa-ticket-alt"></i>
+                    {% trans "Ticket" %}
+                </h5>
             </div>
             <div class="card-body">
-                <p><strong>{% trans "Lottery Reference" %}:</strong> {{ purchase.lottery.lottery_reference }}</p>
-                <p><strong>{% trans "Character" %}:</strong> {{ purchase.character.character_name }}</p>
-                <p><strong>{% trans "Amount" %}:</strong> {{ purchase.amount|floatformat:2 }} ISK</p>
-                <p><strong>{% trans "Date" %}:</strong> {{ purchase.purchase_date|date:"Y-m-d H:i" }}</p>
+                <p>
+                    <strong>{% trans "Lottery Reference" %}:</strong>
+                    {{ purchase.lottery.lottery_reference }}
+                </p>
+                <p>
+                    <strong>{% trans "Character" %}:</strong>
+                    {{ purchase.character.character_name }}
+                </p>
+                <p>
+                    <strong>{% trans "Amount" %}:</strong>
+                    {{ purchase.amount|floatformat:2 }} ISK
+                </p>
+                <p>
+                    <strong>{% trans "Date" %}:</strong>
+                    {{ purchase.purchase_date|date:"Y-m-d H:i" }}
+                </p>
             </div>
         </div>
         {% endfor %}
@@ -41,13 +54,28 @@
         {% for win in winnings %}
         <div class="card shadow" style="width: 20rem;">
             <div class="card-header bg-success text-white">
-                <h5 class="mb-0"><i class="fas fa-trophy"></i> {% trans "Winner" %}</h5>
+                <h5 class="mb-0">
+                    <i class="fas fa-trophy"></i>
+                    {% trans "Winner" %}
+                </h5>
             </div>
             <div class="card-body">
-                <p><strong>{% trans "Lottery Reference" %}:</strong> {{ win.ticket.lottery.lottery_reference }}</p>
-                <p><strong>{% trans "Character" %}:</strong> {{ win.character.character_name }}</p>
-                <p><strong>{% trans "Win Date" %}:</strong> {{ win.won_at|date:"Y-m-d H:i" }}</p>
-                <p><strong>{% trans "Prize" %}:</strong> {{ win.prize_amount|floatformat:2 }} ISK</p>
+                <p>
+                    <strong>{% trans "Lottery Reference" %}:</strong>
+                    {{ win.ticket.lottery.lottery_reference }}
+                </p>
+                <p>
+                    <strong>{% trans "Character" %}:</strong>
+                    {{ win.character.character_name }}
+                </p>
+                <p>
+                    <strong>{% trans "Win Date" %}:</strong>
+                    {{ win.won_at|date:"Y-m-d H:i" }}
+                </p>
+                <p>
+                    <strong>{% trans "Prize" %}:</strong>
+                    {{ win.prize_amount|floatformat:2 }} ISK
+                </p>
             </div>
         </div>
         {% endfor %}

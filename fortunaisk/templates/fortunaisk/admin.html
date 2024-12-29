@@ -2,12 +2,12 @@
 {% load i18n humanize fortunaisk_tags static %}
 
 {% block page_title %}
-    Admin Dashboard
+    {% trans "Admin Dashboard" %}
 {% endblock page_title %}
 
 {% block details %}
 <div class="container mt-4">
-    <h2 class="text-center mb-4">Admin Dashboard</h2>
+    <h2 class="text-center mb-4">{% trans "Admin Dashboard" %}</h2>
 
     <!-- Statistics Cards -->
     <div class="row mb-4">
@@ -15,7 +15,7 @@
         <div class="col-md-3">
             <div class="card text-white bg-primary mb-3">
                 <div class="card-header">
-                    <i class="fas fa-ticket-alt me-1"></i> Total Lotteries
+                    <i class="fas fa-ticket-alt me-1"></i> {% trans "Total Lotteries" %}
                 </div>
                 <div class="card-body">
                     <h5 class="card-title">
@@ -28,7 +28,7 @@
         <div class="col-md-3">
             <div class="card text-white bg-success mb-3">
                 <div class="card-header">
-                    <i class="fas fa-coins me-1"></i> Total Tickets
+                    <i class="fas fa-coins me-1"></i> {% trans "Total Tickets" %}
                 </div>
                 <div class="card-body">
                     <h5 class="card-title">
@@ -40,8 +40,8 @@
         <!-- Total Anomalies (clickable) -->
         <div class="col-md-3">
             <a href="{% url 'fortunaisk:anomalies_list' %}"
-            class="text-decoration-none"
-            style="color: inherit;">
+                class="text-decoration-none"
+                style="color: inherit;">
                 <div class="card text-white
                     {% if stats.total_anomalies > 0 %}
                         bg-danger
@@ -53,9 +53,9 @@
                     <div class="card-header d-flex align-items-center justify-content-between">
                         <span>
                             <i class="fas fa-exclamation-triangle me-1"></i>
-                            Total Anomalies
+                            {% trans "Total Anomalies" %}
                         </span>
-                        <!-- Petit indicateur d'état -->
+                        <!-- Small indicator -->
                         {% if stats.total_anomalies > 0 %}
                             <span class="badge bg-light text-dark">
                                 {% trans "Unresolved" %}
@@ -87,7 +87,7 @@
         <div class="col-md-3">
             <div class="card text-white bg-danger mb-3">
                 <div class="card-header">
-                    <i class="fas fa-users me-1"></i> Average Participation
+                    <i class="fas fa-users me-1"></i> {% trans "Average Participation" %}
                 </div>
                 <div class="card-body">
                     <h5 class="card-title">
@@ -101,18 +101,18 @@
     <!-- Active Lotteries -->
     <div class="row mb-4">
         <div class="col-md-12">
-            <h4>Active Lotteries</h4>
+            <h4>{% trans "Active Lotteries" %}</h4>
             {% if active_lotteries %}
                 <div class="table-responsive">
                     <table class="table table-striped table-hover">
                         <thead class="table-dark">
                             <tr>
-                                <th scope="col">Reference</th>
-                                <th scope="col">Status</th>
-                                <th scope="col">Ticket Price (ISK)</th>
-                                <th scope="col">Total Pot (ISK)</th>
-                                <th scope="col">Participants</th>
-                                <th scope="col">Actions</th>
+                                <th scope="col">{% trans "Reference" %}</th>
+                                <th scope="col">{% trans "Status" %}</th>
+                                <th scope="col">{% trans "Ticket Price (ISK)" %}</th>
+                                <th scope="col">{% trans "Total Pot (ISK)" %}</th>
+                                <th scope="col">{% trans "Participants" %}</th>
+                                <th scope="col">{% trans "Actions" %}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -121,11 +121,11 @@
                                 <td>{{ lottery.lottery_reference }}</td>
                                 <td>
                                     {% if lottery.status == "active" %}
-                                        <span class="badge bg-success">Active</span>
+                                        <span class="badge bg-success">{% trans "Active" %}</span>
                                     {% elif lottery.status == "completed" %}
-                                        <span class="badge bg-secondary">Completed</span>
+                                        <span class="badge bg-secondary">{% trans "Completed" %}</span>
                                     {% elif lottery.status == "cancelled" %}
-                                        <span class="badge bg-danger">Cancelled</span>
+                                        <span class="badge bg-danger">{% trans "Cancelled" %}</span>
                                     {% else %}
                                         {{ lottery.status }}
                                     {% endif %}
@@ -137,7 +137,7 @@
                                     <a href="{% url 'fortunaisk:lottery_detail' lottery.id %}"
                                         class="btn btn-sm btn-info">
                                         <i class="fas fa-chart-pie"></i>
-                                        Dashboard
+                                        {% trans "Dashboard" %}
                                     </a>
                                 </td>
                             </tr>
@@ -148,7 +148,7 @@
             {% else %}
                 <div class="alert alert-info text-center">
                     <i class="fas fa-info-circle alert-icon"></i>
-                    No active lotteries found.
+                    {% trans "No active lotteries found." %}
                 </div>
             {% endif %}
         </div>
@@ -157,19 +157,19 @@
     <!-- Winners -->
     <div class="row mb-4">
         <div class="col-md-12">
-            <h4>Winners and Prizes</h4>
+            <h4>{% trans "Winners and Prizes" %}</h4>
             {% if winners %}
                 <div class="table-responsive">
                     <table class="table table-bordered table-hover">
                         <thead class="table-success">
                             <tr>
-                                <th scope="col">Lottery Reference</th>
-                                <th scope="col">User</th>
-                                <th scope="col">Character</th>
-                                <th scope="col">Prize Amount (ISK)</th>
-                                <th scope="col">Won At</th>
-                                <th scope="col">Distributed</th>
-                                <th scope="col">Actions</th>
+                                <th scope="col">{% trans "Lottery Reference" %}</th>
+                                <th scope="col">{% trans "User" %}</th>
+                                <th scope="col">{% trans "Character" %}</th>
+                                <th scope="col">{% trans "Prize Amount (ISK)" %}</th>
+                                <th scope="col">{% trans "Won At" %}</th>
+                                <th scope="col">{% trans "Distributed" %}</th>
+                                <th scope="col">{% trans "Actions" %}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -188,9 +188,9 @@
                                 <td>{{ winner.won_at|date:"Y-m-d H:i" }}</td>
                                 <td>
                                     {% if winner.distributed %}
-                                        <span class="badge bg-success">Yes</span>
+                                        <span class="badge bg-success">{% trans "Yes" %}</span>
                                     {% else %}
-                                        <span class="badge bg-warning">No</span>
+                                        <span class="badge bg-warning">{% trans "No" %}</span>
                                     {% endif %}
                                 </td>
                                 <td>
@@ -201,13 +201,13 @@
                                             {% csrf_token %}
                                             <button type="submit"
                                                     class="btn btn-sm btn-primary"
-                                                    onclick="return confirm('Have you distributed the prize to this winner?');">
+                                                    onclick="return confirm('{% trans "Have you distributed the prize to this winner?" %}');">
                                                 <i class="fas fa-hand-holding-usd"></i>
-                                                Distribute Prize
+                                                {% trans "Distribute Prize" %}
                                             </button>
                                         </form>
                                     {% else %}
-                                        <span class="badge bg-success">Distributed</span>
+                                        <span class="badge bg-success">{% trans "Distributed" %}</span>
                                     {% endif %}
                                 </td>
                             </tr>
@@ -218,7 +218,7 @@
             {% else %}
                 <div class="alert alert-info text-center">
                     <i class="fas fa-info-circle alert-icon"></i>
-                    No winners recorded yet.
+                    {% trans "No winners recorded yet." %}
                 </div>
             {% endif %}
         </div>
@@ -227,17 +227,17 @@
     <!-- Automatic Lotteries -->
     <div class="row mb-4">
         <div class="col-md-12">
-            <h4>Automatic Lotteries</h4>
+            <h4>{% trans "Automatic Lotteries" %}</h4>
             <div class="d-flex justify-content-end mb-3">
                 <a href="{% url 'fortunaisk:lottery_create' %}"
                     class="btn btn-primary me-2">
                     <i class="fas fa-plus-circle"></i>
-                    Create Lottery
+                    {% trans "Create Lottery" %}
                 </a>
                 <a href="{% url 'fortunaisk:auto_lottery_create' %}"
                     class="btn btn-success">
                     <i class="fas fa-sync"></i>
-                    Create Automatic Lottery
+                    {% trans "Create Automatic Lottery" %}
                 </a>
             </div>
             {% if autolotteries %}
@@ -245,14 +245,14 @@
                     <table class="table table-striped table-hover">
                         <thead class="table-dark">
                             <tr>
-                                <th scope="col">Name</th>
-                                <th scope="col">Frequency</th>
-                                <th scope="col">Ticket Price (ISK)</th>
-                                <th scope="col">Duration</th>
-                                <th scope="col">Payment Receiver</th>
-                                <th scope="col">Number of Winners</th>
-                                <th scope="col">Is Active</th>
-                                <th scope="col">Actions</th>
+                                <th scope="col">{% trans "Name" %}</th>
+                                <th scope="col">{% trans "Frequency" %}</th>
+                                <th scope="col">{% trans "Ticket Price (ISK)" %}</th>
+                                <th scope="col">{% trans "Duration" %}</th>
+                                <th scope="col">{% trans "Payment Receiver" %}</th>
+                                <th scope="col">{% trans "Number of Winners" %}</th>
+                                <th scope="col">{% trans "Is Active" %}</th>
+                                <th scope="col">{% trans "Actions" %}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -272,27 +272,27 @@
                                     {% if autolottery.payment_receiver %}
                                         {{ autolottery.payment_receiver.corporation_name }}
                                     {% else %}
-                                        Unknown Corporation
+                                        {% trans "Unknown Corporation" %}
                                     {% endif %}
                                 </td>
                                 <td>{{ autolottery.winner_count }}</td>
                                 <td>
                                     {% if autolottery.is_active %}
-                                        <span class="badge bg-success">Yes</span>
+                                        <span class="badge bg-success">{% trans "Yes" %}</span>
                                     {% else %}
-                                        <span class="badge bg-secondary">No</span>
+                                        <span class="badge bg-secondary">{% trans "No" %}</span>
                                     {% endif %}
                                 </td>
                                 <td>
                                     <a href="{% url 'fortunaisk:auto_lottery_edit' autolottery.id %}"
                                         class="btn btn-sm btn-warning">
                                         <i class="fas fa-edit"></i>
-                                        Edit
+                                        {% trans "Edit" %}
                                     </a>
                                     <a href="{% url 'fortunaisk:auto_lottery_delete' autolottery.id %}"
                                         class="btn btn-sm btn-danger">
                                         <i class="fas fa-trash"></i>
-                                        Delete
+                                        {% trans "Delete" %}
                                     </a>
                                 </td>
                             </tr>
@@ -303,7 +303,7 @@
             {% else %}
                 <div class="alert alert-info text-center">
                     <i class="fas fa-info-circle"></i>
-                    No automatic lotteries found.
+                    {% trans "No automatic lotteries found." %}
                 </div>
             {% endif %}
         </div>
