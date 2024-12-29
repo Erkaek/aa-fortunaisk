@@ -538,13 +538,13 @@ def lottery_detail(request, lottery_id):
 @permission_required("fortunaisk.admin", raise_exception=True)
 def anomalies_list(request):
     """
-    Lists all anomalies in a table, optionally paginated.
+    Lists all anomalies, optionally with pagination.
     """
     anomalies_qs = TicketAnomaly.objects.select_related(
         "lottery", "user", "character"
     ).order_by("-recorded_at")
 
-    # Exemple de pagination
+    # Pagination
     paginator = Paginator(anomalies_qs, 25)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
