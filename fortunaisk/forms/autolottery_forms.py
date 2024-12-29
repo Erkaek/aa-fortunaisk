@@ -1,3 +1,5 @@
+# fortunaisk/forms/autolottery_forms.py
+
 # Standard Library
 import json
 import logging
@@ -97,6 +99,12 @@ class AutoLotteryForm(forms.ModelForm):
         distribution_str = self.cleaned_data.get("winners_distribution") or ""
         winner_count = self.cleaned_data.get("winner_count", 1)
 
+        logger.debug(
+            "[AUTO LOTTERY] raw distribution_str=%r, winner_count=%r",
+            distribution_str,
+            winner_count,
+        )
+
         if not distribution_str:
             raise ValidationError(_("The winners distribution is required."))
 
@@ -117,19 +125,20 @@ class AutoLotteryForm(forms.ModelForm):
 
         total = sum(distribution_list)
         if total != 100:
-            raise ValidationError(_("The sum of percentages must be 100."))
+            raise ValidationError(_("The sum of the percentages must be 100."))
 
-        logger.debug(f"AutoLottery distribution cleaned: {distribution_list}")
+        logger.debug("[AUTO LOTTERY] distribution final = %s", distribution_list)
         return distribution_list
 
     def clean_max_tickets_per_user(self):
         max_tickets = self.cleaned_data.get("max_tickets_per_user")
         if max_tickets == 0:
-            return None  # Unlimited
+            return None
         return max_tickets
 
     def clean(self):
         cleaned_data = super().clean()
+
         name = cleaned_data.get("name")
         frequency = cleaned_data.get("frequency")
         frequency_unit = cleaned_data.get("frequency_unit")
@@ -139,14 +148,12 @@ class AutoLotteryForm(forms.ModelForm):
         if not name:
             self.add_error("name", _("Lottery name is required."))
 
-        # Check frequency
         if frequency and frequency_unit:
             if frequency < 1:
                 self.add_error("frequency", _("Frequency must be >= 1."))
         else:
             self.add_error("frequency", _("Frequency and its unit are required."))
 
-        # Check duration
         if duration_value and duration_unit:
             if duration_unit == "hours":
                 delta = timezone.timedelta(hours=duration_value)
@@ -170,7 +177,7 @@ class AutoLotteryForm(forms.ModelForm):
         if instance.max_tickets_per_user == 0:
             instance.max_tickets_per_user = None
 
-        # Ensure distribution is a list of ints
+        # ensure the winners_distribution is a list of ints
         if isinstance(instance.winners_distribution, str):
             try:
                 instance.winners_distribution = json.loads(

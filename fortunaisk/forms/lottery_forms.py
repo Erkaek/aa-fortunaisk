@@ -1,3 +1,5 @@
+# fortunaisk/forms/lottery_forms.py
+
 # Standard Library
 import json
 import logging
@@ -5,8 +7,10 @@ import logging
 # Django
 from django import forms
 from django.core.exceptions import ValidationError
-from django.utils import timezone
 from django.utils.translation import gettext as _
+
+# Alliance Auth
+from allianceauth.eveonline.models import EveCorporationInfo
 
 # fortunaisk
 from fortunaisk.models import Lottery
@@ -16,19 +20,35 @@ logger = logging.getLogger(__name__)
 
 class LotteryCreateForm(forms.ModelForm):
     """
-    Form to create a one-time (standard) lottery.
+    Formulaire pour créer une loterie standard (une seule occurrence).
     """
 
     winners_distribution = forms.CharField(
         widget=forms.HiddenInput(),
         required=True,
-        help_text=_("List of winners distribution percentages (JSON)."),
+        help_text=_("Liste des pourcentages de distribution des gagnants (JSON)."),
+    )
+
+    payment_receiver = forms.ModelChoiceField(
+        queryset=EveCorporationInfo.objects.all(),
+        required=False,
+        label=_("Récepteur du paiement (Corporation)"),
+        help_text=_("Choisissez la corporation qui recevra les paiements."),
+        widget=forms.Select(attrs={"class": "form-select"}),
     )
 
     class Meta:
         model = Lottery
-        # Exclude fields managed automatically
-        exclude = ["start_date", "end_date", "status", "total_pot"]
+        # Définir explicitement les champs à inclure
+        fields = [
+            "ticket_price",
+            "duration_value",
+            "duration_unit",
+            "winner_count",
+            "winners_distribution",
+            "max_tickets_per_user",
+            "payment_receiver",
+        ]
         widgets = {
             "ticket_price": forms.NumberInput(
                 attrs={
@@ -56,18 +76,23 @@ class LotteryCreateForm(forms.ModelForm):
                 attrs={
                     "min": "1",
                     "class": "form-control",
-                    "placeholder": _("Leave blank for unlimited"),
+                    "placeholder": _("Laissez vide pour illimité"),
                 }
             ),
-            "payment_receiver": forms.Select(attrs={"class": "form-select"}),
         }
 
     def clean_winners_distribution(self):
         distribution_str = self.cleaned_data.get("winners_distribution") or ""
         winner_count = self.cleaned_data.get("winner_count", 1)
 
+        logger.debug(
+            "[STANDARD LOTTERY] raw distribution_str=%r, winner_count=%r",
+            distribution_str,
+            winner_count,
+        )
+
         if not distribution_str:
-            raise ValidationError(_("Winners distribution is required."))
+            raise ValidationError(_("La distribution des gagnants est requise."))
 
         try:
             distribution_list = json.loads(distribution_str)
@@ -76,19 +101,23 @@ class LotteryCreateForm(forms.ModelForm):
             distribution_list = [int(x) for x in distribution_list]
         except (ValueError, TypeError, json.JSONDecodeError):
             raise ValidationError(
-                _("Please provide valid percentages as a JSON list of integers.")
+                _(
+                    "Veuillez fournir des pourcentages valides sous forme de liste JSON d'entiers."
+                )
             )
 
+        # Vérification de la taille
         if len(distribution_list) != winner_count:
             raise ValidationError(
-                _("Distribution does not match the number of winners.")
+                _("La distribution ne correspond pas au nombre de gagnants.")
             )
 
+        # Vérification de la somme = 100
         total = sum(distribution_list)
         if total != 100:
-            raise ValidationError(_("Sum of percentages must be 100."))
+            raise ValidationError(_("La somme des pourcentages doit être de 100."))
 
-        logger.debug(f"Lottery standard distribution cleaned: {distribution_list}")
+        logger.debug("[STANDARD LOTTERY] distribution final = %s", distribution_list)
         return distribution_list
 
     def clean_max_tickets_per_user(self):
@@ -103,19 +132,10 @@ class LotteryCreateForm(forms.ModelForm):
         duration_value = cleaned_data.get("duration_value")
         duration_unit = cleaned_data.get("duration_unit")
         if duration_value and duration_unit:
-            if duration_unit == "hours":
-                delta = timezone.timedelta(hours=duration_value)
-            elif duration_unit == "days":
-                delta = timezone.timedelta(days=duration_value)
-            elif duration_unit == "months":
-                delta = timezone.timedelta(days=30 * duration_value)
-            else:
-                delta = timezone.timedelta()
-
-            if delta <= timezone.timedelta():
-                self.add_error("duration_value", _("Duration must be positive."))
+            if duration_unit not in ["hours", "days", "months"]:
+                self.add_error("duration_unit", _("Unité de durée invalide."))
         else:
-            self.add_error("duration_value", _("Duration and unit are required."))
+            self.add_error("duration_value", _("La durée et son unité sont requises."))
 
         return cleaned_data
 
@@ -125,7 +145,9 @@ class LotteryCreateForm(forms.ModelForm):
         if instance.max_tickets_per_user == 0:
             instance.max_tickets_per_user = None
 
-        instance.winners_distribution = self.cleaned_data.get("winners_distribution")
+        # Convertir la distribution en liste d'entiers
+        distribution = self.cleaned_data.get("winners_distribution")
+        instance.winners_distribution = distribution
 
         if commit:
             instance.save()

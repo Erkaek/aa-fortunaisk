@@ -1,3 +1,5 @@
+# fortunaisk/models/lottery.py
+
 # Standard Library
 import logging
 import random
@@ -120,13 +122,13 @@ class Lottery(models.Model):
                 return reference
 
     def clean(self):
-        """Validate winners_distribution = 100 % and length == winner_count."""
+        """Validate winners_distribution = 100 % and winners_distribution.length == winner_count."""
         if self.winners_distribution:
             if len(self.winners_distribution) != self.winner_count:
                 raise ValidationError(
                     {
                         "winners_distribution": _(
-                            "The distribution must match the number of winners."
+                            "La répartition doit correspondre au nombre de gagnants."
                         )
                     }
                 )
@@ -135,19 +137,18 @@ class Lottery(models.Model):
                 raise ValidationError(
                     {
                         "winners_distribution": _(
-                            "The sum of the percentages must be 100."
+                            "La somme des pourcentages doit être égale à 100."
                         )
                     }
                 )
 
     def save(self, *args, **kwargs) -> None:
-        creating = self._state.adding
         self.clean()
         if not self.lottery_reference:
             self.lottery_reference = self.generate_unique_reference()
         self.end_date = self.start_date + self.get_duration_timedelta()
         super().save(*args, **kwargs)
-        if creating:
+        if self._state.adding:
             pass  # any post-creation logic
 
     def get_duration_timedelta(self) -> timedelta:
@@ -214,8 +215,6 @@ class Lottery(models.Model):
             selected_ids = ticket_ids
         else:
             # Standard Library
-            import random
-
             selected_ids = random.sample(ticket_ids, self.winner_count)
 
         winners = []
@@ -271,25 +270,25 @@ class Lottery(models.Model):
 
         for winner in winners:
             embed = {
-                "title": "🎉 Congratulations to the Winner! 🎉",
+                "title": "🎉 Félicitations au Gagnant ! 🎉",
                 "description": (
-                    f"We are happy to announce that **{winner.ticket.user.username}** "
-                    f"({winner.character.character_name}) has won the lottery **{self.lottery_reference}**!"
+                    f"Nous sommes heureux d'annoncer que **{winner.ticket.user.username}** "
+                    f"({winner.character.character_name}) a gagné la loterie **{self.lottery_reference}** !"
                 ),
                 "color": 0xFFD700,
                 "fields": [
                     {
-                        "name": "User",
+                        "name": "Utilisateur",
                         "value": f"{winner.ticket.user.username}",
                         "inline": True,
                     },
                     {
-                        "name": "Character",
+                        "name": "Personnage",
                         "value": f"{winner.character.character_name}",
                         "inline": True,
                     },
                     {
-                        "name": "Prize",
+                        "name": "Prix",
                         "value": f"{winner.prize_amount:,.2f} ISK",
                         "inline": True,
                     },
@@ -299,12 +298,12 @@ class Lottery(models.Model):
                         "inline": False,
                     },
                     {
-                        "name": "Winning Date",
+                        "name": "Date de Gain",
                         "value": f"{winner.won_at.strftime('%Y-%m-%d %H:%M')}",
                         "inline": False,
                     },
                     {
-                        "name": "Payment Receiver",
+                        "name": "Récepteur du Paiement",
                         "value": corp_name,
                         "inline": False,
                     },
