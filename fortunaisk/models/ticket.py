@@ -19,7 +19,7 @@ class TicketPurchase(models.Model):
         ("pending", "Pending"),
         ("processed", "Processed"),
         ("failed", "Failed"),
-        # Ajoutez d'autres choix si nécessaire
+        # Add other choices if necessary
     ]
 
     lottery = models.ForeignKey(
@@ -61,7 +61,7 @@ class TicketPurchase(models.Model):
         choices=STATUS_CHOICES,
         default="pending",
         verbose_name="Ticket Status",
-    )  # Nouveau champ
+    )  # New field
 
     def __str__(self) -> str:
         return (
@@ -116,12 +116,12 @@ class TicketAnomaly(models.Model):
     """
 
     lottery = models.ForeignKey(
-        "fortunaisk.Lottery",  # string reference again
+        "fortunaisk.Lottery",
         on_delete=models.CASCADE,
         related_name="anomalies",
         verbose_name="Lottery",
-        null=True,  # Permettre les valeurs nulles
-        blank=True,  # Permettre les formulaires vides
+        null=True,  # Allow null values
+        blank=True,  # Allow blank forms
     )
     character = models.ForeignKey(
         EveCharacter,

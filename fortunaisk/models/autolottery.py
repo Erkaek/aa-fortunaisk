@@ -2,13 +2,13 @@
 
 # Standard Library
 import logging
-from datetime import timedelta  # Déjà utilisé dans get_duration_timedelta
+from datetime import timedelta  # Already used in get_duration_timedelta
 
 # Django
-from django.apps import apps  # Ajouté pour utiliser apps.get_model
+from django.apps import apps  # For using apps.get_model
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.utils import timezone  # Ajouté pour utiliser timezone.now
+from django.utils import timezone  # For timezone.now
 from django.utils.translation import gettext as _
 
 # Alliance Auth
@@ -84,14 +84,14 @@ class AutoLottery(models.Model):
 
     def clean(self):
         """
-        Valide winners_distribution = 100 % et winners_distribution.length == winner_count
+        Validates that winners_distribution sums to 100% and matches winner_count.
         """
         if self.winners_distribution:
             if len(self.winners_distribution) != self.winner_count:
                 raise ValidationError(
                     {
                         "winners_distribution": _(
-                            "La répartition doit correspondre au nombre de gagnants."
+                            "Distribution must match the number of winners."
                         )
                     }
                 )
@@ -100,7 +100,7 @@ class AutoLottery(models.Model):
                 raise ValidationError(
                     {
                         "winners_distribution": _(
-                            "La somme des pourcentages doit être égale à 100."
+                            "The sum of percentages must equal 100."
                         )
                     }
                 )
@@ -110,7 +110,7 @@ class AutoLottery(models.Model):
         super().save(*args, **kwargs)
 
     def get_duration_timedelta(self):
-        # Utilise déjà timedelta importé en haut
+        # Uses timedelta imported at the top
         if self.duration_unit == "hours":
             return timedelta(hours=self.duration_value)
         elif self.duration_unit == "days":
@@ -121,7 +121,7 @@ class AutoLottery(models.Model):
 
     def create_lottery(self):
         """
-        Crée une nouvelle Lottery basée sur cette AutoLottery.
+        Creates a new Lottery based on this AutoLottery.
         """
         Lottery = apps.get_model("fortunaisk", "Lottery")
         new_lottery = Lottery.objects.create(
@@ -137,6 +137,6 @@ class AutoLottery(models.Model):
             duration_unit=self.duration_unit,
         )
         logger.info(
-            f"AutoLottery '{self.name}' a créé la Lottery '{new_lottery.lottery_reference}'"
+            f"AutoLottery '{self.name}' created Lottery '{new_lottery.lottery_reference}'"
         )
         return new_lottery

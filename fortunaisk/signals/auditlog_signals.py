@@ -18,8 +18,8 @@ logger = logging.getLogger(__name__)
 
 def table_exists(table_name: str) -> bool:
     """
-    Vérifie si la table existe déjà dans la base de données
-    (évite l'erreur 1146 pendant la première migration).
+    Checks if the table already exists in the database
+    (prevents error 1146 during the first migration).
     """
     try:
         return table_name in connection.introspection.table_names()
@@ -58,7 +58,7 @@ def get_changes(old_instance, new_instance):
 
 def is_fortunaisk_model(sender):
     """
-    Vérifie si le modèle appartient à l'application 'fortunaisk'.
+    Checks if the model belongs to the 'fortunaisk' application.
     """
     return sender._meta.app_label == "fortunaisk"
 
@@ -68,7 +68,7 @@ def auditlog_pre_save(sender, instance, **kwargs):
     if sender == AuditLog or not is_fortunaisk_model(sender):
         return
     if not instance.pk:
-        # Cas création, pas d'ancienne version
+        # Creation case, no old version
         instance._pre_save_instance = None
     else:
         try:
@@ -83,12 +83,12 @@ def auditlog_post_save(sender, instance, created, **kwargs):
     if sender == AuditLog or not is_fortunaisk_model(sender):
         return
 
-    # On vérifie l'existence de la table avant d'insérer
+    # Check table existence before inserting
     if not table_exists("fortunaisk_auditlog"):
         return
 
     if created:
-        # Cas création
+        # Creation case
         AuditLog.objects.create(
             user=None,
             action_type="create",
@@ -97,7 +97,7 @@ def auditlog_post_save(sender, instance, created, **kwargs):
             changes=None,
         )
     else:
-        # Cas mise à jour
+        # Update case
         old_instance = getattr(instance, "_pre_save_instance", None)
         if not old_instance:
             return

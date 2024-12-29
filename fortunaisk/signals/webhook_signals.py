@@ -17,14 +17,10 @@ logger = logging.getLogger(__name__)
 @receiver(post_save, sender=WebhookConfiguration)
 def clear_webhook_cache_on_save(sender, instance, **kwargs):
     cache.delete("discord_webhook_url")
-    logger.info(
-        "Cache 'discord_webhook_url' invalidé suite à la mise à jour du webhook."
-    )
+    logger.info("Cache 'discord_webhook_url' invalidated due to webhook update.")
 
 
 @receiver(post_delete, sender=WebhookConfiguration)
 def clear_webhook_cache_on_delete(sender, instance, **kwargs):
     cache.delete("discord_webhook_url")
-    logger.info(
-        "Cache 'discord_webhook_url' invalidé suite à la suppression du webhook."
-    )
+    logger.info("Cache 'discord_webhook_url' invalidated due to webhook deletion.")

@@ -122,13 +122,13 @@ class Lottery(models.Model):
                 return reference
 
     def clean(self):
-        """Validate winners_distribution = 100 % and winners_distribution.length == winner_count."""
+        """Validate that winners_distribution sums to 100% and matches winner_count."""
         if self.winners_distribution:
             if len(self.winners_distribution) != self.winner_count:
                 raise ValidationError(
                     {
                         "winners_distribution": _(
-                            "La répartition doit correspondre au nombre de gagnants."
+                            "Distribution must match the number of winners."
                         )
                     }
                 )
@@ -137,7 +137,7 @@ class Lottery(models.Model):
                 raise ValidationError(
                     {
                         "winners_distribution": _(
-                            "La somme des pourcentages doit être égale à 100."
+                            "The sum of percentages must equal 100."
                         )
                     }
                 )
@@ -149,7 +149,7 @@ class Lottery(models.Model):
         self.end_date = self.start_date + self.get_duration_timedelta()
         super().save(*args, **kwargs)
         if self._state.adding:
-            pass  # any post-creation logic
+            pass  # Any post-creation logic
 
     def get_duration_timedelta(self) -> timedelta:
         if self.duration_unit == "hours":
@@ -243,77 +243,6 @@ class Lottery(models.Model):
                 continue
 
         return winners
-
-    def notify_discord(self, winners):
-        """
-        Sends a Discord notification for each winner.
-        """
-        # fortunaisk
-        from fortunaisk.notifications import send_discord_notification
-
-        if not winners:
-            logger.info(f"No winners to notify for lottery {self.lottery_reference}.")
-            return
-        try:
-            corp_name = (
-                self.payment_receiver.corporation_name
-                if self.payment_receiver
-                else "Unknown Corporation"
-            )
-        except Exception as ex:
-            logger.warning(f"Error retrieving corporation_name: {ex}")
-            corp_name = "Unknown Corporation"
-
-        distribution_str = (
-            ", ".join([f"{d}%" for d in self.winners_distribution]) or "N/A"
-        )
-
-        for winner in winners:
-            embed = {
-                "title": "🎉 Félicitations au Gagnant ! 🎉",
-                "description": (
-                    f"Nous sommes heureux d'annoncer que **{winner.ticket.user.username}** "
-                    f"({winner.character.character_name}) a gagné la loterie **{self.lottery_reference}** !"
-                ),
-                "color": 0xFFD700,
-                "fields": [
-                    {
-                        "name": "Utilisateur",
-                        "value": f"{winner.ticket.user.username}",
-                        "inline": True,
-                    },
-                    {
-                        "name": "Personnage",
-                        "value": f"{winner.character.character_name}",
-                        "inline": True,
-                    },
-                    {
-                        "name": "Prix",
-                        "value": f"{winner.prize_amount:,.2f} ISK",
-                        "inline": True,
-                    },
-                    {
-                        "name": "Distribution",
-                        "value": distribution_str,
-                        "inline": False,
-                    },
-                    {
-                        "name": "Date de Gain",
-                        "value": f"{winner.won_at.strftime('%Y-%m-%d %H:%M')}",
-                        "inline": False,
-                    },
-                    {
-                        "name": "Récepteur du Paiement",
-                        "value": corp_name,
-                        "inline": False,
-                    },
-                ],
-            }
-            send_discord_notification(embed=embed)
-
-    @property
-    def participant_count(self):
-        return self.ticket_purchases.count()
 
     @property
     def winners(self):

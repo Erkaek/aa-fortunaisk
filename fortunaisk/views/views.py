@@ -21,10 +21,7 @@ from fortunaisk.models import (
     TicketPurchase,
     Winner,
 )
-from fortunaisk.notifications import (
-    send_alliance_auth_notification,
-    send_discord_notification,
-)
+from fortunaisk.notifications import send_alliance_auth_notification
 from fortunaisk.tasks import create_lottery_from_auto_lottery
 
 logger = logging.getLogger(__name__)
@@ -125,18 +122,14 @@ def resolve_anomaly(request, anomaly_id):
             messages.success(request, _("Anomaly successfully resolved."))
             send_alliance_auth_notification(
                 user=request.user,
-                title=_("Anomaly Resolved"),
-                message=_(
-                    f"Anomaly {anomaly_id} resolved for lottery {anomaly.lottery.lottery_reference}."
+                title="Anomaly Resolved",
+                message=(
+                    f"Anomaly {anomaly_id} resolved for lottery "
+                    f"{anomaly.lottery.lottery_reference if anomaly.lottery else 'N/A'}."
                 ),
                 level="info",
             )
-            send_discord_notification(
-                message=(
-                    f"Anomaly resolved: {anomaly.reason} for lottery "
-                    f"{anomaly.lottery.lottery_reference} by {request.user.username}."
-                )
-            )
+            # Discord notification is handled via signals if necessary
         except Exception as e:
             messages.error(request, _("An error occurred while resolving the anomaly."))
             logger.exception(f"Error resolving anomaly {anomaly_id}: {e}")
@@ -164,21 +157,15 @@ def distribute_prize(request, winner_id):
                 )
                 send_alliance_auth_notification(
                     user=request.user,
-                    title=_("Prize Distributed"),
-                    message=_(
+                    title="Prize Distributed",
+                    message=(
                         f"{winner.prize_amount} ISK prize distributed to "
                         f"{winner.ticket.user.username} for lottery "
                         f"{winner.ticket.lottery.lottery_reference}."
                     ),
                     level="success",
                 )
-                send_discord_notification(
-                    message=(
-                        f"Prize distributed: {winner.prize_amount} ISK to "
-                        f"{winner.ticket.user.username} for lottery "
-                        f"{winner.ticket.lottery.lottery_reference}."
-                    )
-                )
+                # Discord notification is handled via signals if necessary
             else:
                 messages.info(request, _("This prize has already been distributed."))
         except Exception as e:
@@ -195,7 +182,7 @@ def distribute_prize(request, winner_id):
 
 ##################################
 #       AUTOLOTTERY VIEWS
-#  We keep creation and editing, but no separate listing page
+#  Keep creation and editing, no separate listing page
 ##################################
 
 
@@ -281,7 +268,7 @@ def delete_auto_lottery(request, autolottery_id):
 @login_required
 def lottery(request):
     """
-    List active lotteries for regular users, with instructions to participate.
+    Lists active lotteries for regular users, with instructions to participate.
     """
     active_lotteries = Lottery.objects.filter(status="active").prefetch_related(
         "ticket_purchases"
@@ -299,14 +286,12 @@ def lottery(request):
         corp_name = (
             lot.payment_receiver.corporation_name
             if lot.payment_receiver and lot.payment_receiver.corporation_name
-            else _("Unknown Corporation")
+            else "Unknown Corporation"
         )
         user_ticket_count = user_ticket_map.get(lot.id, 0)
         has_ticket = user_ticket_count > 0
 
-        instructions = _(
-            "To participate, send {price} ISK to {corp} with '{ref}' as the payment description."
-        ).format(price=lot.ticket_price, corp=corp_name, ref=lot.lottery_reference)
+        instructions = f"To participate, send {lot.ticket_price} ISK to {corp_name} with '{lot.lottery_reference}' as the payment description."
 
         lotteries_info.append(
             {
@@ -331,24 +316,24 @@ def winner_list(request):
     """
     Lists all winners with pagination, plus a top-3 podium by prize_amount.
     """
-    # L'intégralité des winners, ordonnés par date de gain DESC
+    # All winners, ordered by winning date DESC
     winners_qs = Winner.objects.select_related(
         "ticket__user", "ticket__lottery", "character"
     ).order_by("-won_at")
 
-    # Top 3 par plus gros prize_amount
+    # Top 3 by largest prize_amount
     top_3 = Winner.objects.select_related(
         "ticket__user", "ticket__lottery", "character"
     ).order_by("-prize_amount")[:3]
 
-    # Pagination pour la table générale
+    # Pagination for the general table
     paginator = Paginator(winners_qs, 25)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
     context = {
-        "page_obj": page_obj,  # Les winners paginés
-        "top_3": top_3,  # Les 3 plus gros gains
+        "page_obj": page_obj,  # Paginated winners
+        "top_3": top_3,  # Top 3 largest prizes
     }
     return render(request, "fortunaisk/winner_list.html", context)
 
@@ -366,7 +351,7 @@ def lottery_history(request):
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
-    # Définir tes choix directement ici
+    # Define choices directly here
     per_page_choices = [6, 12, 24, 48]
 
     context = {
@@ -470,19 +455,14 @@ def terminate_lottery(request, lottery_id):
             )
             send_alliance_auth_notification(
                 user=request.user,
-                title=_("Lottery Terminated"),
-                message=_(
+                title="Lottery Terminated",
+                message=(
                     f"Lottery {lottery_obj.lottery_reference} was prematurely terminated "
                     f"by {request.user.username}."
                 ),
                 level="warning",
             )
-            send_discord_notification(
-                message=(
-                    f"Lottery {lottery_obj.lottery_reference} was prematurely terminated "
-                    f"by {request.user.username}."
-                )
-            )
+            # Discord notification is handled via signals
         except Exception as e:
             messages.error(
                 request, _("An error occurred while terminating the lottery.")
@@ -493,97 +473,3 @@ def terminate_lottery(request, lottery_id):
     return render(
         request, "fortunaisk/terminate_lottery_confirm.html", {"lottery": lottery_obj}
     )
-
-
-##################################
-#          USER DASHBOARD
-##################################
-
-
-@login_required
-def user_dashboard(request):
-    """
-    User dashboard: lists the user's purchased tickets and any winnings.
-    """
-    user = request.user
-    ticket_purchases_qs = (
-        TicketPurchase.objects.filter(user=user)
-        .select_related("lottery", "character")
-        .order_by("-purchase_date")
-    )
-    paginator_tickets = Paginator(ticket_purchases_qs, 25)
-    page_number_tickets = request.GET.get("tickets_page")
-    page_obj_tickets = paginator_tickets.get_page(page_number_tickets)
-
-    winnings_qs = (
-        Winner.objects.filter(ticket__user=user)
-        .select_related("ticket__lottery", "character")
-        .order_by("-won_at")
-    )
-    paginator_winnings = Paginator(winnings_qs, 25)
-    page_number_winnings = request.GET.get("winnings_page")
-    page_obj_winnings = paginator_winnings.get_page(page_number_winnings)
-
-    context = {
-        "ticket_purchases": page_obj_tickets,
-        "winnings": page_obj_winnings,
-    }
-    return render(request, "fortunaisk/user_dashboard.html", context)
-
-
-@login_required
-@permission_required("fortunaisk.admin", raise_exception=True)
-def lottery_detail(request, lottery_id):
-    """
-    Detailed view of a lottery (participants, anomalies, winners, etc.).
-    """
-    lottery_obj = get_object_or_404(Lottery, id=lottery_id)
-    participants_qs = lottery_obj.ticket_purchases.select_related(
-        "user", "character"
-    ).all()
-    paginator_participants = Paginator(participants_qs, 25)
-    page_number_participants = request.GET.get("participants_page")
-    page_obj_participants = paginator_participants.get_page(page_number_participants)
-
-    anomalies_qs = TicketAnomaly.objects.filter(lottery=lottery_obj).select_related(
-        "user", "character"
-    )
-    paginator_anomalies = Paginator(anomalies_qs, 25)
-    page_number_anomalies = request.GET.get("anomalies_page")
-    page_obj_anomalies = paginator_anomalies.get_page(page_number_anomalies)
-
-    winners_qs = Winner.objects.filter(ticket__lottery=lottery_obj).select_related(
-        "ticket__user", "character"
-    )
-    paginator_winners = Paginator(winners_qs, 25)
-    page_number_winners = request.GET.get("winners_page")
-    page_obj_winners = paginator_winners.get_page(page_number_winners)
-
-    context = {
-        "lottery": lottery_obj,
-        "participants": page_obj_participants,
-        "anomalies": page_obj_anomalies,
-        "winners": page_obj_winners,
-    }
-    return render(request, "fortunaisk/lottery_detail.html", context)
-
-
-@login_required
-@permission_required("fortunaisk.admin", raise_exception=True)
-def anomalies_list(request):
-    """
-    Lists all anomalies, optionally with pagination.
-    """
-    anomalies_qs = TicketAnomaly.objects.select_related(
-        "lottery", "user", "character"
-    ).order_by("-recorded_at")
-
-    # Pagination
-    paginator = Paginator(anomalies_qs, 25)
-    page_number = request.GET.get("page")
-    page_obj = paginator.get_page(page_number)
-
-    context = {
-        "page_obj": page_obj,
-    }
-    return render(request, "fortunaisk/anomalies_list.html", context)
