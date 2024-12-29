@@ -35,9 +35,6 @@ pip install fortunaisk
 
 Add `fortunaisk` to `INSTALLED_APPS` in your configuration file:
 
-```python
-INSTALLED_APPS += ["fortunaisk"]
-```
 
 ### Step 3 - Finalize Installation
 
