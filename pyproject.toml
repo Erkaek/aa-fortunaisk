@@ -1,51 +1,69 @@
 [build-system]
-build-backend = "hatchling.build"
+build-backend = "flit_core.buildapi"
+
 requires = [
-    "hatchling",
+    "flit-core>=3.2,<4",
 ]
 
 [project]
 name = "fortunaisk"
-description = "fortunaisk Plugin for Alliance Auth (GitHub Version)"
+description = "fortunaisk Plugin for Alliance Auth"
 readme = "README.md"
 keywords = [
     "allianceauth",
     "fortunaisk",
+    "eveonline",
 ]
 license = { file = "LICENSE" }
 authors = [
-    { name = "Peter Pfeufer", email = "develop@ppfeufer.de" },
+    { name = "erka Ekanon", email = "erkaekanon@outlook.com" },
 ]
-requires-python = ">=3.10"
+
+requires-python = ">=3.8"
 classifiers = [
     "Environment :: Web Environment",
+    "Framework :: Celery",
     "Framework :: Django",
+    "Framework :: Django :: 4.0",
     "Framework :: Django :: 4.2",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: Implementation :: CPython",
     "Topic :: Internet :: WWW/HTTP",
     "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
 ]
-dynamic = [
-    "version",
-]
 dependencies = [
-    "allianceauth>=4.3.1,<5",
+    "allianceauth>=3,<5",
+    "allianceauth-corptools>=2.5.5",
 ]
-urls.Changelog = "https://github.com/erkaek/fortunaisk/blob/master/CHANGELOG.md"
-urls."Issue / Bug Reports" = "https://github.com/erkaek/fortunaisk/issues"
 
-[tool.hatch.version]
-path = "fortunaisk/__init__.py"
 
-[tool.hatch.build]
-include = [
-    "/fortunaisk",
-]
+urls.Home = "https://github.com/Erkaek/aa-fortunaisk"
+urls.Source = "https://github.com/Erkaek/aa-fortunaisk"
+urls.Tracker = "https://github.com/Erkaek/aa-fortunaisk/issues"
+
+[tool.flit.module]
+name = "FortunaIsk"
+
+known_allianceauth = [ "allianceauth", "esi" ]
+known_django = [ "django" ]
+skip_gitignore = true
+
+[tool.flake8]
+exclude = [ ".git", "*migrations*", ".tox", "dist", "htmlcov" ]
+max-line-length = 119
+select = [ "C", "E", "F", "W", "B", "B950" ]
+ignore = [ 'E203', 'E231', 'E501', 'W503', 'W291', 'W293' ]
+
+[tool.djlint]
+max_attribute_length = 119
+max_line_length = 119
+max_blank_lines = 1
