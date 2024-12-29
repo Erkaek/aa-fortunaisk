@@ -1,7 +1,5 @@
 {% extends "fortunaisk/base.html" %}
-{% load i18n %}
-{% load humanize %}
-{% load fortunaisk_tags %}
+{% load i18n humanize fortunaisk_tags my_filters %}
 
 {% block page_title %}
     {% trans "Lottery History" %}
@@ -26,13 +24,18 @@
                 {% trans "Results per page" %}:
             </label>
             <select id="perPageSelect" name="per_page" class="form-select w-auto me-2" onchange="this.form.submit()">
+                {% comment %}
+                On concatène "6", " 12", " 24", " 48" dans la chaîne, puis on "split" pour itérer sur [6,12,24,48].
+                Cf. le filtre 'split' défini dans my_filters.py
+                {% endcomment %}
                 {% for choice in 6|add:" 12"|add:" 24"|add:" 48"|split:" " %}
-                    <option value="{{ choice }}" {% if per_page == choice|stringformat:"s" %}selected{% endif %}>
+                    <option value="{{ choice }}"
+                        {% if per_page == choice|stringformat:"s" %}selected{% endif %}>
                         {{ choice }}
                     </option>
                 {% endfor %}
             </select>
-            {% comment %} Keep the existing 'page' param if needed. But if we set per_page, page might revert to 1. {% endcomment %}
+            <!-- We keep the existing 'page' param if needed. But if we set per_page, page might revert to 1. -->
             <noscript>
                 <button type="submit" class="btn btn-primary btn-sm">
                     {% trans "Apply" %}
@@ -125,7 +128,9 @@
             <ul class="pagination justify-content-center">
                 {% if page_obj.has_previous %}
                 <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}&per_page={{ per_page }}" aria-label="Previous">
+                    <a class="page-link"
+                        href="?page={{ page_obj.previous_page_number }}&per_page={{ per_page }}"
+                        aria-label="Previous">
                         <span aria-hidden="true">&laquo;</span>
                     </a>
                 </li>
@@ -149,7 +154,9 @@
 
                 {% if page_obj.has_next %}
                 <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.next_page_number }}&per_page={{ per_page }}" aria-label="Next">
+                    <a class="page-link"
+                        href="?page={{ page_obj.next_page_number }}&per_page={{ per_page }}"
+                        aria-label="Next">
                         <span aria-hidden="true">&raquo;</span>
                     </a>
                 </li>

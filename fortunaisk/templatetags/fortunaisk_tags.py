@@ -1,4 +1,3 @@
-# fortunaisk/templatetags/fortunaisk_tags.py
 """Custom template tags for FortunaIsk."""
 
 # Django
