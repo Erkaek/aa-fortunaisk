@@ -340,10 +340,10 @@ def winner_list(request):
             ),
             main_character_name=F(
                 "profile__main_character__character_name"
-            ),  # Utiliser 'user_settings' pour accéder au personnage principal via Alliance Auth
+            ),  # Accès via profile
         )
         .order_by("-total_prize")[:3]
-        .select_related("user_settings__main_character")
+        .select_related("profile__main_character")
     )
 
     # Pagination pour le tableau général
