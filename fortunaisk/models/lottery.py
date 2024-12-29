@@ -1,28 +1,23 @@
-# fortunaisk/models/lottery.py
-
 # Standard Library
-import logging  # Import ajouté
-import random  # Import ajouté
-import string  # Import ajouté
-from datetime import timedelta  # Import ajouté
+import logging
+import random
+import string
+from datetime import timedelta
 from decimal import Decimal
 
 # Django
-from django.core.exceptions import ValidationError  # Import ajouté
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
-from django.utils.translation import gettext as _  # Import ajouté
+from django.utils.translation import gettext as _
 
 # Alliance Auth
-from allianceauth.eveonline.models import (  # Import EveCharacter
-    EveCharacter,
-    EveCorporationInfo,
-)
+from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 
 # fortunaisk
-from fortunaisk.models.ticket import TicketPurchase  # Import TicketPurchase
+from fortunaisk.models.ticket import TicketPurchase
 
-logger = logging.getLogger(__name__)  # Initialisation du logger
+logger = logging.getLogger(__name__)
 
 
 class Lottery(models.Model):
@@ -110,10 +105,8 @@ class Lottery(models.Model):
     class Meta:
         ordering = ["-start_date"]
         permissions = [
-            ("view_lotteryhistory", "Can view lottery history"),
-            ("terminate_lottery", "Can terminate a lottery"),
-            ("admin_dashboard", "Can access the admin dashboard"),
-            # Ajouter des permissions supplémentaires ici si nécessaire
+            ("user", "User permission"),
+            ("admin", "Administrator permission"),
         ]
 
     def __str__(self) -> str:
@@ -127,15 +120,13 @@ class Lottery(models.Model):
                 return reference
 
     def clean(self):
-        """
-        Valide winners_distribution = 100 % et winners_distribution.length == winner_count
-        """
+        """Validate winners_distribution = 100 % and length == winner_count."""
         if self.winners_distribution:
             if len(self.winners_distribution) != self.winner_count:
                 raise ValidationError(
                     {
                         "winners_distribution": _(
-                            "La répartition doit correspondre au nombre de gagnants."
+                            "The distribution must match the number of winners."
                         )
                     }
                 )
@@ -144,24 +135,22 @@ class Lottery(models.Model):
                 raise ValidationError(
                     {
                         "winners_distribution": _(
-                            "La somme des pourcentages doit être égale à 100."
+                            "The sum of the percentages must be 100."
                         )
                     }
                 )
 
     def save(self, *args, **kwargs) -> None:
-        creating = self._state.adding  # Vérifie si c'est une création
+        creating = self._state.adding
         self.clean()
         if not self.lottery_reference:
             self.lottery_reference = self.generate_unique_reference()
-        # Définir end_date en fonction de start_date et de la durée
         self.end_date = self.start_date + self.get_duration_timedelta()
         super().save(*args, **kwargs)
         if creating:
-            pass
+            pass  # any post-creation logic
 
     def get_duration_timedelta(self) -> timedelta:
-        # Utilise déjà timedelta importé en haut
         if self.duration_unit == "hours":
             return timedelta(hours=self.duration_value)
         elif self.duration_unit == "days":
@@ -171,26 +160,23 @@ class Lottery(models.Model):
         return timedelta(hours=self.duration_value)
 
     def update_total_pot(self):
-        """
-        Recalcule la cagnotte en multipliant le ticket_price par le nombre de tickets vendus.
-        """
+        """Recalculate the pot based on ticket_price * number of purchased tickets."""
         ticket_count = self.ticket_purchases.count()
         self.total_pot = self.ticket_price * Decimal(ticket_count)
         self.save(update_fields=["total_pot"])
 
     def complete_lottery(self):
         """
-        Déclenche la finalisation de la loterie :
-        - Met à jour la cagnotte
-        - Lance la tâche Celery de finalisation
+        Trigger the completion of the lottery:
+        - Update the pot
+        - Launch the Celery task to finalize the lottery
         """
         if self.status != "active":
             logger.info(
-                f"Lottery {self.lottery_reference} not active. Current status: {self.status}"
+                f"Lottery {self.lottery_reference} is not active. Current status: {self.status}"
             )
             return
 
-        # Update pot
         self.update_total_pot()
 
         if self.total_pot <= Decimal("0"):
@@ -201,7 +187,6 @@ class Lottery(models.Model):
             self.save(update_fields=["status"])
             return
 
-        # Planifier la finalisation via une tâche dédiée
         # fortunaisk
         from fortunaisk.tasks import finalize_lottery
 
@@ -212,13 +197,11 @@ class Lottery(models.Model):
 
     def select_winners(self):
         """
-        Choisit aléatoirement winner_count tickets (ou moins si pas assez de tickets).
-        Crée un Winner pour chaque ticket gagnant.
+        Randomly select winner_count tickets (or fewer if not enough).
+        Create a Winner for each selected ticket.
         """
         # fortunaisk
-        from fortunaisk.models.ticket import (
-            Winner,  # Import local pour éviter les problèmes de dépendances
-        )
+        from fortunaisk.models.ticket import Winner
 
         tickets = TicketPurchase.objects.filter(lottery=self)
         ticket_ids = list(tickets.values_list("id", flat=True))
@@ -230,6 +213,9 @@ class Lottery(models.Model):
             logger.warning(f"Not enough tickets to select {self.winner_count} winners.")
             selected_ids = ticket_ids
         else:
+            # Standard Library
+            import random
+
             selected_ids = random.sample(ticket_ids, self.winner_count)
 
         winners = []
@@ -247,12 +233,12 @@ class Lottery(models.Model):
                 winners.append(winner)
             except EveCharacter.DoesNotExist:
                 logger.warning(
-                    f"EveCharacter associé au ticket ID {ticket_id} n'existe pas. Skipping winner creation."
+                    f"The EveCharacter for ticket ID {ticket_id} does not exist. Skipping."
                 )
                 continue
             except Exception as e:
                 logger.error(
-                    f"Erreur lors de la création du Winner pour le ticket ID {ticket_id}: {e}",
+                    f"Error creating Winner for ticket ID {ticket_id}: {e}",
                     exc_info=True,
                 )
                 continue
@@ -261,10 +247,10 @@ class Lottery(models.Model):
 
     def notify_discord(self, winners):
         """
-        Envoie une notification Discord pour chaque gagnant.
+        Sends a Discord notification for each winner.
         """
         # fortunaisk
-        from fortunaisk.notifications import send_discord_notification  # Import local
+        from fortunaisk.notifications import send_discord_notification
 
         if not winners:
             logger.info(f"No winners to notify for lottery {self.lottery_reference}.")
@@ -285,40 +271,40 @@ class Lottery(models.Model):
 
         for winner in winners:
             embed = {
-                "title": "🎉 **Félicitations au Gagnant!** 🎉",
+                "title": "🎉 Congratulations to the Winner! 🎉",
                 "description": (
-                    f"Nous sommes ravis d'annoncer que **{winner.ticket.user.username}** "
-                    f"({winner.character.character_name}) a remporté la loterie **{self.lottery_reference}**!"
+                    f"We are happy to announce that **{winner.ticket.user.username}** "
+                    f"({winner.character.character_name}) has won the lottery **{self.lottery_reference}**!"
                 ),
                 "color": 0xFFD700,
                 "fields": [
                     {
-                        "name": "Utilisateur",
+                        "name": "User",
                         "value": f"{winner.ticket.user.username}",
                         "inline": True,
                     },
                     {
-                        "name": "Personnage",
+                        "name": "Character",
                         "value": f"{winner.character.character_name}",
                         "inline": True,
                     },
                     {
-                        "name": "Prix",
+                        "name": "Prize",
                         "value": f"{winner.prize_amount:,.2f} ISK",
                         "inline": True,
                     },
                     {
-                        "name": "Répartition",
+                        "name": "Distribution",
                         "value": distribution_str,
                         "inline": False,
                     },
                     {
-                        "name": "Date de Gain",
+                        "name": "Winning Date",
                         "value": f"{winner.won_at.strftime('%Y-%m-%d %H:%M')}",
                         "inline": False,
                     },
                     {
-                        "name": "Récepteur de Paiement",
+                        "name": "Payment Receiver",
                         "value": corp_name,
                         "inline": False,
                     },
@@ -328,19 +314,11 @@ class Lottery(models.Model):
 
     @property
     def participant_count(self):
-        """
-        Retourne le nombre total de TicketPurchase liés à cette loterie.
-        """
         return self.ticket_purchases.count()
 
     @property
     def winners(self):
-        """
-        Permet d'accéder directement à tous les Winner liés à cette loterie
-        via la relation Winner → TicketPurchase → Lottery.
-        Ex : lottery.winners.all() dans un template.
-        """
         # fortunaisk
-        from fortunaisk.models.ticket import Winner  # Import local
+        from fortunaisk.models.ticket import Winner
 
         return Winner.objects.filter(ticket__lottery=self)

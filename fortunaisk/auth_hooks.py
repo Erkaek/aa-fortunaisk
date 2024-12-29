@@ -4,8 +4,8 @@ Alliance Auth hooks for adding FortunaIsk to the navigation menu.
 """
 
 # Alliance Auth
-from allianceauth import hooks  # type: ignore
-from allianceauth.services.hooks import MenuItemHook, UrlHook  # type: ignore
+from allianceauth import hooks
+from allianceauth.services.hooks import MenuItemHook, UrlHook
 
 from . import urls
 

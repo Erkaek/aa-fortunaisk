@@ -4,10 +4,10 @@
 import logging
 
 # Third Party
-from solo.models import SingletonModel  # type: ignore
+from solo.models import SingletonModel
 
 # Django
-from django.db import models  # type: ignore
+from django.db import models
 
 logger = logging.getLogger(__name__)
 

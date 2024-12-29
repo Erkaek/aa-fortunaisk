@@ -1,5 +1,3 @@
-# fortunaisk/urls.py
-
 # Django
 from django.urls import path
 
@@ -10,14 +8,12 @@ from .views import (
     delete_auto_lottery,
     distribute_prize,
     edit_auto_lottery,
-    list_auto_lotteries,
     lottery,
     lottery_detail,
     lottery_history,
     lottery_participants,
     resolve_anomaly,
     terminate_lottery,
-    ticket_purchases,
     user_dashboard,
     winner_list,
 )
@@ -25,20 +21,32 @@ from .views import (
 app_name = "fortunaisk"
 
 urlpatterns = [
+    # User-facing
     path("lottery/", lottery, name="lottery"),
-    path("winners/", winner_list, name="winner_list"),
-    path("admin_dashboard/", admin_dashboard, name="admin_dashboard"),
-    path("ticket_purchases/", ticket_purchases, name="ticket_purchases"),
-    path("history/", lottery_history, name="lottery_history"),
     path("dashboard/", user_dashboard, name="user_dashboard"),
+    # Winners & history
+    path("winners/", winner_list, name="winner_list"),
+    path("history/", lottery_history, name="lottery_history"),
+    # Admin Dashboard
+    path("admin_dashboard/", admin_dashboard, name="admin_dashboard"),
+    # Standard Lottery
+    path("lottery_create/", create_lottery, name="lottery_create"),
     path(
         "lottery/<int:lottery_id>/participants/",
         lottery_participants,
         name="lottery_participants",
     ),
-    path("lottery_create/", create_lottery, name="lottery_create"),
-    # AutoLottery URLs
-    path("auto_lotteries/", list_auto_lotteries, name="auto_lottery_list"),
+    path(
+        "lottery/<int:lottery_id>/detail/",
+        lottery_detail,
+        name="lottery_detail",
+    ),
+    path(
+        "terminate_lottery/<int:lottery_id>/",
+        terminate_lottery,
+        name="terminate_lottery",
+    ),
+    # AutoLottery
     path("auto_lotteries/create/", create_auto_lottery, name="auto_lottery_create"),
     path(
         "auto_lotteries/edit/<int:autolottery_id>/",
@@ -50,11 +58,7 @@ urlpatterns = [
         delete_auto_lottery,
         name="auto_lottery_delete",
     ),
-    path(
-        "terminate_lottery/<int:lottery_id>/",
-        terminate_lottery,
-        name="terminate_lottery",
-    ),
+    # Anomaly & Prize distribution
     path(
         "resolve_anomaly/<int:anomaly_id>/",
         resolve_anomaly,
@@ -64,10 +68,5 @@ urlpatterns = [
         "distribute_prize/<int:winner_id>/",
         distribute_prize,
         name="distribute_prize",
-    ),
-    path(
-        "lottery/<int:lottery_id>/detail/",
-        lottery_detail,
-        name="lottery_detail",
     ),
 ]

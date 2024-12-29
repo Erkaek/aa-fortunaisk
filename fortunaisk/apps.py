@@ -1,11 +1,9 @@
-# fortunaisk/apps.py
-
 # Standard Library
 import importlib
 import logging
 
 # Django
-from django.apps import AppConfig
+from django.apps import AppConfig, apps
 
 logger = logging.getLogger(__name__)
 
@@ -16,9 +14,17 @@ class FortunaIskConfig(AppConfig):
 
     def ready(self) -> None:
         super().ready()
+
+        # Attempt to import signals
         try:
-            # Import dynamique de tous les signaux
             importlib.import_module("fortunaisk.signals")
             logger.info("FortunaIsk signals loaded.")
         except Exception as e:
             logger.exception(f"Failed to load FortunaIsk signals: {e}")
+
+        # Check if corptools is installed (warn if not)
+        if not apps.is_installed("corptools"):
+            logger.warning(
+                "The 'corptools' application is not installed. "
+                "Some ticket processing functionalities will be unavailable."
+            )

@@ -12,7 +12,7 @@ from django.core.cache import cache
 from django.core.mail import mail_admins
 
 # Alliance Auth
-from allianceauth.notifications import notify  # type: ignore
+from allianceauth.notifications import notify
 
 from .models import WebhookConfiguration
 

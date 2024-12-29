@@ -4,9 +4,9 @@
 import logging
 
 # Django
-from django.core.cache import cache  # type: ignore
-from django.db.models.signals import post_delete, post_save  # type: ignore
-from django.dispatch import receiver  # type: ignore
+from django.core.cache import cache
+from django.db.models.signals import post_delete, post_save
+from django.dispatch import receiver
 
 # fortunaisk
 from fortunaisk.models import WebhookConfiguration

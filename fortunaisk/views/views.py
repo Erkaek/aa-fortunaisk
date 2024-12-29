@@ -1,5 +1,3 @@
-# fortunaisk/views/views.py
-
 # Standard Library
 import logging
 
@@ -9,10 +7,9 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.core.paginator import Paginator
 from django.db.models import Avg, Count, Sum
 from django.shortcuts import get_object_or_404, redirect, render
-from django.utils.translation import gettext as _
 
 # fortunaisk
-from fortunaisk.forms.autolottery_forms import AutoLotteryForm  # Import ajouté
+from fortunaisk.forms.autolottery_forms import AutoLotteryForm
 from fortunaisk.forms.lottery_forms import LotteryCreateForm
 from fortunaisk.models import (
     AutoLottery,
@@ -25,17 +22,12 @@ from fortunaisk.notifications import (
     send_alliance_auth_notification,
     send_discord_notification,
 )
-from fortunaisk.tasks import (
-    create_lottery_from_auto_lottery,  # Assurez-vous que cette fonction est utilisée
-)
+from fortunaisk.tasks import create_lottery_from_auto_lottery
 
 logger = logging.getLogger(__name__)
 
 
 def get_distribution_range(winner_count):
-    """
-    Fonction utilitaire pour obtenir la plage de distribution en fonction du nombre de gagnants.
-    """
     try:
         winner_count = int(winner_count)
         if winner_count < 1:
@@ -51,16 +43,15 @@ def get_distribution_range(winner_count):
 
 
 @login_required
-@permission_required("fortunaisk.admin_dashboard", raise_exception=True)
+@permission_required("fortunaisk.admin", raise_exception=True)
 def admin_dashboard(request):
     """
-    Vue principale de l'admin, affichant des statistiques globales,
-    la liste des loteries actives, les anomalies, etc.
+    Main admin dashboard: global stats, list of active lotteries,
+    anomalies, winners, and automatic lotteries in one place.
     """
-    # Toutes les loteries
+    # All lotteries
     lotteries = Lottery.objects.all().prefetch_related("ticket_purchases")
-
-    # Loteries actives
+    # Active lotteries
     active_lotteries = lotteries.filter(status="active").annotate(
         tickets=Count("ticket_purchases")
     )
@@ -82,7 +73,7 @@ def admin_dashboard(request):
         "avg_participation": active_lotteries.aggregate(avg=Avg("tickets"))["avg"] or 0,
     }
 
-    # Anomalies par loterie (top 10)
+    # Anomalies by lottery (top 10)
     anomaly_data = (
         anomalies.values("lottery__lottery_reference")
         .annotate(count=Count("id"))
@@ -93,7 +84,7 @@ def admin_dashboard(request):
     ]
     anomalies_per_lottery = [item["count"] for item in anomaly_data[:10]]
 
-    # Top Active Users (top anomalies par user) (top 10)
+    # Top Active Users (by anomalies) (top 10)
     top_users = (
         TicketAnomaly.objects.values("user__username")
         .annotate(anomaly_count=Count("id"))
@@ -102,6 +93,9 @@ def admin_dashboard(request):
     top_users_names = [item["user__username"] for item in top_users]
     top_users_anomalies = [item["anomaly_count"] for item in top_users]
     top_active_users = zip(top_users_names, top_users_anomalies)
+
+    # Automatic Lotteries
+    autolotteries = AutoLottery.objects.all()
 
     context = {
         "active_lotteries": active_lotteries,
@@ -113,48 +107,33 @@ def admin_dashboard(request):
         "top_users_names": top_users_names,
         "top_users_anomalies": top_users_anomalies,
         "top_active_users": top_active_users,
+        "autolotteries": autolotteries,  # integrated from old auto_lottery_list
     }
     return render(request, "fortunaisk/admin.html", context)
 
 
 @login_required
-@permission_required("fortunaisk.change_ticketanomaly", raise_exception=True)
+@permission_required("fortunaisk.admin", raise_exception=True)
 def resolve_anomaly(request, anomaly_id):
-    """
-    Vue pour résoudre une anomalie (TicketAnomaly).
-    """
     anomaly = get_object_or_404(TicketAnomaly, id=anomaly_id)
     if request.method == "POST":
         try:
             anomaly.delete()
-            messages.success(request, _("Anomalie résolue avec succès."))
-
-            # Notifications
+            messages.success(request, "Anomaly successfully resolved.")
             send_alliance_auth_notification(
                 user=request.user,
-                title=_("Anomalie Résolue"),
-                message=_(
-                    "Anomalie {anomaly_id} résolue pour la loterie {lottery_ref}."
-                ).format(
-                    anomaly_id=anomaly.id,
-                    lottery_ref=anomaly.lottery.lottery_reference,
-                ),
+                title="Anomaly Resolved",
+                message=f"Anomaly {anomaly_id} resolved for lottery {anomaly.lottery.lottery_reference}.",
                 level="info",
             )
             send_discord_notification(
-                message=_(
-                    "Anomalie résolue : {reason} pour la loterie {lottery_ref} par {username}."
-                ).format(
-                    reason=anomaly.reason,
-                    lottery_ref=anomaly.lottery.lottery_reference,
-                    username=request.user.username,
+                message=(
+                    f"Anomaly resolved: {anomaly.reason} for lottery "
+                    f"{anomaly.lottery.lottery_reference} by {request.user.username}."
                 )
             )
         except Exception as e:
-            messages.error(
-                request,
-                _("Une erreur est survenue lors de la résolution de l'anomalie."),
-            )
+            messages.error(request, "An error occurred while resolving the anomaly.")
             logger.exception(f"Error resolving anomaly {anomaly_id}: {e}")
         return redirect("fortunaisk:admin_dashboard")
 
@@ -164,52 +143,39 @@ def resolve_anomaly(request, anomaly_id):
 
 
 @login_required
-@permission_required("fortunaisk.change_winner", raise_exception=True)
+@permission_required("fortunaisk.admin", raise_exception=True)
 def distribute_prize(request, winner_id):
-    """
-    Vue pour marquer le gain d'un winner comme 'distributed'.
-    """
     winner = get_object_or_404(Winner, id=winner_id)
     if request.method == "POST":
         try:
             if not winner.distributed:
                 winner.distributed = True
                 winner.save()
-
                 messages.success(
                     request,
-                    _("Prix distribué à {username}.").format(
-                        username=winner.ticket.user.username
-                    ),
+                    f"Prize distributed to {winner.ticket.user.username}.",
                 )
-                # Notifications
                 send_alliance_auth_notification(
                     user=request.user,
-                    title=_("Prix Distribué"),
-                    message=_(
-                        "Les prix de {prize_amount} ISK ont été distribués à {username} pour la loterie {lottery_ref}."
-                    ).format(
-                        prize_amount=winner.prize_amount,
-                        username=winner.ticket.user.username,
-                        lottery_ref=winner.ticket.lottery.lottery_reference,
+                    title="Prize Distributed",
+                    message=(
+                        f"{winner.prize_amount} ISK prize distributed to "
+                        f"{winner.ticket.user.username} for lottery "
+                        f"{winner.ticket.lottery.lottery_reference}."
                     ),
                     level="success",
                 )
                 send_discord_notification(
-                    message=_(
-                        "Prix distribué : {prize_amount} ISK à {username} pour la loterie {lottery_ref}."
-                    ).format(
-                        prize_amount=winner.prize_amount,
-                        username=winner.ticket.user.username,
-                        lottery_ref=winner.ticket.lottery.lottery_reference,
+                    message=(
+                        f"Prize distributed: {winner.prize_amount} ISK to "
+                        f"{winner.ticket.user.username} for lottery "
+                        f"{winner.ticket.lottery.lottery_reference}."
                     )
                 )
             else:
-                messages.info(request, _("Ce prix a déjà été distribué."))
+                messages.info(request, "This prize has already been distributed.")
         except Exception as e:
-            messages.error(
-                request, _("Une erreur est survenue lors de la distribution du prix.")
-            )
+            messages.error(request, "An error occurred while distributing the prize.")
             logger.exception(f"Error distributing prize {winner_id}: {e}")
         return redirect("fortunaisk:admin_dashboard")
 
@@ -220,42 +186,27 @@ def distribute_prize(request, winner_id):
 
 ##################################
 #       AUTOLOTTERY VIEWS
+#  We keep creation and editing, but no separate listing page
 ##################################
 
 
 @login_required
-@permission_required("fortunaisk.view_autolottery", raise_exception=True)
-def list_auto_lotteries(request):
-    """
-    Liste toutes les autolotteries actives.
-    """
-    # Liste toutes les AutoLotteries
-    autolotteries = AutoLottery.objects.all()
-    return render(
-        request, "fortunaisk/auto_lottery_list.html", {"autolotteries": autolotteries}
-    )
-
-
-@login_required
-@permission_required("fortunaisk.add_autolottery", raise_exception=True)
+@permission_required("fortunaisk.admin", raise_exception=True)
 def create_auto_lottery(request):
     if request.method == "POST":
         form = AutoLotteryForm(request.POST)
         if form.is_valid():
             form.save()
-            messages.success(request, _("AutoLottery créée avec succès."))
-            return redirect("fortunaisk:auto_lottery_list")
+            messages.success(request, "AutoLottery successfully created.")
+            return redirect("fortunaisk:admin_dashboard")
         else:
-            messages.error(request, _("Veuillez corriger les erreurs ci-dessous."))
-            # Passer 'distribution_range' basé sur le nombre de gagnants soumis
+            messages.error(request, "Please correct the errors below.")
             winner_count = form.data.get("winner_count", 1)
             distribution_range = get_distribution_range(winner_count)
     else:
         form = AutoLotteryForm()
-        # Passer 'distribution_range' basé sur le nombre de gagnants initial
         distribution_range = get_distribution_range(form.initial.get("winner_count", 1))
 
-    # Si instance a winners_distribution, ajuster distribution_range
     if form.instance.winners_distribution:
         distribution_range = range(len(form.instance.winners_distribution))
 
@@ -267,11 +218,8 @@ def create_auto_lottery(request):
 
 
 @login_required
-@permission_required("fortunaisk.change_autolottery", raise_exception=True)
+@permission_required("fortunaisk.admin", raise_exception=True)
 def edit_auto_lottery(request, autolottery_id):
-    """
-    Vue pour éditer une AutoLottery existante.
-    """
     autolottery = get_object_or_404(AutoLottery, id=autolottery_id)
     if request.method == "POST":
         form = AutoLotteryForm(request.POST, instance=autolottery)
@@ -279,41 +227,35 @@ def edit_auto_lottery(request, autolottery_id):
             previous_is_active = autolottery.is_active
             auto_lottery = form.save()
             if auto_lottery.is_active and not previous_is_active:
-                # Si réactivé, créer une nouvelle loterie
                 create_lottery_from_auto_lottery.delay(auto_lottery.id)
-            messages.success(request, _("Loterie automatique mise à jour avec succès."))
-            return redirect("fortunaisk:auto_lottery_list")
+            messages.success(request, "AutoLottery updated successfully.")
+            return redirect("fortunaisk:admin_dashboard")
         else:
-            messages.error(request, _("Veuillez corriger les erreurs ci-dessous."))
-            # Passer 'distribution_range' basé sur le nombre de gagnants soumis
+            messages.error(request, "Please correct the errors below.")
             winner_count = form.data.get("winner_count", 1)
             distribution_range = get_distribution_range(winner_count)
     else:
         form = AutoLotteryForm(instance=autolottery)
         distribution_range = get_distribution_range(form.instance.winner_count or 1)
 
-    # Si instance a winners_distribution, ajuster distribution_range
     if form.instance.winners_distribution:
         distribution_range = range(len(form.instance.winners_distribution))
 
-    context = {
-        "form": form,
-        "distribution_range": distribution_range,
-    }
-    return render(request, "fortunaisk/auto_lottery_form.html", context)
+    return render(
+        request,
+        "fortunaisk/auto_lottery_form.html",
+        {"form": form, "distribution_range": distribution_range},
+    )
 
 
 @login_required
-@permission_required("fortunaisk.delete_autolottery", raise_exception=True)
+@permission_required("fortunaisk.admin", raise_exception=True)
 def delete_auto_lottery(request, autolottery_id):
-    """
-    Vue pour supprimer une AutoLottery.
-    """
     autolottery = get_object_or_404(AutoLottery, id=autolottery_id)
     if request.method == "POST":
         autolottery.delete()
-        messages.success(request, _("Loterie automatique supprimée avec succès."))
-        return redirect("fortunaisk:auto_lottery_list")
+        messages.success(request, "AutoLottery successfully deleted.")
+        return redirect("fortunaisk:admin_dashboard")
 
     return render(
         request,
@@ -330,15 +272,13 @@ def delete_auto_lottery(request, autolottery_id):
 @login_required
 def lottery(request):
     """
-    Vue listant les loteries actives,
-    donnant des instructions de participation à l'utilisateur.
+    List active lotteries for regular users, with instructions to participate.
     """
     active_lotteries = Lottery.objects.filter(status="active").prefetch_related(
         "ticket_purchases"
     )
     lotteries_info = []
 
-    # Comptabiliser le nb de tickets de l'utilisateur
     user_ticket_counts = (
         TicketPurchase.objects.filter(user=request.user, lottery__in=active_lotteries)
         .values("lottery")
@@ -350,18 +290,14 @@ def lottery(request):
         corp_name = (
             lot.payment_receiver.corporation_name
             if lot.payment_receiver and lot.payment_receiver.corporation_name
-            else _("Unknown Corporation")
+            else "Unknown Corporation"
         )
         user_ticket_count = user_ticket_map.get(lot.id, 0)
         has_ticket = user_ticket_count > 0
 
-        instructions = _(
-            "Pour participer, envoyez {ticket_price} ISK à {corp_name} "
-            "avec la référence '{lottery_reference}' dans la description du paiement."
-        ).format(
-            ticket_price=lot.ticket_price,
-            corp_name=corp_name,
-            lottery_reference=lot.lottery_reference,
+        instructions = (
+            f"To participate, send {lot.ticket_price} ISK to {corp_name} "
+            f"with '{lot.lottery_reference}' as the payment description."
         )
 
         lotteries_info.append(
@@ -382,30 +318,10 @@ def lottery(request):
 
 
 @login_required
-@permission_required("fortunaisk.view_ticketpurchase", raise_exception=True)
-def ticket_purchases(request):
-    """
-    Vue listant tous les achats de tickets
-    pour les loteries actives (avec pagination).
-    """
-    current_lotteries = Lottery.objects.filter(status="active")
-    purchases_qs = (
-        TicketPurchase.objects.filter(lottery__in=current_lotteries)
-        .select_related("user", "character", "lottery")
-        .order_by("-purchase_date")
-    )
-    paginator = Paginator(purchases_qs, 25)
-    page_number = request.GET.get("page")
-    page_obj = paginator.get_page(page_number)
-
-    return render(request, "fortunaisk/ticket_purchases.html", {"page_obj": page_obj})
-
-
-@login_required
-@permission_required("fortunaisk.view_winner", raise_exception=True)
+@permission_required("fortunaisk.admin", raise_exception=True)
 def winner_list(request):
     """
-    Vue listant tous les winners (gagnants) avec pagination.
+    Lists all winners with pagination.
     """
     winners_qs = Winner.objects.select_related(
         "ticket__user", "ticket__lottery", "character"
@@ -418,10 +334,10 @@ def winner_list(request):
 
 
 @login_required
-@permission_required("fortunaisk.view_lotteryhistory", raise_exception=True)
+@permission_required("fortunaisk.admin", raise_exception=True)
 def lottery_history(request):
     """
-    Vue listant toutes les loteries passées (complétées ou annulées).
+    Lists all past lotteries (completed or cancelled).
     """
     past_lotteries_qs = Lottery.objects.exclude(status="active").order_by("-end_date")
     paginator = Paginator(past_lotteries_qs, 6)
@@ -436,28 +352,25 @@ def lottery_history(request):
 
 
 @login_required
-@permission_required("fortunaisk.add_lottery", raise_exception=True)
+@permission_required("fortunaisk.admin", raise_exception=True)
 def create_lottery(request):
     """
-    Vue pour créer une loterie "unique" (non automatique).
-    Gère LotteryCreateForm.
+    Create a one-shot lottery (non-automatic).
     """
     if request.method == "POST":
         form = LotteryCreateForm(request.POST)
         if form.is_valid():
             form.save()
-            messages.success(request, _("Loterie créée avec succès."))
+            messages.success(request, "Lottery successfully created.")
             return redirect("fortunaisk:lottery")
         else:
-            messages.error(request, _("Veuillez corriger les erreurs ci-dessous."))
-            # Passer 'distribution_range' basé sur le nombre de gagnants soumis
+            messages.error(request, "Please correct the errors below.")
             winner_count = form.cleaned_data.get("winner_count", 1)
             distribution_range = get_distribution_range(winner_count)
     else:
         form = LotteryCreateForm()
         distribution_range = get_distribution_range(form.instance.winner_count or 1)
 
-    # Si instance a winners_distribution, ajuster distribution_range
     if form.instance.winners_distribution:
         distribution_range = range(len(form.instance.winners_distribution))
 
@@ -469,10 +382,10 @@ def create_lottery(request):
 
 
 @login_required
-@permission_required("fortunaisk.lottery_participants", raise_exception=True)
+@permission_required("fortunaisk.admin", raise_exception=True)
 def lottery_participants(request, lottery_id):
     """
-    Vue listant les participants d'une loterie.
+    Lists participants of a lottery.
     """
     lottery_obj = get_object_or_404(Lottery, id=lottery_id)
     participants_qs = lottery_obj.ticket_purchases.select_related(
@@ -490,10 +403,10 @@ def lottery_participants(request, lottery_id):
 
 
 @login_required
-@permission_required("fortunaisk.terminate_lottery", raise_exception=True)
+@permission_required("fortunaisk.admin", raise_exception=True)
 def terminate_lottery(request, lottery_id):
     """
-    Vue permettant de terminer prématurément une loterie active.
+    Allows an admin to terminate an active lottery prematurely.
     """
     lottery_obj = get_object_or_404(Lottery, id=lottery_id, status="active")
     if request.method == "POST":
@@ -502,35 +415,25 @@ def terminate_lottery(request, lottery_id):
             lottery_obj.save(update_fields=["status"])
             messages.success(
                 request,
-                _("Loterie {lottery_ref} terminée avec succès.").format(
-                    lottery_ref=lottery_obj.lottery_reference
-                ),
+                f"Lottery {lottery_obj.lottery_reference} terminated successfully.",
             )
-            # Notifications
             send_alliance_auth_notification(
                 user=request.user,
-                title=_("Loterie Terminée"),
-                message=_(
-                    "La loterie {lottery_ref} a été terminée prématurément par {username}."
-                ).format(
-                    lottery_ref=lottery_obj.lottery_reference,
-                    username=request.user.username,
+                title="Lottery Terminated",
+                message=(
+                    f"Lottery {lottery_obj.lottery_reference} was prematurely terminated "
+                    f"by {request.user.username}."
                 ),
                 level="warning",
             )
             send_discord_notification(
-                message=_(
-                    "La loterie {lottery_ref} a été terminée prématurément par {username}."
-                ).format(
-                    lottery_ref=lottery_obj.lottery_reference,
-                    username=request.user.username,
+                message=(
+                    f"Lottery {lottery_obj.lottery_reference} was prematurely terminated "
+                    f"by {request.user.username}."
                 )
             )
         except Exception as e:
-            messages.error(
-                request,
-                _("Une erreur est survenue lors de la terminaison de la loterie."),
-            )
+            messages.error(request, "An error occurred while terminating the lottery.")
             logger.exception(f"Error terminating lottery {lottery_id}: {e}")
         return redirect("fortunaisk:admin_dashboard")
 
@@ -547,7 +450,7 @@ def terminate_lottery(request, lottery_id):
 @login_required
 def user_dashboard(request):
     """
-    Tableau de bord utilisateur : liste des tickets achetés et des gains.
+    User dashboard: lists the user's purchased tickets and any winnings.
     """
     user = request.user
     ticket_purchases_qs = (
@@ -576,10 +479,10 @@ def user_dashboard(request):
 
 
 @login_required
-@permission_required("fortunaisk.view_lotteryhistory", raise_exception=True)
+@permission_required("fortunaisk.admin", raise_exception=True)
 def lottery_detail(request, lottery_id):
     """
-    Vue d'un détail d'une loterie (participants, anomalies, winners, etc.)
+    Detailed view of a lottery (participants, anomalies, winners, etc.).
     """
     lottery_obj = get_object_or_404(Lottery, id=lottery_id)
     participants_qs = lottery_obj.ticket_purchases.select_related(

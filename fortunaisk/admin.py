@@ -1,23 +1,18 @@
-# fortunaisk/admin.py
-
 # Standard Library
 import csv
 import json
 import logging
 
 # Third Party
-from django_celery_beat.models import (  # Utilisé dans AutoLotteryAdmin
-    IntervalSchedule,
-    PeriodicTask,
-)
-from solo.admin import SingletonModelAdmin  # type: ignore
+from django_celery_beat.models import IntervalSchedule, PeriodicTask
+from solo.admin import SingletonModelAdmin
 
 # Django
-from django.contrib import admin  # type: ignore
-from django.db import models  # Ajouté pour résoudre l'erreur F821
-from django.http import HttpResponse  # type: ignore
+from django.contrib import admin
+from django.db import models
+from django.http import HttpResponse
 
-from .models import (  # TicketPurchase,  # Supprimé car inutilisé directement dans admin.py
+from .models import (
     AuditLog,
     AutoLottery,
     Lottery,
@@ -33,7 +28,7 @@ logger = logging.getLogger(__name__)
 class ExportCSVMixin:
     export_fields = []
 
-    @admin.action(description="Exporter les éléments sélectionnés au format CSV")
+    @admin.action(description="Export selected items to CSV")
     def export_as_csv(self, request, queryset):
         meta = self.model._meta
         field_names = self.export_fields or [field.name for field in meta.fields]
@@ -72,6 +67,7 @@ class LotteryAdmin(ExportCSVMixin, admin.ModelAdmin):
         "export_as_csv",
         "terminate_lottery",
     ]
+    # Removed from readonly_fields to allow editing:
     readonly_fields = (
         "id",
         "lottery_reference",
@@ -114,7 +110,8 @@ class LotteryAdmin(ExportCSVMixin, admin.ModelAdmin):
     ]
 
     def has_add_permission(self, request):
-        return False  # Désactiver la création via l'admin
+        # We do not allow creation via the admin for standard lotteries
+        return False
 
     def save_model(self, request, obj, form, change):
         if change:
@@ -127,71 +124,70 @@ class LotteryAdmin(ExportCSVMixin, admin.ModelAdmin):
         if change and old_obj:
             if old_obj.status != obj.status:
                 if obj.status == "completed":
-                    message = f"Loterie {obj.lottery_reference} terminée."
+                    message = f"Lottery {obj.lottery_reference} completed."
                 elif obj.status == "cancelled":
-                    message = f"Loterie {obj.lottery_reference} annulée."
+                    message = f"Lottery {obj.lottery_reference} cancelled."
                 else:
-                    message = f"Loterie {obj.lottery_reference} mise à jour."
+                    message = f"Lottery {obj.lottery_reference} updated."
 
-                # Envoyer une notification via Alliance Auth
                 send_alliance_auth_notification(
                     user=request.user,
-                    title="Statut de la Loterie Changé",
+                    title="Lottery Status Changed",
                     message=message,
                     level="info",
                 )
-
-                # Envoyer une notification Discord
                 send_discord_notification(message=message)
 
-    @admin.action(description="Marquer les loteries sélectionnées comme terminées")
+    @admin.action(description="Mark selected lotteries as completed")
     def mark_completed(self, request, queryset):
         updated = 0
         for lottery in queryset.filter(status="active"):
             lottery.complete_lottery()
             updated += 1
-        self.message_user(
-            request, f"{updated} loterie(s) marquée(s) comme terminée(s)."
+        self.message_user(request, f"{updated} lottery(ies) marked as completed.")
+        send_discord_notification(
+            message=f"{updated} lottery(ies) have been completed."
         )
-        send_discord_notification(message=f"{updated} loterie(s) ont été terminée(s).")
-        # Envoyer une notification via Alliance Auth
         send_alliance_auth_notification(
             user=request.user,
-            title="Lotteries Terminated",
-            message=f"{updated} loterie(s) ont été terminée(s).",
+            title="Lotteries Completed",
+            message=f"{updated} lottery(ies) have been completed.",
             level="info",
         )
 
-    @admin.action(description="Marquer les loteries sélectionnées comme annulées")
+    @admin.action(description="Mark selected lotteries as cancelled")
     def mark_cancelled(self, request, queryset):
         updated = queryset.filter(status="active").count()
         queryset.filter(status="active").update(status="cancelled")
-        self.message_user(request, f"{updated} loterie(s) annulée(s).")
-        send_discord_notification(message=f"{updated} loterie(s) ont été annulée(s).")
-        # Envoyer une notification via Alliance Auth
+        self.message_user(request, f"{updated} lottery(ies) cancelled.")
+        send_discord_notification(
+            message=f"{updated} lottery(ies) have been cancelled."
+        )
         send_alliance_auth_notification(
             user=request.user,
             title="Lotteries Cancelled",
-            message=f"{updated} loterie(s) ont été annulée(s).",
+            message=f"{updated} lottery(ies) have been cancelled.",
             level="warning",
         )
 
-    @admin.action(description="Terminer prématurément les loteries sélectionnées")
+    @admin.action(description="Terminate selected lotteries prematurely")
     def terminate_lottery(self, request, queryset):
         updated = 0
         for lottery in queryset.filter(status="active"):
             lottery.status = "cancelled"
             lottery.save(update_fields=["status"])
             updated += 1
-        self.message_user(request, f"{updated} loterie(s) terminée(s) prématurément.")
-        send_discord_notification(
-            message=f"{updated} loterie(s) ont été terminée(s) prématurément par {request.user.username}."
+        self.message_user(
+            request,
+            f"{updated} lottery(ies) terminated prematurely.",
         )
-        # Envoyer une notification via Alliance Auth
+        send_discord_notification(
+            message=f"{updated} lottery(ies) terminated prematurely by {request.user.username}."
+        )
         send_alliance_auth_notification(
             user=request.user,
             title="Lotteries Terminated Prematurely",
-            message=f"{updated} loterie(s) ont été terminée(s) prématurément par {request.user.username}.",
+            message=f"{updated} lottery(ies) terminated prematurely by {request.user.username}.",
             level="warning",
         )
 
@@ -261,7 +257,8 @@ class AutoLotteryAdmin(ExportCSVMixin, admin.ModelAdmin):
     )
     search_fields = ("name",)
     actions = ["export_as_csv"]
-    readonly_fields = ("max_tickets_per_user",)
+    # Previously it was readonly; we remove it so it can be edited:
+    readonly_fields = ()
     fields = (
         "is_active",
         "name",
@@ -294,50 +291,37 @@ class AutoLotteryAdmin(ExportCSVMixin, admin.ModelAdmin):
         super().save_model(request, obj, form, change)
         if change:
             if obj.is_active:
-                message = f"AutoLoterie {obj.name} est maintenant active."
-                # Create a periodic task for this AutoLottery
+                message = f"AutoLottery {obj.name} is now active."
 
-                # Define schedule based on frequency and unit
+                # We create or update the periodic task
                 if obj.frequency_unit == "minutes":
                     period = IntervalSchedule.MINUTES
                 elif obj.frequency_unit == "hours":
                     period = IntervalSchedule.HOURS
                 elif obj.frequency_unit == "days":
                     period = IntervalSchedule.DAYS
-                elif obj.frequency_unit == "weeks":
-                    period = IntervalSchedule.WEEKS
-                elif obj.frequency_unit == "months":
-                    period = IntervalSchedule.MONTHS
                 else:
-                    logger.error(
-                        f"Unknown frequency_unit {obj.frequency_unit} for AutoLottery {obj.id}"
-                    )
-                    return
-
-                schedule, created = IntervalSchedule.objects.get_or_create(
+                    # default fallback
+                    period = IntervalSchedule.DAYS
+                interval, _ = IntervalSchedule.objects.get_or_create(
                     every=obj.frequency,
                     period=period,
                 )
 
-                # Create or get the periodic task
                 task_name = f"create_lottery_from_autolottery_{obj.id}"
                 PeriodicTask.objects.update_or_create(
                     name=task_name,
                     defaults={
                         "task": "fortunaisk.tasks.create_lottery_from_auto_lottery",
-                        "interval": schedule,
+                        "interval": interval,
                         "args": json.dumps([obj.id]),
                     },
                 )
-
                 logger.info(
-                    f"Periodic task '{task_name}' created for AutoLottery {obj.id}."
+                    f"Periodic task '{task_name}' created/updated for AutoLottery {obj.id}."
                 )
-
             else:
-                message = f"AutoLoterie {obj.name} a été désactivée."
-                # Delete the periodic task for this AutoLottery
-
+                message = f"AutoLottery {obj.name} has been deactivated."
                 task_name = f"create_lottery_from_autolottery_{obj.id}"
                 try:
                     task = PeriodicTask.objects.get(name=task_name)
@@ -351,11 +335,9 @@ class AutoLotteryAdmin(ExportCSVMixin, admin.ModelAdmin):
                     )
 
             send_discord_notification(message=message)
-
-            # Envoyer une notification via Alliance Auth
             send_alliance_auth_notification(
                 user=request.user,
-                title="AutoLoterie Status Changed",
+                title="AutoLottery Status Changed",
                 message=message,
                 level="info",
             )
@@ -392,18 +374,17 @@ class WinnerAdmin(admin.ModelAdmin):
     list_filter = ("distributed",)
     actions = ["mark_as_distributed"]
 
-    @admin.action(description="Marquer les gains sélectionnés comme distribués")
+    @admin.action(description="Mark selected winnings as distributed")
     def mark_as_distributed(self, request, queryset):
         updated = queryset.filter(distributed=False).update(distributed=True)
-        self.message_user(request, f"{updated} gain(s) marqué(s) comme distribués.")
+        self.message_user(request, f"{updated} prize(s) marked as distributed.")
         send_discord_notification(
-            message=f"{updated} gain(s) ont été marqué(s) comme distribués."
+            message=f"{updated} prize(s) have been marked as distributed."
         )
-        # Envoyer une notification via Alliance Auth
         send_alliance_auth_notification(
             user=request.user,
             title="Prizes Distributed",
-            message=f"{updated} gain(s) ont été marqué(s) comme distribués.",
+            message=f"{updated} prize(s) have been marked as distributed.",
             level="success",
         )
 
@@ -420,13 +401,12 @@ class WebhookConfigurationAdmin(SingletonModelAdmin):
     )
 
     def has_add_permission(self, request):
-        # Limiter à une seule instance
         if WebhookConfiguration.objects.exists():
             return False
         return True
 
     def has_change_permission(self, request, obj=None):
-        return True  # Allow changes
+        return True
 
 
 @admin.register(AuditLog)
@@ -444,7 +424,7 @@ class AuditLogAdmin(admin.ModelAdmin):
     )
 
     def has_add_permission(self, request):
-        return False  # Prevent manual addition of audit logs
+        return False
 
     def has_change_permission(self, request, obj=None):
-        return False  # Prevent modification of audit logs
+        return False
