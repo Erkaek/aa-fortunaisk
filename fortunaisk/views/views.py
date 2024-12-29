@@ -2,13 +2,14 @@
 
 # Standard Library
 import logging
+from decimal import Decimal
 
 # Django
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.paginator import Paginator
-from django.db.models import Avg, Count, F, Sum
+from django.db.models import Avg, Count, DecimalField, F, Sum
 from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext as _
@@ -58,9 +59,9 @@ def admin_dashboard(request):
     active_lotteries = lotteries.filter(status="active").annotate(
         tickets=Count("ticket_purchases")
     )
-    ticket_purchases_amount = (
-        active_lotteries.aggregate(total=Sum("ticket_purchases__amount"))["total"] or 0
-    )
+    ticket_purchases_amount = active_lotteries.aggregate(
+        total=Sum("ticket_purchases__amount")
+    )["total"] or Decimal("0")
 
     winners = Winner.objects.select_related(
         "ticket__user", "ticket__lottery", "character"
@@ -332,13 +333,17 @@ def winner_list(request):
     # Top 3 utilisateurs par montant total gagné
     top_3 = (
         User.objects.annotate(
-            total_prize=Coalesce(Sum("ticket_purchases__winners__prize_amount"), 0),
+            total_prize=Coalesce(
+                Sum("ticket_purchases__winners__prize_amount"),
+                Decimal("0"),  # Utiliser Decimal('0') au lieu de 0
+                output_field=DecimalField(),  # Spécifier l'output_field
+            ),
             main_character_name=F(
-                "profile__main_character__character_name"
-            ),  # Utiliser 'profile' si c'est le related_name
+                "user_settings__main_character__character_name"
+            ),  # Utiliser 'user_settings' pour accéder au personnage principal via Alliance Auth
         )
         .order_by("-total_prize")[:3]
-        .select_related("profile__main_character")
+        .select_related("user_settings__main_character")
     )
 
     # Pagination pour le tableau général

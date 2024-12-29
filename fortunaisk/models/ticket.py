@@ -19,7 +19,7 @@ class TicketPurchase(models.Model):
         ("pending", "Pending"),
         ("processed", "Processed"),
         ("failed", "Failed"),
-        # Add other choices if necessary
+        # Ajoutez d'autres choix si nécessaire
     ]
 
     lottery = models.ForeignKey(
@@ -61,7 +61,7 @@ class TicketPurchase(models.Model):
         choices=STATUS_CHOICES,
         default="pending",
         verbose_name="Ticket Status",
-    )  # New field
+    )  # Nouveau champ
 
     def __str__(self) -> str:
         return (
@@ -73,7 +73,7 @@ class TicketPurchase(models.Model):
 
 class Winner(models.Model):
     """
-    Represents a winner associated with a specific TicketPurchase.
+    Représente un gagnant associé à un TicketPurchase spécifique.
     """
 
     ticket = models.ForeignKey(
@@ -93,7 +93,7 @@ class Winner(models.Model):
     prize_amount = models.DecimalField(
         max_digits=25,
         decimal_places=2,
-        default=0,
+        default=Decimal("0"),
         verbose_name="Prize Amount",
         help_text="ISK amount that the winner receives.",
     )
@@ -111,8 +111,8 @@ class Winner(models.Model):
 
 class TicketAnomaly(models.Model):
     """
-    Represents any anomaly detected during ticket processing.
-    E.g., payment outside lottery period, user exceeding max tickets, etc.
+    Représente toute anomalie détectée lors du traitement des tickets.
+    Par exemple, paiement en dehors de la période de la loterie, utilisateur dépassant le nombre maximal de tickets, etc.
     """
 
     lottery = models.ForeignKey(
@@ -120,8 +120,8 @@ class TicketAnomaly(models.Model):
         on_delete=models.CASCADE,
         related_name="anomalies",
         verbose_name="Lottery",
-        null=True,  # Allow null values
-        blank=True,  # Allow blank forms
+        null=True,  # Autorise les valeurs nulles
+        blank=True,  # Autorise les formulaires vides
     )
     character = models.ForeignKey(
         EveCharacter,
