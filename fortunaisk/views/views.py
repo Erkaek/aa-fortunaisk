@@ -380,31 +380,35 @@ def create_lottery(request):
             messages.success(request, "Lottery successfully created.")
             return redirect("fortunaisk:lottery")
         else:
-            # Form invalide -> on recalcule distribution_range
-            # à partir de la donnée POST (nouvelle valeur).
-            winner_count = form.data.get("winner_count", 1)
+            # Form is invalid => re-calculate distribution_range from POST
+            winner_count_str = form.data.get("winner_count", 1)
             try:
-                winner_count = int(winner_count)
+                winner_count = int(winner_count_str)
             except ValueError:
                 winner_count = 1
 
             distribution_range = range(winner_count)
-
-            # On rend le template en passant ce distribution_range
             return render(
                 request,
                 "fortunaisk/standard_lottery_form.html",
-                {"form": form, "distribution_range": distribution_range},
+                {
+                    "form": form,
+                    "distribution_range": distribution_range,
+                },
             )
-
     else:
-        # GET initial -> l’utilisateur vient pour la 1ère fois
+        # GET => first load
         form = LotteryCreateForm()
-        distribution_range = get_distribution_range(form.instance.winner_count or 1)
+        # read initial or default to 1
+        winner_count_initial = form.instance.winner_count or 1
+        distribution_range = get_distribution_range(winner_count_initial)
         return render(
             request,
             "fortunaisk/standard_lottery_form.html",
-            {"form": form, "distribution_range": distribution_range},
+            {
+                "form": form,
+                "distribution_range": distribution_range,
+            },
         )
 
 
