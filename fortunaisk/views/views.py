@@ -5,9 +5,11 @@ import logging
 
 # Django
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.paginator import Paginator
-from django.db.models import Avg, Count, Sum
+from django.db.models import Avg, Count, F, Sum
+from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext as _
 
@@ -25,6 +27,7 @@ from fortunaisk.notifications import send_alliance_auth_notification
 from fortunaisk.tasks import create_lottery_from_auto_lottery
 
 logger = logging.getLogger(__name__)
+User = get_user_model()
 
 
 def get_distribution_range(winner_count):
@@ -318,26 +321,32 @@ def lottery(request):
 @permission_required("fortunaisk.admin", raise_exception=True)
 def winner_list(request):
     """
-    Lists all winners with pagination, plus a top-3 podium by prize_amount.
+    Liste tous les gagnants avec pagination, plus un podium des 3 meilleurs par montant total.
+    Affiche le nom du personnage principal pour chaque meilleur gagnant.
     """
-    # All winners, ordered by winning date DESC
+    # Tous les gagnants, ordonnés par date de gain DESC
     winners_qs = Winner.objects.select_related(
         "ticket__user", "ticket__lottery", "character"
     ).order_by("-won_at")
 
-    # Top 3 by largest prize_amount
-    top_3 = Winner.objects.select_related(
-        "ticket__user", "ticket__lottery", "character"
-    ).order_by("-prize_amount")[:3]
+    # Top 3 utilisateurs par montant total gagné
+    top_3 = (
+        User.objects.annotate(
+            total_prize=Coalesce(Sum("ticket__winner__prize_amount"), 0),
+            main_character_name=F("userprofile__main_character__character_name"),
+        )
+        .order_by("-total_prize")[:3]
+        .select_related("userprofile__main_character")
+    )
 
-    # Pagination for the general table
+    # Pagination pour le tableau général
     paginator = Paginator(winners_qs, 25)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
     context = {
-        "page_obj": page_obj,  # Paginated winners
-        "top_3": top_3,  # Top 3 largest prizes
+        "page_obj": page_obj,  # Gagnants paginés
+        "top_3": top_3,  # Top 3 utilisateurs par montant total
     }
     return render(request, "fortunaisk/winner_list.html", context)
 
