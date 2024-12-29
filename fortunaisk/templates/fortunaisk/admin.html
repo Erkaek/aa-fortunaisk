@@ -39,15 +39,46 @@
         </div>
         <!-- Total Anomalies (clickable) -->
         <div class="col-md-3">
-            <a href="#" style="text-decoration:none; color:inherit;">
-                <div class="card text-white bg-warning mb-3">
-                    <div class="card-header">
-                        <i class="fas fa-exclamation-triangle me-1"></i> Total Anomalies
+            <a href="{% url 'fortunaisk:anomalies_list' %}"
+            class="text-decoration-none"
+            style="color: inherit;">
+                <div class="card text-white
+                    {% if stats.total_anomalies > 0 %}
+                        bg-danger
+                    {% else %}
+                        bg-success
+                    {% endif %}
+                    mb-3"
+                    style="cursor: pointer;">
+                    <div class="card-header d-flex align-items-center justify-content-between">
+                        <span>
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            Total Anomalies
+                        </span>
+                        <!-- Petit indicateur d'état -->
+                        {% if stats.total_anomalies > 0 %}
+                            <span class="badge bg-light text-dark">
+                                {% trans "Unresolved" %}
+                            </span>
+                        {% else %}
+                            <span class="badge bg-light text-dark">
+                                {% trans "None" %}
+                            </span>
+                        {% endif %}
                     </div>
                     <div class="card-body">
                         <h5 class="card-title">
                             {{ stats.total_anomalies }}
                         </h5>
+                        {% if stats.total_anomalies > 0 %}
+                            <p class="card-text">
+                                {% trans "Click to view or resolve anomalies." %}
+                            </p>
+                        {% else %}
+                            <p class="card-text">
+                                {% trans "No anomalies detected, click to view history." %}
+                            </p>
+                        {% endif %}
                     </div>
                 </div>
             </a>
