@@ -43,16 +43,17 @@ Run the following commands:
 ```bash
 python manage.py migrate
 python manage.py collectstatic
+Restart the Auth server
 ```
 
-Restart the Auth server.
+
 
 ## Usage
 
 ### Creating an Automatic Lottery
 
 1. Go to the admin interface and click "Create Automatic Lottery."
-1. Fill out the form with the following details:
+2. Fill out the form with the following details:
 
 - **Lottery Name**: A unique name for the lottery.
 - **Frequency**: Set the recurrence (e.g., every month).
@@ -63,17 +64,17 @@ Restart the Auth server.
 - **Max Tickets per User**: (Optional) Limit the number of tickets per user.
 - **Payment Receiver**: Select the corporation that will receive ticket payments.
 
-1. Submit the form to save the configuration.
+3. Submit the form to save the configuration.
 
 ### Creating a Standard Lottery
 
 1. Go to the admin interface and click "Create a New Lottery."
-1. Fill out the form with details similar to an automatic lottery:
+2. Fill out the form with details similar to an automatic lottery:
 
 - **Ticket Price**, **Duration**, **Number of Winners**, **Prize Distribution**, and **Max Tickets per User**.
 - **Payment Receiver** is also configurable.
 
-1. Submit the form to launch the lottery.
+3. Submit the form to launch the lottery.
 
 ### User Participation
 
@@ -89,9 +90,9 @@ Restart the Auth server.
 
 ### Resolving Anomalies
 
-1. Access the admin dashboard and click "Total Anomalies."
-1. Review listed anomalies, including transaction details.
-1. Use the "Resolve" button to mark anomalies as resolved.
+- Access the admin dashboard and click "Total Anomalies."
+- Review listed anomalies, including transaction details.
+- Use the "Resolve" button to mark anomalies as resolved.
 
 ### Lottery History
 
@@ -104,13 +105,13 @@ Contributions are welcome! To report an issue or propose a feature:
 
 1. Fork this repository.
 
-1. Create a branch for your feature or fix:
+2. Create a branch for your feature or fix:
 
 ```bash
 git checkout -b feature/your-feature-name
 ```
 
-1. Submit a pull request.
+3. Submit a pull request.
 
 ## License
 
