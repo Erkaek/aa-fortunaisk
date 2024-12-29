@@ -3,6 +3,7 @@ from django.urls import path
 
 from .views import (
     admin_dashboard,
+    anomalies_list,
     create_auto_lottery,
     create_lottery,
     delete_auto_lottery,
@@ -69,4 +70,5 @@ urlpatterns = [
         distribute_prize,
         name="distribute_prize",
     ),
+    path("anomalies/", anomalies_list, name="anomalies_list"),
 ]
