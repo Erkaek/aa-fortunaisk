@@ -116,6 +116,12 @@ def create_creation_embed(lottery):
     else:
         distribution_str = "No distribution defined."
 
+    # Déterminer le nombre maximal de tickets par utilisateur
+    if lottery.max_tickets_per_user is not None:
+        max_tickets = str(lottery.max_tickets_per_user)
+    else:
+        max_tickets = "Illimité"
+
     embed = {
         "title": "✨ **New Lottery Created!** ✨",
         "color": 3066993,  # Green color
@@ -126,13 +132,18 @@ def create_creation_embed(lottery):
                 "inline": False,
             },
             {
+                "name": "📅 **End Date**",
+                "value": lottery.end_date.strftime("%Y-%m-%d %H:%M:%S"),
+                "inline": False,
+            },
+            {
                 "name": "💰 **Ticket Price**",
                 "value": f"{lottery.ticket_price} ISK",
                 "inline": False,
             },
             {
-                "name": "📅 **End Date**",
-                "value": lottery.end_date.strftime("%Y-%m-%d %H:%M:%S"),
+                "name": "🎟️ **Max Tickets Per User**",
+                "value": max_tickets,
                 "inline": False,
             },
             {
