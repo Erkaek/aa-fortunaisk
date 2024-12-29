@@ -49,7 +49,7 @@ urls.Source = "https://github.com/Erkaek/aa-fortunaisk"
 urls.Tracker = "https://github.com/Erkaek/aa-fortunaisk/issues"
 
 [tool.flit.module]
-name = "FortunaIsk"
+name = "fortunaisk"
 known_allianceauth = [ "allianceauth", "esi" ]
 known_django = [ "django" ]
 skip_gitignore = true
