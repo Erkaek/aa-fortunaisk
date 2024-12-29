@@ -1,17 +1,16 @@
 # fortunaisk/models/ticket.py
 
 # Standard Library
-import logging
 from decimal import Decimal
 
 # Django
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.db import models
 
 # Alliance Auth
 from allianceauth.eveonline.models import EveCharacter
 
-logger = logging.getLogger(__name__)
+User = get_user_model()
 
 
 class TicketPurchase(models.Model):
@@ -19,7 +18,6 @@ class TicketPurchase(models.Model):
         ("pending", "Pending"),
         ("processed", "Processed"),
         ("failed", "Failed"),
-        # Ajoutez d'autres choix si nécessaire
     ]
 
     lottery = models.ForeignKey(
@@ -61,7 +59,7 @@ class TicketPurchase(models.Model):
         choices=STATUS_CHOICES,
         default="pending",
         verbose_name="Ticket Status",
-    )  # Nouveau champ
+    )
 
     def __str__(self) -> str:
         return (
@@ -72,10 +70,6 @@ class TicketPurchase(models.Model):
 
 
 class Winner(models.Model):
-    """
-    Représente un gagnant associé à un TicketPurchase spécifique.
-    """
-
     ticket = models.ForeignKey(
         TicketPurchase,
         on_delete=models.CASCADE,
@@ -110,18 +104,13 @@ class Winner(models.Model):
 
 
 class TicketAnomaly(models.Model):
-    """
-    Représente toute anomalie détectée lors du traitement des tickets.
-    Par exemple, paiement en dehors de la période de la loterie, utilisateur dépassant le nombre maximal de tickets, etc.
-    """
-
     lottery = models.ForeignKey(
         "fortunaisk.Lottery",
         on_delete=models.CASCADE,
         related_name="anomalies",
         verbose_name="Lottery",
-        null=True,  # Autorise les valeurs nulles
-        blank=True,  # Autorise les formulaires vides
+        null=True,
+        blank=True,
     )
     character = models.ForeignKey(
         EveCharacter,
