@@ -380,8 +380,8 @@ def create_lottery(request):
             messages.success(request, "Lottery successfully created.")
             return redirect("fortunaisk:lottery")
         else:
-            # Form is invalid => re-calculate distribution_range from POST
-            winner_count_str = form.data.get("winner_count", 1)
+            # Form is invalid => we re-build distribution_range from POST
+            winner_count_str = request.POST.get("winner_count", 1)
             try:
                 winner_count = int(winner_count_str)
             except ValueError:
@@ -399,7 +399,6 @@ def create_lottery(request):
     else:
         # GET => first load
         form = LotteryCreateForm()
-        # read initial or default to 1
         winner_count_initial = form.instance.winner_count or 1
         distribution_range = get_distribution_range(winner_count_initial)
         return render(
