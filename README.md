@@ -35,6 +35,9 @@ pip install fortunaisk
 
 Add `fortunaisk` to `INSTALLED_APPS` in your configuration file:
 
+```python
+INSTALLED_APPS += ["fortunaisk"]
+```
 
 ### Step 3 - Finalize Installation
 
@@ -43,38 +46,32 @@ Run the following commands:
 ```bash
 python manage.py migrate
 python manage.py collectstatic
-Restart the Auth server
+Restart the Auth server.
 ```
-
-
 
 ## Usage
 
 ### Creating an Automatic Lottery
 
 1. Go to the admin interface and click "Create Automatic Lottery."
-2. Fill out the form with the following details:
-
-- **Lottery Name**: A unique name for the lottery.
-- **Frequency**: Set the recurrence (e.g., every month).
-- **Ticket Price**: Cost of each ticket in ISK.
-- **Duration**: Time period the lottery will remain open.
-- **Number of Winners**: Number of winners to be selected.
-- **Prize Distribution**: Allocate percentages to winners (total must be 100%).
-- **Max Tickets per User**: (Optional) Limit the number of tickets per user.
-- **Payment Receiver**: Select the corporation that will receive ticket payments.
-
-3. Submit the form to save the configuration.
+1. Fill out the form with the following details:
+    - **Lottery Name**: A unique name for the lottery.
+    - **Frequency**: Set the recurrence (e.g., every month).
+    - **Ticket Price**: Cost of each ticket in ISK.
+    - **Duration**: Time period the lottery will remain open.
+    - **Number of Winners**: Number of winners to be selected.
+    - **Prize Distribution**: Allocate percentages to winners (total must be 100%).
+    - **Max Tickets per User**: (Optional) Limit the number of tickets per user.
+    - **Payment Receiver**: Select the corporation that will receive ticket payments.
+1. Submit the form to save the configuration.
 
 ### Creating a Standard Lottery
 
 1. Go to the admin interface and click "Create a New Lottery."
-2. Fill out the form with details similar to an automatic lottery:
-
-- **Ticket Price**, **Duration**, **Number of Winners**, **Prize Distribution**, and **Max Tickets per User**.
-- **Payment Receiver** is also configurable.
-
-3. Submit the form to launch the lottery.
+1. Fill out the form with details similar to an automatic lottery:
+    - **Ticket Price**, **Duration**, **Number of Winners**, **Prize Distribution**, and **Max Tickets per User**.
+    - **Payment Receiver** is also configurable.
+1. Submit the form to launch the lottery.
 
 ### User Participation
 
@@ -90,9 +87,9 @@ Restart the Auth server
 
 ### Resolving Anomalies
 
-- Access the admin dashboard and click "Total Anomalies."
-- Review listed anomalies, including transaction details.
-- Use the "Resolve" button to mark anomalies as resolved.
+1. Access the admin dashboard and click "Total Anomalies."
+1. Review listed anomalies, including transaction details.
+1. Use the "Resolve" button to mark anomalies as resolved.
 
 ### Lottery History
 
@@ -104,8 +101,7 @@ Restart the Auth server
 Contributions are welcome! To report an issue or propose a feature:
 
 1. Fork this repository.
-
-2. Create a branch for your feature or fix:
+1. Create a branch for your feature or fix:
 
 ```bash
 git checkout -b feature/your-feature-name
