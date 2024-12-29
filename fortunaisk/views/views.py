@@ -332,11 +332,13 @@ def winner_list(request):
     # Top 3 utilisateurs par montant total gagné
     top_3 = (
         User.objects.annotate(
-            total_prize=Coalesce(Sum("ticket__winner__prize_amount"), 0),
-            main_character_name=F("userprofile__main_character__character_name"),
+            total_prize=Coalesce(Sum("ticket_purchases__winners__prize_amount"), 0),
+            main_character_name=F(
+                "profile__main_character__character_name"
+            ),  # Utiliser 'profile' si c'est le related_name
         )
         .order_by("-total_prize")[:3]
-        .select_related("userprofile__main_character")
+        .select_related("profile__main_character")
     )
 
     # Pagination pour le tableau général
