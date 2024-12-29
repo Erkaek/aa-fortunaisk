@@ -531,3 +531,34 @@ def lottery_detail(request, lottery_id):
         "winners": page_obj_winners,
     }
     return render(request, "fortunaisk/lottery_detail.html", context)
+
+
+@login_required
+def user_dashboard(request):
+    """
+    User dashboard: lists the user's purchased tickets and any winnings.
+    """
+    user = request.user
+    ticket_purchases_qs = (
+        TicketPurchase.objects.filter(user=user)
+        .select_related("lottery", "character")
+        .order_by("-purchase_date")
+    )
+    paginator_tickets = Paginator(ticket_purchases_qs, 25)
+    page_number_tickets = request.GET.get("tickets_page")
+    page_obj_tickets = paginator_tickets.get_page(page_number_tickets)
+
+    winnings_qs = (
+        Winner.objects.filter(ticket__user=user)
+        .select_related("ticket__lottery", "character")
+        .order_by("-won_at")
+    )
+    paginator_winnings = Paginator(winnings_qs, 25)
+    page_number_winnings = request.GET.get("winnings_page")
+    page_obj_winnings = paginator_winnings.get_page(page_number_winnings)
+
+    context = {
+        "ticket_purchases": page_obj_tickets,
+        "winnings": page_obj_winnings,
+    }
+    return render(request, "fortunaisk/user_dashboard.html", context)
