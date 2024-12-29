@@ -13,7 +13,6 @@ from .views import (
     lottery_participants,
     resolve_anomaly,
     terminate_lottery,
-    ticket_purchases,
     user_dashboard,
     winner_list,
 )
@@ -26,7 +25,6 @@ __all__ = [
     "edit_auto_lottery",
     "delete_auto_lottery",
     "lottery",
-    "ticket_purchases",
     "winner_list",
     "lottery_history",
     "create_lottery",
