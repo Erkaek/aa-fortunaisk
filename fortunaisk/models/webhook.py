@@ -29,8 +29,8 @@ class WebhookConfiguration(SingletonModel):
         verbose_name_plural = "Webhook Configuration"
         default_permissions = ()  # Désactive les permissions automatiques
         permissions = [
-            ("user", "User permission"),
-            ("admin", "Administrator permission"),
+            ("user", "can access this app"),
+            ("admin", "can admin this app"),
         ]
 
     def __str__(self) -> str:
