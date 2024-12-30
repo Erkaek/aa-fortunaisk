@@ -18,59 +18,68 @@
 
 ## Installation
 
-### Prerequisites
+0. This app is built as a submodule of [CorpTools](https://github.com/pvyParts/allianceauth-corp-tools), so please install this first.
 
-- Alliance Auth must be installed.
-- `allianceauth-corp-tools` is required for transaction management.
+1. Install the app:
 
-### Step 1 - Install the Module
+   ```bash
+   pip install fortunaisk
+   ```
 
-Install the module with pip:
+1. Add `'fortunaisk',` to your `INSTALLED_APPS` in your project's `local.py`:
 
-```bash
-pip install fortunaisk
-```
+   ```python
+   INSTALLED_APPS += ["fortunaisk"]
+   ```
 
-### Step 2 - Configure Auth Settings
+1. Run migrations, collect static files, and restart Auth:
 
-Add `fortunaisk` to `INSTALLED_APPS` in your configuration file:
+   ```bash
+   python manage.py migrate fortunaisk
+   python manage.py collectstatic
+   supervisorctl restart all
+   ```
 
-```python
-INSTALLED_APPS += ["fortunaisk"]
-```
+1. Navigate to the following address to set up default cron tasks:
 
-### Step 3 - Finalize Installation
+   ```bash
+   AUTH_ADDRESS/fortunaisk/admin_create_tasks/
+   ```
 
-Run the following commands:
+1. Set up your permissions as documented below.
 
-```bash
-python manage.py migrate
-python manage.py collectstatic
-Restart the Auth server.
-```
+1. Add characters and corp tokens as required.
+
+1. Optionally, set up update tasks if you want data to auto-update (see the Usage section).
 
 ## Usage
 
 ### Creating an Automatic Lottery
 
 1. Go to the admin interface and click "Create Automatic Lottery."
+
 1. Fill out the form with the following details:
-    - **Lottery Name**: A unique name for the lottery.
-    - **Frequency**: Set the recurrence (e.g., every month).
-    - **Ticket Price**: Cost of each ticket in ISK.
-    - **Duration**: Time period the lottery will remain open.
-    - **Number of Winners**: Number of winners to be selected.
-    - **Prize Distribution**: Allocate percentages to winners (total must be 100%).
-    - **Max Tickets per User**: (Optional) Limit the number of tickets per user.
-    - **Payment Receiver**: Select the corporation that will receive ticket payments.
+
+   - **Lottery Name**: A unique name for the lottery.
+   - **Frequency**: Set the recurrence (e.g., every month).
+   - **Ticket Price**: Cost of each ticket in ISK.
+   - **Duration**: Time period the lottery will remain open.
+   - **Number of Winners**: Number of winners to be selected.
+   - **Prize Distribution**: Allocate percentages to winners (total must be 100%).
+   - **Max Tickets per User**: (Optional) Limit the number of tickets per user.
+   - **Payment Receiver**: Select the corporation that will receive ticket payments.
+
 1. Submit the form to save the configuration.
 
 ### Creating a Standard Lottery
 
 1. Go to the admin interface and click "Create a New Lottery."
+
 1. Fill out the form with details similar to an automatic lottery:
-    - **Ticket Price**, **Duration**, **Number of Winners**, **Prize Distribution**, and **Max Tickets per User**.
-    - **Payment Receiver** is also configurable.
+
+   - **Ticket Price**, **Duration**, **Number of Winners**, **Prize Distribution**, and **Max Tickets per User**.
+   - **Payment Receiver** is also configurable.
+
 1. Submit the form to launch the lottery.
 
 ### User Participation
@@ -96,18 +105,34 @@ Restart the Auth server.
 - Displays past lotteries, including details on tickets sold, participants, and total pots.
 - Winners are listed with their respective rewards.
 
+## Permissions
+
+The following table outlines the permissions available in **FortunaISK** and the corresponding actions they enable:
+
+| **Permission**                 | **Description**                                                                      |
+| ------------------------------ | ------------------------------------------------------------------------------------ |
+| `fortunaisk.admin`             | Grants access to the admin dashboard for managing lotteries, anomalies, and winners. |
+| `fortunaisk.create_lottery`    | Allows creating new standard or automatic lotteries.                                 |
+| `fortunaisk.edit_lottery`      | Allows editing the details of existing lotteries.                                    |
+| `fortunaisk.terminate_lottery` | Enables termination of active lotteries prematurely.                                 |
+| `fortunaisk.resolve_anomaly`   | Allows resolving detected anomalies.                                                 |
+| `fortunaisk.distribute_prize`  | Permits marking prizes as distributed to winners.                                    |
+
+Ensure the appropriate permissions are assigned to users or groups to provide controlled access to the module's features.
+
 ## Contributing
 
 Contributions are welcome! To report an issue or propose a feature:
 
 1. Fork this repository.
+
 1. Create a branch for your feature or fix:
 
-```bash
-git checkout -b feature/your-feature-name
-```
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
 
-3. Submit a pull request.
+1. Submit a pull request.
 
 ## License
 
