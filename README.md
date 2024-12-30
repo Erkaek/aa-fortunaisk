@@ -107,16 +107,28 @@
 
 ## Permissions
 
-The following table outlines the permissions available in **FortunaISK** and the corresponding actions they enable:
+The table below summarizes the access to various views and features based on user permissions:
 
-| **Permission**                 | **Description**                                                                      |
-| ------------------------------ | ------------------------------------------------------------------------------------ |
-| `fortunaisk.admin`             | Grants access to the admin dashboard for managing lotteries, anomalies, and winners. |
-| `fortunaisk.create_lottery`    | Allows creating new standard or automatic lotteries.                                 |
-| `fortunaisk.edit_lottery`      | Allows editing the details of existing lotteries.                                    |
-| `fortunaisk.terminate_lottery` | Enables termination of active lotteries prematurely.                                 |
-| `fortunaisk.resolve_anomaly`   | Allows resolving detected anomalies.                                                 |
-| `fortunaisk.distribute_prize`  | Permits marking prizes as distributed to winners.                                    |
+| **View / Feature**     | **fortunaisk.user** | **fortunaisk.admin** |
+| ---------------------- | ------------------- | -------------------- |
+| `admin_dashboard`      | ❌                  | ✅                   |
+| `resolve_anomaly`      | ❌                  | ✅                   |
+| `distribute_prize`     | ❌                  | ✅                   |
+| `create_auto_lottery`  | ❌                  | ✅                   |
+| `edit_auto_lottery`    | ❌                  | ✅                   |
+| `delete_auto_lottery`  | ❌                  | ✅                   |
+| `lottery_participants` | ❌                  | ✅                   |
+| `terminate_lottery`    | ❌                  | ✅                   |
+| `anomalies_list`       | ❌                  | ✅                   |
+| `lottery_detail`       | ❌                  | ✅                   |
+| `lottery`              | ✅                  | ✅                   |
+| `winner_list`          | ✅                  | ✅                   |
+| `lottery_history`      | ✅                  | ✅                   |
+| `user_dashboard`       | ✅                  | ✅                   |
+| `create_lottery`       | ❌                  | ✅                   |
+
+- **✅**: Access Granted
+- **❌**: Access Denied
 
 Ensure the appropriate permissions are assigned to users or groups to provide controlled access to the module's features.
 

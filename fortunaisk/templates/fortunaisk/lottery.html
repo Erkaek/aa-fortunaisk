@@ -22,9 +22,18 @@
         {% for info in active_lotteries %}
         <div class="card shadow-lg" style="width: 22rem;">
             <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">
-                    <i class="fas fa-ticket-alt me-2"></i>
-                    {{ info.lottery.lottery_reference }}
+                <h5 class="mb-0 d-flex justify-content-between align-items-center">
+                    <span>
+                        <i class="fas fa-ticket-alt me-2"></i>
+                        {{ info.lottery.lottery_reference }}
+                    </span>
+                    <!-- Bouton "Copy ID" ajouté ici -->
+                    <button
+                        class="btn btn-sm btn-light text-primary copy-id-btn"
+                        data-copy="{{ info.lottery.lottery_reference }}"
+                        aria-label="{% trans 'Copy ID' %}">
+                        {% trans "Copy ID" %}
+                    </button>
                 </h5>
             </div>
             <div class="card-body">
@@ -112,12 +121,60 @@
     {% endif %}
 </div>
 
+<!-- Toast de confirmation ajouté ici -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+    <div id="copyToast" class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body">
+                {% trans "ID copié dans le presse-papiers !" %}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+
+<!-- Script JavaScript pour gérer la copie et les tooltips -->
 <script>
-    var tooltipTriggerList = [].slice.call(
-        document.querySelectorAll('[data-bs-toggle="tooltip"]')
-    );
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
+    document.addEventListener('DOMContentLoaded', function () {
+        // Initialiser les tooltips de Bootstrap
+        var tooltipTriggerList = [].slice.call(
+            document.querySelectorAll('[data-bs-toggle="tooltip"]')
+        );
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+
+        // Sélectionner tous les boutons "Copy ID"
+        const copyButtons = document.querySelectorAll('.copy-id-btn');
+        const copyToastEl = document.getElementById('copyToast');
+        const copyToast = new bootstrap.Toast(copyToastEl);
+
+        copyButtons.forEach(function(button) {
+            button.addEventListener('click', function() {
+                const textToCopy = this.getAttribute('data-copy');
+
+                // Utiliser l'API Clipboard pour copier le texte
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    // Afficher le toast de confirmation
+                    copyToast.show();
+
+                    // Changer temporairement le texte et le style du bouton
+                    const originalText = button.textContent;
+                    button.textContent = '{% trans "Copied!" %}';
+                    button.classList.remove('btn-light', 'text-primary');
+                    button.classList.add('btn-success');
+
+                    // Réinitialiser après 2 secondes
+                    setTimeout(() => {
+                        button.textContent = '{% trans "Copy ID" %}';
+                        button.classList.remove('btn-success');
+                        button.classList.add('btn-light', 'text-primary');
+                    }, 2000);
+                }).catch(err => {
+                    console.error('Échec de la copie : ', err);
+                });
+            });
+        });
     });
 </script>
 {% endblock details %}

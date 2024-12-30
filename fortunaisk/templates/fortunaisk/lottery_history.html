@@ -1,5 +1,6 @@
+<!-- fortunaisk/templates/fortunaisk/lottery_history.html -->
 {% extends "fortunaisk/base.html" %}
-{% load i18n humanize fortunaisk_tags my_filters %}
+{% load i18n humanize fortunaisk_tags my_filters static %}
 
 {% block page_title %}
     {% trans "Lottery History" %}
@@ -25,9 +26,9 @@
             </label>
             <select id="perPageSelect" name="per_page" class="form-select w-auto me-2"
                     onchange="this.form.submit()">
-                {% for choice in "6 12 24 48"|split:" " %}
+                {% for choice in per_page_choices %}
                     <option value="{{ choice }}"
-                            {% if per_page == choice|stringformat:"s" %}
+                            {% if per_page|add:"0" == choice %}
                                 selected
                             {% endif %}>
                         {{ choice }}

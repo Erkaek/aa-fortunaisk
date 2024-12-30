@@ -26,13 +26,15 @@
         <li class="nav-item {% navactive request 'fortunaisk:lottery' %}">
             <a class="nav-link" href="{% url 'fortunaisk:lottery' %}">{% trans "Lottery" %}</a>
         </li>
+        {% if perms.fortunaisk.user or perms.fortunaisk.admin %}
         <li class="nav-item {% navactive request 'fortunaisk:winner_list' %}">
             <a class="nav-link" href="{% url 'fortunaisk:winner_list' %}">{% trans "Winners" %}</a>
         </li>
+        {% endif %}
         <li class="nav-item {% navactive request 'fortunaisk:lottery_history' %}">
             <a class="nav-link" href="{% url 'fortunaisk:lottery_history' %}">{% trans "Lottery History" %}</a>
         </li>
-        {% if perms.fortunaisk.admin_dashboard %}
+        {% if perms.fortunaisk.admin %}
         <li class="nav-item {% navactive request 'fortunaisk:admin_dashboard' %}">
             <a class="nav-link" href="{% url 'fortunaisk:admin_dashboard' %}">{% trans "Admin Dashboard" %}</a>
         </li>

@@ -1,3 +1,4 @@
+<!-- fortunaisk/templates/fortunaisk/lottery_detail.html -->
 {% extends "fortunaisk/base.html" %}
 {% load i18n humanize fortunaisk_tags static %}
 
@@ -13,7 +14,7 @@
 
     <!-- Action Buttons -->
     <div class="mb-4 text-end">
-        {% if perms.fortunaisk.terminate_lottery and lottery.status == 'active' %}
+        {% if perms.fortunaisk.admin and lottery.status == 'active' %}
         <form action="{% url 'fortunaisk:terminate_lottery' lottery.id %}"
                 method="post" style="display:inline;">
             {% csrf_token %}
@@ -168,22 +169,24 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    {% if not winner.distributed %}
-                                        <form action="{% url 'fortunaisk:distribute_prize' winner.id %}"
-                                                method="post"
-                                                style="display:inline;">
-                                            {% csrf_token %}
-                                            <button type="submit"
-                                                    class="btn btn-sm btn-primary"
-                                                    onclick="return confirm('{% trans "Have you distributed the prize to this winner?" %}');">
-                                                <i class="fas fa-hand-holding-usd"></i>
-                                                {% trans "Distribute Prize" %}
-                                            </button>
-                                        </form>
-                                    {% else %}
-                                        <span class="badge bg-success">
-                                            {% trans "Distributed" %}
-                                        </span>
+                                    {% if perms.fortunaisk.admin %}
+                                        {% if not winner.distributed %}
+                                            <form action="{% url 'fortunaisk:distribute_prize' winner.id %}"
+                                                    method="post"
+                                                    style="display:inline;">
+                                                {% csrf_token %}
+                                                <button type="submit"
+                                                        class="btn btn-sm btn-primary"
+                                                        onclick="return confirm('{% trans "Have you distributed the prize to this winner?" %}');">
+                                                    <i class="fas fa-hand-holding-usd"></i>
+                                                    {% trans "Distribute Prize" %}
+                                                </button>
+                                            </form>
+                                        {% else %}
+                                            <span class="badge bg-success">
+                                                {% trans "Distributed" %}
+                                            </span>
+                                        {% endif %}
                                     {% endif %}
                                 </td>
                             </tr>
