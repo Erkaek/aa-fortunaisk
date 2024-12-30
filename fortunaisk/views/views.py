@@ -3,6 +3,7 @@
 # Standard Library
 import logging
 from decimal import Decimal
+from functools import wraps
 
 # Django
 from django.contrib import messages
@@ -29,6 +30,25 @@ from fortunaisk.tasks import create_lottery_from_auto_lottery
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
+
+
+def user_or_admin_permission_required(view_func):
+    """
+    Vérifie si l'utilisateur a la permission 'fortunaisk.user' ou 'fortunaisk.admin'.
+    """
+
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        if request.user.has_perm("fortunaisk.user") or request.user.has_perm(
+            "fortunaisk.admin"
+        ):
+            return view_func(request, *args, **kwargs)
+        # Django
+        from django.core.exceptions import PermissionDenied
+
+        raise PermissionDenied
+
+    return _wrapped_view
 
 
 def get_distribution_range(winner_count):
@@ -274,9 +294,10 @@ def delete_auto_lottery(request, autolottery_id):
 
 
 @login_required
+@user_or_admin_permission_required
 def lottery(request):
     """
-    Lists active lotteries for regular users, with instructions to participate.
+    Liste des loteries actives pour les utilisateurs et les administrateurs.
     """
     active_lotteries = Lottery.objects.filter(status="active").prefetch_related(
         "ticket_purchases"
@@ -319,11 +340,10 @@ def lottery(request):
 
 
 @login_required
-@permission_required("fortunaisk.admin", raise_exception=True)
+@user_or_admin_permission_required
 def winner_list(request):
     """
-    Lists all winners with pagination, plus a podium of the best 3 by total amount.
-    Shows the main character's name for each top winner.
+    Liste des gagnants pour les utilisateurs et les administrateurs.
     """
     # All winners, ordered by win date DESC
     winners_qs = Winner.objects.select_related(
@@ -358,7 +378,11 @@ def winner_list(request):
 
 
 @login_required
+@user_or_admin_permission_required
 def lottery_history(request):
+    """
+    Historique des loteries pour les utilisateurs et les administrateurs.
+    """
     per_page = request.GET.get("per_page", 6)
     try:
         per_page = int(per_page)
@@ -438,7 +462,7 @@ def create_lottery(request):
 @permission_required("fortunaisk.admin", raise_exception=True)
 def lottery_participants(request, lottery_id):
     """
-    Lists participants of a lottery.
+    Liste des participants d'une loterie réservée aux administrateurs.
     """
     lottery_obj = get_object_or_404(Lottery, id=lottery_id)
     participants_qs = lottery_obj.ticket_purchases.select_related(
@@ -459,7 +483,7 @@ def lottery_participants(request, lottery_id):
 @permission_required("fortunaisk.admin", raise_exception=True)
 def terminate_lottery(request, lottery_id):
     """
-    Allows an admin to terminate an active lottery prematurely.
+    Permet à un administrateur de terminer une loterie active prématurément.
     """
     lottery_obj = get_object_or_404(Lottery, id=lottery_id, status="active")
     if request.method == "POST":
@@ -498,7 +522,7 @@ def terminate_lottery(request, lottery_id):
 @permission_required("fortunaisk.admin", raise_exception=True)
 def anomalies_list(request):
     """
-    Lists all anomalies, optionally with pagination.
+    Liste toutes les anomalies pour les administrateurs.
     """
     anomalies_qs = TicketAnomaly.objects.select_related(
         "lottery", "user", "character"
@@ -519,7 +543,7 @@ def anomalies_list(request):
 @permission_required("fortunaisk.admin", raise_exception=True)
 def lottery_detail(request, lottery_id):
     """
-    Detailed view of a lottery (participants, anomalies, winners, etc.).
+    Vue détaillée d'une loterie réservée aux administrateurs.
     """
     lottery_obj = get_object_or_404(Lottery, id=lottery_id)
     participants_qs = lottery_obj.ticket_purchases.select_related(
@@ -552,10 +576,16 @@ def lottery_detail(request, lottery_id):
     return render(request, "fortunaisk/lottery_detail.html", context)
 
 
+##################################
+#         USER VIEWS
+##################################
+
+
 @login_required
+@user_or_admin_permission_required
 def user_dashboard(request):
     """
-    User dashboard: lists the user's purchased tickets and any winnings.
+    Tableau de bord de l'utilisateur pour les utilisateurs et les administrateurs.
     """
     user = request.user
     ticket_purchases_qs = (

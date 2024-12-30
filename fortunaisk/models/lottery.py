@@ -106,6 +106,7 @@ class Lottery(models.Model):
 
     class Meta:
         ordering = ["-start_date"]
+        default_permissions = ()  # Désactive les permissions automatiques
         permissions = [
             ("user", "User permission"),
             ("admin", "Administrator permission"),

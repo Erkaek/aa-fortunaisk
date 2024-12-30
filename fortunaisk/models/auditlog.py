@@ -64,6 +64,11 @@ class AuditLog(models.Model):
         ordering = ["-timestamp"]
         verbose_name = "Audit Log"
         verbose_name_plural = "Audit Logs"
+        default_permissions = ()  # Désactive les permissions automatiques
+        permissions = [
+            ("user", "User permission"),
+            ("admin", "Administrator permission"),
+        ]
 
     def __str__(self):
         return f"{self.get_action_type_display()} - {self.model} ({self.object_id}) by {self.user}"

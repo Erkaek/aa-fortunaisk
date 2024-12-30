@@ -61,6 +61,15 @@ class TicketPurchase(models.Model):
         verbose_name="Ticket Status",
     )
 
+    class Meta:
+        verbose_name = "Ticket Purchase"
+        verbose_name_plural = "Ticket Purchases"
+        default_permissions = ()  # Désactive les permissions automatiques
+        permissions = [
+            ("user", "User permission"),
+            ("admin", "Administrator permission"),
+        ]
+
     def __str__(self) -> str:
         return (
             f"TicketPurchase(user={self.user.username}, "
@@ -97,6 +106,15 @@ class Winner(models.Model):
         verbose_name="Prize Distributed",
         help_text="Indicates whether the prize has been distributed to the winner.",
     )
+
+    class Meta:
+        verbose_name = "Winner"
+        verbose_name_plural = "Winners"
+        default_permissions = ()  # Désactive les permissions automatiques
+        permissions = [
+            ("user", "User permission"),
+            ("admin", "Administrator permission"),
+        ]
 
     def __str__(self) -> str:
         char_name = self.character.character_name if self.character else "Unknown"
@@ -136,6 +154,15 @@ class TicketAnomaly(models.Model):
     )
     payment_id = models.CharField(max_length=255, verbose_name="Payment ID")
     recorded_at = models.DateTimeField(auto_now_add=True, verbose_name="Recorded At")
+
+    class Meta:
+        verbose_name = "Ticket Anomaly"
+        verbose_name_plural = "Ticket Anomalies"
+        default_permissions = ()  # Désactive les permissions automatiques
+        permissions = [
+            ("user", "User permission"),
+            ("admin", "Administrator permission"),
+        ]
 
     def __str__(self) -> str:
         if self.lottery:

@@ -17,5 +17,14 @@ class ProcessedPayment(models.Model):
         help_text="Timestamp when the payment was processed.",
     )
 
+    class Meta:
+        verbose_name = "Processed Payment"
+        verbose_name_plural = "Processed Payments"
+        default_permissions = ()  # Désactive les permissions automatiques
+        permissions = [
+            ("user", "User permission"),
+            ("admin", "Administrator permission"),
+        ]
+
     def __str__(self):
         return f"ProcessedPayment(payment_id={self.payment_id})"

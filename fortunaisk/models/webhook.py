@@ -24,9 +24,14 @@ class WebhookConfiguration(SingletonModel):
         null=True,
     )
 
-    def __str__(self) -> str:
-        return self.webhook_url or "No Webhook Configured"
-
     class Meta:
         verbose_name = "Webhook Configuration"
         verbose_name_plural = "Webhook Configuration"
+        default_permissions = ()  # Désactive les permissions automatiques
+        permissions = [
+            ("user", "User permission"),
+            ("admin", "Administrator permission"),
+        ]
+
+    def __str__(self) -> str:
+        return self.webhook_url or "No Webhook Configured"

@@ -510,10 +510,10 @@ def setup_periodic_tasks():
         if not PeriodicTaskModel.objects.filter(
             name="check_purchased_tickets"
         ).exists():
-            # check_purchased_tickets => every 5 minutes
+            # check_purchased_tickets => every 30 minutes
             schedule_check_tickets, created = (
                 IntervalScheduleModel.objects.get_or_create(
-                    every=5,
+                    every=30,
                     period=IntervalScheduleModel.MINUTES,
                 )
             )

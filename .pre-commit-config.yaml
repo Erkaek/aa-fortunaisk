@@ -199,6 +199,7 @@ repos:
         exclude: |
           (?x)(
             LICENSE|
+            README\.md|
             .min(.css|.css.map|.js|.js.map)|
             static/(.*)/libs/
           )
