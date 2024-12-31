@@ -16,3 +16,4 @@ __pycache__
 alliance_auth.sqlite3
 /venv/
 .pypirc
+.notepad
