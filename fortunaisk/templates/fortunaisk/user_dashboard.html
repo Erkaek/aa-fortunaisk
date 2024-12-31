@@ -9,6 +9,7 @@
 <div class="container mt-4">
     <h2 class="text-center mb-4">{% trans "My Dashboard" %}</h2>
 
+    <!-- Section des Achats de Billets -->
     <h3 class="mb-3">{% trans "My Ticket Purchases" %}</h3>
     {% if ticket_purchases %}
     <div class="d-flex flex-wrap justify-content-center gap-4 mb-4">
@@ -26,14 +27,6 @@
                     {{ purchase.lottery.lottery_reference }}
                 </p>
                 <p>
-                    <strong>{% trans "Character" %}:</strong>
-                    {{ purchase.character.character_name }}
-                </p>
-                <p>
-                    <strong>{% trans "Amount" %}:</strong>
-                    {{ purchase.amount|floatformat:2 }} ISK
-                </p>
-                <p>
                     <strong>{% trans "Date" %}:</strong>
                     {{ purchase.purchase_date|date:"Y-m-d H:i" }}
                 </p>
@@ -48,6 +41,7 @@
     </div>
     {% endif %}
 
+    <!-- Section des Gains -->
     <h3 class="mb-3">{% trans "My Winnings" %}</h3>
     {% if winnings %}
     <div class="d-flex flex-wrap justify-content-center gap-4">
@@ -63,10 +57,6 @@
                 <p>
                     <strong>{% trans "Lottery Reference" %}:</strong>
                     {{ win.ticket.lottery.lottery_reference }}
-                </p>
-                <p>
-                    <strong>{% trans "Character" %}:</strong>
-                    {{ win.character.character_name }}
                 </p>
                 <p>
                     <strong>{% trans "Win Date" %}:</strong>

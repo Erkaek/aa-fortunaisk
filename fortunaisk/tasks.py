@@ -47,7 +47,8 @@ def check_purchased_tickets(self):
 
         # Filter payments containing "lottery" and not yet processed
         pending_payments = CorporationWalletJournalEntryModel.objects.filter(
-            reason__icontains="lottery"
+            reason__icontains="lottery",
+            amount__gt=0,  # Ensures only positive amounts are processed
         ).exclude(entry_id__in=processed_payment_ids)
 
         logger.debug(f"Number of pending payments: {pending_payments.count()}")

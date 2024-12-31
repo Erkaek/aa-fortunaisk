@@ -10,9 +10,10 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.paginator import Paginator
-from django.db.models import Avg, Count, DecimalField, F, Sum
+from django.db.models import Avg, Count, DecimalField, F, Q, Sum
 from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.html import format_html
 from django.utils.translation import gettext as _
 
 # fortunaisk
@@ -34,7 +35,7 @@ User = get_user_model()
 
 def user_or_admin_permission_required(view_func):
     """
-    Vérifie si l'utilisateur a la permission 'fortunaisk.user' ou 'fortunaisk.admin'.
+    Checks if the user has 'fortunaisk.user' or 'fortunaisk.admin' permission.
     """
 
     @wraps(view_func)
@@ -73,31 +74,57 @@ def admin_dashboard(request):
     Main admin dashboard: global stats, list of active lotteries,
     anomalies, winners, and automatic lotteries in one place.
     """
-    # All lotteries
-    lotteries = Lottery.objects.all().prefetch_related("ticket_purchases")
-    # Active lotteries
-    active_lotteries = lotteries.filter(status="active").annotate(
-        tickets=Count("ticket_purchases")
+    # Exclude cancelled lotteries
+    lotteries = Lottery.objects.exclude(status="cancelled").prefetch_related(
+        "ticket_purchases"
     )
-    ticket_purchases_amount = active_lotteries.aggregate(
-        total=Sum("ticket_purchases__amount")
+
+    # Add logs to verify filtering
+    logger.debug(f"Total lotteries (excluding cancelled): {lotteries.count()}")
+    sample_lotteries = lotteries.values_list("lottery_reference", flat=True)[:5]
+    logger.debug(f"Sample lotteries: {list(sample_lotteries)}")
+
+    # Active lotteries with annotations for tickets_sold and participant_count
+    active_lotteries = lotteries.filter(status="active").annotate(
+        tickets_sold=Count(
+            "ticket_purchases", filter=Q(ticket_purchases__status="processed")
+        ),
+        participant_count=Count("ticket_purchases__user", distinct=True),
+    )
+
+    # Financial summary calculations
+    total_tickets_sold = TicketPurchase.objects.filter(status="processed").count()
+
+    total_participants = (
+        TicketPurchase.objects.filter(status="processed")
+        .values("user")
+        .distinct()
+        .count()
+    )
+
+    # Total prizes distributed
+    total_prizes_distributed = Winner.objects.filter(distributed=True).aggregate(
+        total=Sum("prize_amount")
     )["total"] or Decimal("0")
 
-    winners = Winner.objects.select_related(
-        "ticket__user", "ticket__lottery", "character"
-    ).order_by("-won_at")
+    # Other statistics
     anomalies = TicketAnomaly.objects.select_related(
         "lottery", "user", "character"
     ).order_by("-recorded_at")
 
     stats = {
         "total_lotteries": lotteries.count(),
-        "total_tickets": ticket_purchases_amount,
+        "total_tickets_sold": total_tickets_sold,
+        "total_participants": total_participants,
         "total_anomalies": anomalies.count(),
-        "avg_participation": active_lotteries.aggregate(avg=Avg("tickets"))["avg"] or 0,
+        "avg_participation": active_lotteries.aggregate(avg=Avg("participant_count"))[
+            "avg"
+        ]
+        or 0,
+        "total_prizes_distributed": total_prizes_distributed,
     }
 
-    # Anomalies by lottery (top 10)
+    # Anomalies per lottery (top 10)
     anomaly_data = (
         anomalies.values("lottery__lottery_reference")
         .annotate(count=Count("id"))
@@ -108,7 +135,7 @@ def admin_dashboard(request):
     ]
     anomalies_per_lottery = [item["count"] for item in anomaly_data[:10]]
 
-    # Top Active Users (by anomalies) (top 10)
+    # Top active users by anomalies (top 10)
     top_users = (
         TicketAnomaly.objects.values("user__username")
         .annotate(anomaly_count=Count("id"))
@@ -121,12 +148,14 @@ def admin_dashboard(request):
     # Automatic Lotteries
     autolotteries = AutoLottery.objects.all()
 
-    # Dernières Anomalies
-    latest_anomalies = anomalies[:5]  # Afficher les 5 dernières anomalies
+    # Latest Anomalies
+    latest_anomalies = anomalies[:5]  # Display the latest 5 anomalies
 
     context = {
         "active_lotteries": active_lotteries,
-        "winners": winners,
+        "winners": Winner.objects.select_related(
+            "ticket__user", "ticket__lottery", "character"
+        ).order_by("-won_at"),
         "anomalies": anomalies,
         "stats": stats,
         "anomaly_lottery_names": anomaly_lottery_names,
@@ -134,8 +163,8 @@ def admin_dashboard(request):
         "top_users_names": top_users_names,
         "top_users_anomalies": top_users_anomalies,
         "top_active_users": top_active_users,
-        "autolotteries": autolotteries,  # integrated from old auto_lottery_list
-        "latest_anomalies": latest_anomalies,  # Ajout des dernières anomalies
+        "autolotteries": autolotteries,
+        "latest_anomalies": latest_anomalies,
     }
     return render(request, "fortunaisk/admin.html", context)
 
@@ -143,6 +172,9 @@ def admin_dashboard(request):
 @login_required
 @permission_required("fortunaisk.admin", raise_exception=True)
 def resolve_anomaly(request, anomaly_id):
+    """
+    Allows an admin to resolve a specific ticket anomaly.
+    """
     anomaly = get_object_or_404(TicketAnomaly, id=anomaly_id)
     if request.method == "POST":
         try:
@@ -171,6 +203,9 @@ def resolve_anomaly(request, anomaly_id):
 @login_required
 @permission_required("fortunaisk.admin", raise_exception=True)
 def distribute_prize(request, winner_id):
+    """
+    Allows an admin to distribute a prize to a winner.
+    """
     winner = get_object_or_404(Winner, id=winner_id)
     if request.method == "POST":
         try:
@@ -275,6 +310,9 @@ def edit_auto_lottery(request, autolottery_id):
 @login_required
 @permission_required("fortunaisk.admin", raise_exception=True)
 def delete_auto_lottery(request, autolottery_id):
+    """
+    Allows an admin to delete an automatic lottery.
+    """
     autolottery = get_object_or_404(AutoLottery, id=autolottery_id)
     if request.method == "POST":
         autolottery.delete()
@@ -297,7 +335,7 @@ def delete_auto_lottery(request, autolottery_id):
 @user_or_admin_permission_required
 def lottery(request):
     """
-    Liste des loteries actives pour les utilisateurs et les administrateurs.
+    List of active lotteries for users and administrators.
     """
     active_lotteries = Lottery.objects.filter(status="active").prefetch_related(
         "ticket_purchases"
@@ -320,15 +358,31 @@ def lottery(request):
         user_ticket_count = user_ticket_map.get(lot.id, 0)
         has_ticket = user_ticket_count > 0
 
-        instructions = f"To participate, send {lot.ticket_price} ISK to {corp_name} with '{lot.lottery_reference}' as the payment description."
+        # Calculate tickets percentage if max_tickets_per_user is set
+        if lot.max_tickets_per_user and lot.max_tickets_per_user > 0:
+            tickets_percentage = (user_ticket_count / lot.max_tickets_per_user) * 100
+            # Ensure the percentage does not exceed 100%
+            tickets_percentage = min(tickets_percentage, 100)
+        else:
+            tickets_percentage = 0  # Or any default value
+
+        # Use format_html to safely format HTML
+        formatted_instructions = format_html(
+            "To participate, send <strong>{amount}</strong> ISK to <strong>{receiver}</strong> with <strong>{lottery_id}</strong> as the payment description.",
+            amount=lot.ticket_price,
+            receiver=corp_name,
+            lottery_id=lot.lottery_reference,
+        )
 
         lotteries_info.append(
             {
                 "lottery": lot,
                 "corporation_name": corp_name,
                 "has_ticket": has_ticket,
-                "instructions": instructions,
+                "instructions": formatted_instructions,
                 "user_ticket_count": user_ticket_count,
+                "max_tickets_per_user": lot.max_tickets_per_user,
+                "tickets_percentage": tickets_percentage,
             }
         )
 
@@ -343,7 +397,7 @@ def lottery(request):
 @user_or_admin_permission_required
 def winner_list(request):
     """
-    Liste des gagnants pour les utilisateurs et les administrateurs.
+    List of winners for users and administrators.
     """
     # All winners, ordered by win date DESC
     winners_qs = Winner.objects.select_related(
@@ -381,7 +435,7 @@ def winner_list(request):
 @user_or_admin_permission_required
 def lottery_history(request):
     """
-    Historique des loteries pour les utilisateurs et les administrateurs.
+    Lottery history for users and administrators.
     """
     per_page = request.GET.get("per_page", 6)
     try:
@@ -409,6 +463,9 @@ def lottery_history(request):
 @login_required
 @permission_required("fortunaisk.admin", raise_exception=True)
 def create_lottery(request):
+    """
+    Allows an admin to create a new lottery.
+    """
     if request.method == "POST":
         form = LotteryCreateForm(request.POST)
         if form.is_valid():
@@ -422,7 +479,7 @@ def create_lottery(request):
                 winner_count = int(winner_count_str)
             except ValueError:
                 winner_count = 1
-            distribution_range = range(winner_count)
+            distribution_range = get_distribution_range(winner_count)
 
             logger.debug(
                 "[create_lottery] Form invalid. winner_count=%s => distribution_range=%s",
@@ -459,10 +516,10 @@ def create_lottery(request):
 
 
 @login_required
-@permission_required("fortunaisk.admin", raise_exception=True)
+@user_or_admin_permission_required
 def lottery_participants(request, lottery_id):
     """
-    Liste des participants d'une loterie réservée aux administrateurs.
+    List of participants in a lottery, reserved for administrators.
     """
     lottery_obj = get_object_or_404(Lottery, id=lottery_id)
     participants_qs = lottery_obj.ticket_purchases.select_related(
@@ -483,7 +540,7 @@ def lottery_participants(request, lottery_id):
 @permission_required("fortunaisk.admin", raise_exception=True)
 def terminate_lottery(request, lottery_id):
     """
-    Permet à un administrateur de terminer une loterie active prématurément.
+    Allows an admin to prematurely terminate an active lottery.
     """
     lottery_obj = get_object_or_404(Lottery, id=lottery_id, status="active")
     if request.method == "POST":
@@ -522,7 +579,7 @@ def terminate_lottery(request, lottery_id):
 @permission_required("fortunaisk.admin", raise_exception=True)
 def anomalies_list(request):
     """
-    Liste toutes les anomalies pour les administrateurs.
+    Lists all anomalies for administrators.
     """
     anomalies_qs = TicketAnomaly.objects.select_related(
         "lottery", "user", "character"
@@ -543,7 +600,7 @@ def anomalies_list(request):
 @permission_required("fortunaisk.admin", raise_exception=True)
 def lottery_detail(request, lottery_id):
     """
-    Vue détaillée d'une loterie réservée aux administrateurs.
+    Detailed view of a lottery reserved for administrators.
     """
     lottery_obj = get_object_or_404(Lottery, id=lottery_id)
     participants_qs = lottery_obj.ticket_purchases.select_related(
@@ -585,7 +642,7 @@ def lottery_detail(request, lottery_id):
 @user_or_admin_permission_required
 def user_dashboard(request):
     """
-    Tableau de bord de l'utilisateur pour les utilisateurs et les administrateurs.
+    User dashboard for users and administrators.
     """
     user = request.user
     ticket_purchases_qs = (

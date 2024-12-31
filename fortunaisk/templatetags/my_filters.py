@@ -25,3 +25,14 @@ def split(value, delimiter):
         return value.split(delimiter)
     except AttributeError:
         return []
+
+
+@register.filter
+def format_decimal(value):
+    """
+    Convert a decimal value to a string with a dot as the decimal separator.
+    """
+    try:
+        return str(value).replace(",", ".")
+    except (ValueError, TypeError):
+        return value  # Return the original value if conversion fails

@@ -1,5 +1,5 @@
 {% extends "fortunaisk/base.html" %}
-{% load i18n %}
+{% load i18n my_filters %}
 
 {% block page_title %}
     {% trans "Lotteries" %}
@@ -22,91 +22,112 @@
         {% for info in active_lotteries %}
         <div class="card shadow-lg" style="width: 22rem;">
             <div class="card-header bg-primary text-white">
-                <h5 class="mb-0 d-flex justify-content-between align-items-center">
-                    <span>
-                        <i class="fas fa-ticket-alt me-2"></i>
-                        {{ info.lottery.lottery_reference }}
-                    </span>
-                    <!-- Bouton "Copy ID" ajouté ici -->
-                    <button
-                        class="btn btn-sm btn-light text-primary copy-id-btn"
-                        data-copy="{{ info.lottery.lottery_reference }}"
-                        aria-label="{% trans 'Copy ID' %}">
-                        {% trans "Copy ID" %}
-                    </button>
+                <h5 class="mb-0">
+                    <i class="fas fa-ticket-alt me-2"></i>
+                    {{ info.lottery.lottery_reference }}
                 </h5>
             </div>
-            <div class="card-body">
-                <p class="mb-2">
-                    <strong>{% trans "Start Date" %}:</strong>
-                    <i class="far fa-clock me-1"></i>
-                    {{ info.lottery.start_date|date:"Y-m-d H:i" }}
-                </p>
-                <p class="mb-2">
-                    <strong>{% trans "End Date" %}:</strong>
-                    <i class="far fa-clock me-1"></i>
-                    {{ info.lottery.end_date|date:"Y-m-d H:i" }}
-                </p>
-                <p class="mb-2">
-                    <strong>{% trans "Ticket Price" %}:</strong>
-                    <span class="text-warning fw-bold">
-                        {{ info.lottery.ticket_price }} ISK
-                    </span>
-                </p>
-                <p class="mb-2">
-                    <strong>{% trans "Payment Receiver" %}:</strong>
-                    <span class="text-primary fw-bold">
-                        {{ info.corporation_name }}
-                    </span>
-                </p>
-                <p class="mb-2">
-                    <strong>{% trans "Number of Winners" %}:</strong>
-                    <span class="badge bg-success">
-                        {{ info.lottery.winner_count }}
-                    </span>
-                </p>
-                <p class="mb-2">
-                    <strong>{% trans "Max Tickets/User" %}:</strong>
-                    {% if info.lottery.max_tickets_per_user %}
-                        {{ info.lottery.max_tickets_per_user }}
-                    {% else %}
-                        {% trans "Unlimited" %}
-                    {% endif %}
-                    <small class="text-muted">
-                        ( {% trans "You have" %} {{ info.user_ticket_count }} )
-                    </small>
-                </p>
-                <hr>
-                <div class="mt-3">
-                    <h5 class="fw-bold">
-                        <i class="fas fa-question-circle text-info me-2"></i>
-                        {% trans "How to Participate" %}
-                    </h5>
-                    <p>
-                        {{ info.instructions }}
-                        <span class="ms-1"
-                                data-bs-toggle="tooltip"
-                                title="{% trans 'Send the ISK in-game via a corp wallet specifying the reference in the reason.' %}">
-                            <i class="fas fa-info-circle"></i>
+            <div class="card-body d-flex flex-column justify-content-between">
+                <div>
+                    <p class="mb-2">
+                        <strong>{% trans "Start Date" %}:</strong>
+                        <i class="far fa-clock me-1"></i>
+                        {{ info.lottery.start_date|date:"Y-m-d H:i" }}
+                    </p>
+                    <p class="mb-2">
+                        <strong>{% trans "End Date" %}:</strong>
+                        <i class="far fa-clock me-1"></i>
+                        {{ info.lottery.end_date|date:"Y-m-d H:i" }}
+                    </p>
+                    <p class="mb-2">
+                        <strong>{% trans "Ticket Price" %}:</strong>
+                        <span class="text-warning fw-bold">
+                            {{ info.lottery.ticket_price }} ISK
                         </span>
                     </p>
-                    <p>
-                        <strong>{% trans "Do you have a ticket" %}? </strong>
-                        {% if info.has_ticket %}
-                            <span class="badge bg-success ms-2">
-                                {% trans "Yes" %}
+                    <p class="mb-2">
+                        <strong>{% trans "Payment Receiver" %}:</strong>
+                        <span class="text-primary fw-bold">
+                            {{ info.corporation_name }}
+                        </span>
+                    </p>
+                    <p class="mb-2">
+                        <strong>{% trans "Number of Winners" %}:</strong>
+                        <span class="badge bg-warning">
+                            {{ info.lottery.winner_count }}
+                        </span>
+                    </p>
+                    <!-- Remplacement de "Max Tickets/User" par une barre de progression -->
+                    <div class="mb-2">
+                        <strong>{% trans "Max Tickets/User" %}:</strong>
+                        {% if info.max_tickets_per_user %}
+                            <span class="badge bg-warning">
+                                {{ info.max_tickets_per_user }}
                             </span>
+                            <div class="progress mt-2" style="height: 25px;">
+                                <div
+                                    class="progress-bar bg-info"
+                                    role="progressbar"
+                                    style="width: {{ info.tickets_percentage }}%;"
+                                    aria-valuenow="{{ info.user_ticket_count }}"
+                                    aria-valuemin="0"
+                                    aria-valuemax="{{ info.max_tickets_per_user }}"
+                                >
+                                    {{ info.user_ticket_count }} / {{ info.max_tickets_per_user }}
+                                </div>
+                            </div>
                         {% else %}
-                            <span class="badge bg-danger ms-2">
-                                {% trans "No" %}
+                            <span class="text-muted">
+                                {% trans "Unlimited" %}
                             </span>
                         {% endif %}
+                    </div>
+                    <!-- Section "Do you have a ticket" corrigée -->
+                    <div class="mt-3 text-center">
+                        <strong>{% trans "Do you have a ticket" %}? </strong>
+                        <div class="mt-3">
+                            {% if info.has_ticket %}
+                                <span class="badge bg-success ms-2">
+                                    {% trans "Yes" %}
+                                </span>
+                            {% else %}
+                                <span class="badge bg-danger ms-2">
+                                    {% trans "No" %}
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <hr>
+                <div class="mt-3">
+                    <h5 class="fw-bold text-center text-decoration-underline">
+                        {% trans "How to Participate" %}
+                    </h5>
+                    <p class="mb-4 text-center">
+                        {{ info.instructions|safe }}
                     </p>
+                    <!-- Boutons de copie uniquement -->
+                    <div class="d-flex justify-content-center gap-3">
+                        <button
+                            class="btn btn-sm btn-outline-primary copy-id-btn"
+                            data-copy="{{ info.lottery.lottery_reference }}"
+                            aria-label="{% trans 'Copy Lottery ID' %}"
+                        >
+                            <i class="fas fa-copy me-1"></i>{% trans "Copy Lottery ID" %}
+                        </button>
+                        <button
+                            class="btn btn-sm btn-outline-primary copy-amount-btn"
+                            data-copy="{{ info.lottery.ticket_price|floatformat:2|format_decimal }}"
+                            aria-label="{% trans 'Copy Amount' %}"
+                        >
+                            <i class="fas fa-copy me-1"></i>{% trans "Copy Amount" %}
+                        </button>
+                    </div>
                 </div>
             </div>
             <div class="card-footer text-center text-muted">
                 <small>
-                    <i class="fas fa-hat-wizard me-1"></i>
+                    <i class="fas fa-clover me-1"></i>
                     {% trans "Good luck!" %}
                 </small>
             </div>
@@ -121,22 +142,22 @@
     {% endif %}
 </div>
 
-<!-- Toast de confirmation ajouté ici -->
+<!-- Toast Confirmation -->
 <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
     <div id="copyToast" class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
         <div class="d-flex">
             <div class="toast-body">
-                {% trans "ID copié dans le presse-papiers !" %}
+                {% trans "Copied to clipboard!" %}
             </div>
             <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
     </div>
 </div>
 
-<!-- Script JavaScript pour gérer la copie et les tooltips -->
+<!-- JavaScript pour la fonctionnalité de copie et les tooltips -->
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        // Initialiser les tooltips de Bootstrap
+        // Initialiser les tooltips Bootstrap
         var tooltipTriggerList = [].slice.call(
             document.querySelectorAll('[data-bs-toggle="tooltip"]')
         );
@@ -144,35 +165,60 @@
             return new bootstrap.Tooltip(tooltipTriggerEl);
         });
 
-        // Sélectionner tous les boutons "Copy ID"
-        const copyButtons = document.querySelectorAll('.copy-id-btn');
+        // Sélectionner tous les boutons "Copy ID" et "Copy Amount"
+        const copyIdButtons = document.querySelectorAll('.copy-id-btn');
+        const copyAmountButtons = document.querySelectorAll('.copy-amount-btn');
         const copyToastEl = document.getElementById('copyToast');
         const copyToast = new bootstrap.Toast(copyToastEl);
 
-        copyButtons.forEach(function(button) {
+        // Fonction pour gérer l'action de copie
+        function handleCopy(button, textToCopy, successMessage) {
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                // Afficher la toast de confirmation avec un message spécifique
+                copyToastEl.querySelector('.toast-body').textContent = successMessage;
+                copyToast.show();
+
+                // Changer temporairement l'icône du bouton pour indiquer le succès
+                const originalIcon = button.querySelector('i').className;
+                button.querySelector('i').className = 'fas fa-check me-1';
+                button.disabled = true;
+
+                // Réinitialiser le bouton après 2 secondes
+                setTimeout(() => {
+                    button.querySelector('i').className = originalIcon;
+                    button.disabled = false;
+                }, 2000);
+            }).catch(err => {
+                console.error('Copy failed: ', err);
+                // Optionnellement, afficher une toast d'erreur
+                copyToastEl.querySelector('.toast-body').textContent = '{% trans "Failed to copy. Please try again." %}';
+                copyToastEl.classList.remove('bg-success');
+                copyToastEl.classList.add('bg-danger');
+                copyToast.show();
+
+                // Réinitialiser le style de la toast après 2 secondes
+                setTimeout(() => {
+                    copyToastEl.classList.remove('bg-danger');
+                    copyToastEl.classList.add('bg-success');
+                }, 2000);
+            });
+        }
+
+        // Ajouter des écouteurs d'événements aux boutons "Copy ID"
+        copyIdButtons.forEach(function(button) {
             button.addEventListener('click', function() {
                 const textToCopy = this.getAttribute('data-copy');
+                const successMessage = '{% trans "Lottery ID copied to clipboard!" %}';
+                handleCopy(this, textToCopy, successMessage);
+            });
+        });
 
-                // Utiliser l'API Clipboard pour copier le texte
-                navigator.clipboard.writeText(textToCopy).then(() => {
-                    // Afficher le toast de confirmation
-                    copyToast.show();
-
-                    // Changer temporairement le texte et le style du bouton
-                    const originalText = button.textContent;
-                    button.textContent = '{% trans "Copied!" %}';
-                    button.classList.remove('btn-light', 'text-primary');
-                    button.classList.add('btn-success');
-
-                    // Réinitialiser après 2 secondes
-                    setTimeout(() => {
-                        button.textContent = '{% trans "Copy ID" %}';
-                        button.classList.remove('btn-success');
-                        button.classList.add('btn-light', 'text-primary');
-                    }, 2000);
-                }).catch(err => {
-                    console.error('Échec de la copie : ', err);
-                });
+        // Ajouter des écouteurs d'événements aux boutons "Copy Amount"
+        copyAmountButtons.forEach(function(button) {
+            button.addEventListener('click', function() {
+                const textToCopy = this.getAttribute('data-copy');
+                const successMessage = '{% trans "Amount copied to clipboard!" %}';
+                handleCopy(this, textToCopy, successMessage);
             });
         });
     });

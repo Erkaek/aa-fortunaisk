@@ -9,8 +9,31 @@
 <div class="container mt-4">
     <h2 class="text-center mb-4">{% trans "Admin Dashboard" %}</h2>
 
-    <!-- Statistics Cards -->
+    <!-- Financial Summary and Existing Statistics -->
     <div class="row mb-4">
+        <!-- Financial Summary -->
+        <div class="col-md-3">
+            <div class="card text-white bg-success mb-3">
+                <div class="card-header">
+                    <i class="fas fa-wallet me-1"></i> {% trans "Financial Summary" %}
+                </div>
+                <div class="card-body">
+                    <h6 class="card-title">
+                        {{ stats.total_tickets_sold|intcomma }}
+                        <small class="text-white-50"> {% trans "Total Tickets Sold" %}</small>
+                    </h6>
+                    <h6>
+                        {{ stats.total_participants|intcomma }}
+                        <small class="text-white-50"> {% trans "Total Participants" %}</small>
+                    </h6>
+                    <h6>
+                        {{ stats.total_prizes_distributed|floatformat:2|intcomma }} ISK
+                        <small class="text-white-50"> {% trans "Prizes Distributed" %}</small>
+                    </h6>
+                </div>
+            </div>
+        </div>
+
         <!-- Total Lotteries -->
         <div class="col-md-3">
             <div class="card text-white bg-primary mb-3">
@@ -19,24 +42,12 @@
                 </div>
                 <div class="card-body">
                     <h5 class="card-title">
-                        {{ stats.total_lotteries }}
+                        {{ stats.total_lotteries|intcomma }}
                     </h5>
                 </div>
             </div>
         </div>
-        <!-- Total Tickets -->
-        <div class="col-md-3">
-            <div class="card text-white bg-success mb-3">
-                <div class="card-header">
-                    <i class="fas fa-coins me-1"></i> {% trans "Total Tickets" %}
-                </div>
-                <div class="card-body">
-                    <h5 class="card-title">
-                        {{ stats.total_tickets|intcomma }}
-                    </h5>
-                </div>
-            </div>
-        </div>
+
         <!-- Total Anomalies (clickable) -->
         <div class="col-md-3">
             <a href="{% url 'fortunaisk:anomalies_list' %}"
@@ -68,7 +79,7 @@
                     </div>
                     <div class="card-body">
                         <h5 class="card-title">
-                            {{ stats.total_anomalies }}
+                            {{ stats.total_anomalies|intcomma }}
                         </h5>
                         {% if stats.total_anomalies > 0 %}
                             <p class="card-text">
@@ -83,15 +94,16 @@
                 </div>
             </a>
         </div>
+
         <!-- Average Participation -->
         <div class="col-md-3">
-            <div class="card text-white bg-danger mb-3">
+            <div class="card text-white bg-primary mb-3">
                 <div class="card-header">
                     <i class="fas fa-users me-1"></i> {% trans "Average Participation" %}
                 </div>
                 <div class="card-body">
                     <h5 class="card-title">
-                        {{ stats.avg_participation }}
+                        {{ stats.avg_participation|floatformat:2 }}
                     </h5>
                 </div>
             </div>
@@ -112,6 +124,7 @@
                                 <th scope="col">{% trans "Ticket Price (ISK)" %}</th>
                                 <th scope="col">{% trans "Total Pot (ISK)" %}</th>
                                 <th scope="col">{% trans "Participants" %}</th>
+                                <th scope="col">{% trans "Tickets Sold" %}</th>
                                 <th scope="col">{% trans "Actions" %}</th>
                             </tr>
                         </thead>
@@ -130,9 +143,10 @@
                                         {{ lottery.status }}
                                     {% endif %}
                                 </td>
-                                <td>{{ lottery.ticket_price|floatformat:2 }}</td>
-                                <td>{{ lottery.total_pot|intcomma }}</td>
-                                <td>{{ lottery.participant_count }}</td>
+                                <td>{{ lottery.ticket_price|floatformat:2|intcomma }}</td>
+                                <td>{{ lottery.total_pot|floatformat:2|intcomma }}</td>
+                                <td>{{ lottery.participant_count|intcomma }}</td>
+                                <td>{{ lottery.tickets_sold|intcomma }}</td>
                                 <td>
                                     <a href="{% url 'fortunaisk:lottery_detail' lottery.id %}"
                                         class="btn btn-sm btn-info">
@@ -154,10 +168,10 @@
         </div>
     </div>
 
-    <!-- Winners (Only show undistributed) -->
+    <!-- Prizes to Distribute (Only show undistributed) -->
     <div class="row mb-4">
         <div class="col-md-12">
-            <h4>{% trans "Winners and Prizes (Undistributed Only)" %}</h4>
+            <h4>{% trans "Prizes to Distribute" %}</h4>
             {% if winners %}
                 <div class="table-responsive">
                     <table class="table table-bordered table-hover">
@@ -186,10 +200,10 @@
                                         {% if winner.character %}
                                             {{ winner.character }}
                                         {% else %}
-                                            N/A
+                                            {% trans "N/A" %}
                                         {% endif %}
                                     </td>
-                                    <td>{{ winner.prize_amount|floatformat:2 }}</td>
+                                    <td>{{ winner.prize_amount|floatformat:2|intcomma }}</td>
                                     <td>{{ winner.won_at|date:"Y-m-d H:i" }}</td>
                                     <td>
                                         <span class="badge bg-warning">
@@ -219,7 +233,7 @@
             {% else %}
                 <div class="alert alert-info text-center">
                     <i class="fas fa-info-circle alert-icon"></i>
-                    {% trans "No winners recorded yet." %}
+                    {% trans "No prizes to distribute at the moment." %}
                 </div>
             {% endif %}
         </div>
@@ -264,7 +278,7 @@
                                     {{ autolottery.frequency }}
                                     {{ autolottery.get_frequency_unit_display }}
                                 </td>
-                                <td>{{ autolottery.ticket_price|floatformat:2 }}</td>
+                                <td>{{ autolottery.ticket_price|floatformat:2|intcomma }}</td>
                                 <td>
                                     {{ autolottery.duration_value }}
                                     {{ autolottery.get_duration_unit_display }}

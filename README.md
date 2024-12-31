@@ -35,7 +35,8 @@
 1. Run migrations, collect static files, and restart Auth:
 
    ```bash
-   python manage.py migrate fortunaisk
+   python manage.py migrate
+   python manage.py setup_tasks
    python manage.py collectstatic
    supervisorctl restart all
    ```
