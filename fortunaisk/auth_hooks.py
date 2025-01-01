@@ -18,7 +18,7 @@ class FortunaIskMenu(MenuItemHook):
 
     def __init__(self):
         super().__init__(
-            "FortunaIsk",
+            "Fortuna-ISK",
             "fas fa-ticket-alt fa-fw",
             "fortunaisk:lottery",
             navactive=["fortunaisk:lottery"],
