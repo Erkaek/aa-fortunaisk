@@ -18,6 +18,7 @@ from django.utils.html import format_html
 from django.utils.translation import gettext as _
 
 # fortunaisk
+from fortunaisk.decorators import can_access_app, can_admin_app
 from fortunaisk.forms.autolottery_forms import AutoLotteryForm
 from fortunaisk.forms.lottery_forms import LotteryCreateForm
 from fortunaisk.models import (
@@ -29,8 +30,6 @@ from fortunaisk.models import (
 )
 from fortunaisk.notifications import send_alliance_auth_notification
 from fortunaisk.tasks import create_lottery_from_auto_lottery
-
-from .decorators import can_access_app, can_admin_app
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
