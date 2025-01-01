@@ -3,12 +3,13 @@
 # Standard Library
 import logging
 from decimal import Decimal
-from functools import wraps
 
 # Django
 from django.contrib import messages
-from django.contrib.auth import get_user_model
-from django.contrib.auth.decorators import login_required, permission_required
+from django.contrib.auth import (
+    get_user_model,  # Assurez-vous que cette ligne est présente
+)
+from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Avg, Count, DecimalField, F, Q, Sum
 from django.db.models.functions import Coalesce
@@ -29,27 +30,10 @@ from fortunaisk.models import (
 from fortunaisk.notifications import send_alliance_auth_notification
 from fortunaisk.tasks import create_lottery_from_auto_lottery
 
+from .decorators import can_access_app, can_admin_app
+
 logger = logging.getLogger(__name__)
 User = get_user_model()
-
-
-def user_or_admin_permission_required(view_func):
-    """
-    Checks if the user has 'fortunaisk.user' or 'fortunaisk.admin' permission.
-    """
-
-    @wraps(view_func)
-    def _wrapped_view(request, *args, **kwargs):
-        if request.user.has_perm("fortunaisk.user") or request.user.has_perm(
-            "fortunaisk.admin"
-        ):
-            return view_func(request, *args, **kwargs)
-        # Django
-        from django.core.exceptions import PermissionDenied
-
-        raise PermissionDenied
-
-    return _wrapped_view
 
 
 def get_distribution_range(winner_count):
@@ -68,7 +52,7 @@ def get_distribution_range(winner_count):
 
 
 @login_required
-@permission_required("fortunaisk.admin", raise_exception=True)
+@can_admin_app
 def admin_dashboard(request):
     """
     Main admin dashboard: global stats, list of active lotteries,
@@ -170,7 +154,7 @@ def admin_dashboard(request):
 
 
 @login_required
-@permission_required("fortunaisk.admin", raise_exception=True)
+@can_admin_app
 def resolve_anomaly(request, anomaly_id):
     """
     Allows an admin to resolve a specific ticket anomaly.
@@ -201,7 +185,7 @@ def resolve_anomaly(request, anomaly_id):
 
 
 @login_required
-@permission_required("fortunaisk.admin", raise_exception=True)
+@can_admin_app
 def distribute_prize(request, winner_id):
     """
     Allows an admin to distribute a prize to a winner.
@@ -250,7 +234,7 @@ def distribute_prize(request, winner_id):
 
 
 @login_required
-@permission_required("fortunaisk.admin", raise_exception=True)
+@can_admin_app
 def create_auto_lottery(request):
     if request.method == "POST":
         form = AutoLotteryForm(request.POST)
@@ -277,7 +261,7 @@ def create_auto_lottery(request):
 
 
 @login_required
-@permission_required("fortunaisk.admin", raise_exception=True)
+@can_admin_app
 def edit_auto_lottery(request, autolottery_id):
     autolottery = get_object_or_404(AutoLottery, id=autolottery_id)
     if request.method == "POST":
@@ -308,7 +292,7 @@ def edit_auto_lottery(request, autolottery_id):
 
 
 @login_required
-@permission_required("fortunaisk.admin", raise_exception=True)
+@can_admin_app
 def delete_auto_lottery(request, autolottery_id):
     """
     Allows an admin to delete an automatic lottery.
@@ -332,7 +316,7 @@ def delete_auto_lottery(request, autolottery_id):
 
 
 @login_required
-@user_or_admin_permission_required
+@can_access_app
 def lottery(request):
     """
     List of active lotteries for users and administrators.
@@ -394,7 +378,7 @@ def lottery(request):
 
 
 @login_required
-@user_or_admin_permission_required
+@can_access_app
 def winner_list(request):
     """
     List of winners for users and administrators.
@@ -432,7 +416,7 @@ def winner_list(request):
 
 
 @login_required
-@user_or_admin_permission_required
+@can_access_app
 def lottery_history(request):
     """
     Lottery history for users and administrators.
@@ -461,7 +445,7 @@ def lottery_history(request):
 
 
 @login_required
-@permission_required("fortunaisk.admin", raise_exception=True)
+@can_admin_app
 def create_lottery(request):
     """
     Allows an admin to create a new lottery.
@@ -516,7 +500,7 @@ def create_lottery(request):
 
 
 @login_required
-@user_or_admin_permission_required
+@can_access_app
 def lottery_participants(request, lottery_id):
     """
     List of participants in a lottery, reserved for administrators.
@@ -537,7 +521,7 @@ def lottery_participants(request, lottery_id):
 
 
 @login_required
-@permission_required("fortunaisk.admin", raise_exception=True)
+@can_admin_app
 def terminate_lottery(request, lottery_id):
     """
     Allows an admin to prematurely terminate an active lottery.
@@ -576,7 +560,7 @@ def terminate_lottery(request, lottery_id):
 
 
 @login_required
-@permission_required("fortunaisk.admin", raise_exception=True)
+@can_admin_app
 def anomalies_list(request):
     """
     Lists all anomalies for administrators.
@@ -597,7 +581,7 @@ def anomalies_list(request):
 
 
 @login_required
-@permission_required("fortunaisk.admin", raise_exception=True)
+@can_admin_app
 def lottery_detail(request, lottery_id):
     """
     Detailed view of a lottery reserved for administrators.
@@ -639,7 +623,7 @@ def lottery_detail(request, lottery_id):
 
 
 @login_required
-@user_or_admin_permission_required
+@can_access_app
 def user_dashboard(request):
     """
     User dashboard for users and administrators.

@@ -53,8 +53,54 @@ class ExportCSVMixin:
         return response
 
 
+class FortunaiskModelAdmin(admin.ModelAdmin):
+    """
+    Custom ModelAdmin that requires 'can_admin_app' permission.
+    """
+
+    def has_module_permission(self, request):
+        if (
+            request.user.has_perm("fortunaisk.can_admin_app")
+            or request.user.is_superuser
+        ):
+            return True
+        return False
+
+    def has_view_permission(self, request, obj=None):
+        if (
+            request.user.has_perm("fortunaisk.can_admin_app")
+            or request.user.is_superuser
+        ):
+            return True
+        return False
+
+    def has_add_permission(self, request):
+        if (
+            request.user.has_perm("fortunaisk.can_admin_app")
+            or request.user.is_superuser
+        ):
+            return True
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        if (
+            request.user.has_perm("fortunaisk.can_admin_app")
+            or request.user.is_superuser
+        ):
+            return True
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        if (
+            request.user.has_perm("fortunaisk.can_admin_app")
+            or request.user.is_superuser
+        ):
+            return True
+        return False
+
+
 @admin.register(Lottery)
-class LotteryAdmin(ExportCSVMixin, admin.ModelAdmin):
+class LotteryAdmin(ExportCSVMixin, FortunaiskModelAdmin):
     list_display = (
         "id",
         "lottery_reference",
@@ -202,7 +248,7 @@ class LotteryAdmin(ExportCSVMixin, admin.ModelAdmin):
 
 
 @admin.register(TicketAnomaly)
-class TicketAnomalyAdmin(ExportCSVMixin, admin.ModelAdmin):
+class TicketAnomalyAdmin(ExportCSVMixin, FortunaiskModelAdmin):
     list_display = (
         "lottery",
         "user",
@@ -251,7 +297,7 @@ class TicketAnomalyAdmin(ExportCSVMixin, admin.ModelAdmin):
 
 
 @admin.register(AutoLottery)
-class AutoLotteryAdmin(ExportCSVMixin, admin.ModelAdmin):
+class AutoLotteryAdmin(ExportCSVMixin, FortunaiskModelAdmin):
     list_display = (
         "id",
         "name",
@@ -352,7 +398,7 @@ class AutoLotteryAdmin(ExportCSVMixin, admin.ModelAdmin):
 
 
 @admin.register(Winner)
-class WinnerAdmin(admin.ModelAdmin):
+class WinnerAdmin(FortunaiskModelAdmin):
     list_display = (
         "id",
         "ticket",
@@ -414,11 +460,17 @@ class WebhookConfigurationAdmin(SingletonModelAdmin):
         return True
 
     def has_change_permission(self, request, obj=None):
-        return True
+        # Vérifier si l'utilisateur a la permission 'can_admin_app'
+        if (
+            request.user.has_perm("fortunaisk.can_admin_app")
+            or request.user.is_superuser
+        ):
+            return True
+        return False
 
 
 @admin.register(AuditLog)
-class AuditLogAdmin(admin.ModelAdmin):
+class AuditLogAdmin(FortunaiskModelAdmin):
     list_display = ("timestamp", "user", "action_type", "model", "object_id")
     list_filter = ("action_type", "model", "user")
     search_fields = ("user__username", "model", "object_id")

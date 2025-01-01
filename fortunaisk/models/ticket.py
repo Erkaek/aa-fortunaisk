@@ -62,13 +62,7 @@ class TicketPurchase(models.Model):
     )
 
     class Meta:
-        verbose_name = "Ticket Purchase"
-        verbose_name_plural = "Ticket Purchases"
-        default_permissions = ()  # Désactive les permissions automatiques
-        permissions = [
-            ("user", "can access this app"),
-            ("admin", "can admin this app"),
-        ]
+        default_permissions = ()
 
     def __str__(self) -> str:
         return (
@@ -108,13 +102,7 @@ class Winner(models.Model):
     )
 
     class Meta:
-        verbose_name = "Winner"
-        verbose_name_plural = "Winners"
-        default_permissions = ()  # Désactive les permissions automatiques
-        permissions = [
-            ("user", "can access this app"),
-            ("admin", "can admin this app"),
-        ]
+        default_permissions = ()
 
     def __str__(self) -> str:
         char_name = self.character.character_name if self.character else "Unknown"
@@ -156,13 +144,7 @@ class TicketAnomaly(models.Model):
     recorded_at = models.DateTimeField(auto_now_add=True, verbose_name="Recorded At")
 
     class Meta:
-        verbose_name = "Ticket Anomaly"
-        verbose_name_plural = "Ticket Anomalies"
-        default_permissions = ()  # Désactive les permissions automatiques
-        permissions = [
-            ("user", "can access this app"),
-            ("admin", "can admin this app"),
-        ]
+        default_permissions = ()
 
     def __str__(self) -> str:
         if self.lottery:

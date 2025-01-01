@@ -76,12 +76,7 @@ class AutoLottery(models.Model):
     )
 
     class Meta:
-        ordering = ["name"]
-        default_permissions = ()  # Désactive les permissions automatiques
-        permissions = [
-            ("user", "can access this app"),
-            ("admin", "can admin this app"),
-        ]
+        default_permissions = ()
 
     def __str__(self):
         return f"{self.name} (Active={self.is_active})"

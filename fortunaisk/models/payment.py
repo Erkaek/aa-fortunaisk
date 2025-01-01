@@ -18,13 +18,7 @@ class ProcessedPayment(models.Model):
     )
 
     class Meta:
-        verbose_name = "Processed Payment"
-        verbose_name_plural = "Processed Payments"
-        default_permissions = ()  # Désactive les permissions automatiques
-        permissions = [
-            ("user", "can access this app"),
-            ("admin", "can admin this app"),
-        ]
+        default_permissions = ()
 
     def __str__(self):
         return f"ProcessedPayment(payment_id={self.payment_id})"

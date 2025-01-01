@@ -1,137 +1,174 @@
-# FortunaISK
+# FortunaISK (Beta)
 
-**FortunaISK** is a lottery module designed for Alliance Auth, enabling you to organize, manage, and track lottery participation and winners within your community. This module automates tedious tasks such as payments and verifications while providing an intuitive interface.
+A lottery module for [Alliance Auth](https://allianceauth.org/) to organize, manage, and track community lotteries effortlessly. This module integrates seamlessly with Alliance Auth and its ecosystem, automating lottery creation, management, and winner selection.
+
+______________________________________________________________________
+
+## Feedback Welcome
+
+**This module is currently in beta testing.** Your feedback, ideas for improvements, and suggestions are highly valued. Feel free to reach out with any insights or recommendations!
+
+______________________________________________________________________
 
 ## Features
 
-- **Admin Dashboard**: Provides an overview of global statistics, detected anomalies, and lottery management options.
-- **Automatic or Manual Lottery Management**: Simplifies the creation and management of recurring or one-time lotteries.
-- **Ticket Purchases**: Allows users to purchase tickets to participate in a lottery.
-- **Automatic Payment Verification**: Integration with `allianceauth-corp-tools` for automatic payment validation.
-- **Anomaly Management**: Identifies and facilitates the resolution of anomalies in transactions or participation.
-- **Automatic Winner Selection**: Automatically selects winners at the end of each lottery based on predefined criteria.
-- **Periodic Tasks**: Automates processes such as payment checks, status updates, and finalizing lotteries using Celery.
-- **History Display**: Lists previous winners with details of prizes awarded.
-- **User-Friendly Interface**: A clear interface to participate in and track ongoing or past lotteries.
-- **Discord Integration**: Sends notifications via Discord webhooks.
-- **Winner Leaderboard**: Highlights top winners with a podium based on their cumulative winnings.
+- **Ticket Handling**: Accepts and validates ticket purchases.
+- **Payment Processing**: Automates payment verification and tracks anomalies.
+- **Winner Selection**: Randomly selects winners using pre-defined criteria.
+- **Lottery History**: Provides a detailed history of past lotteries and winners.
+- **Recurring Lotteries**: Supports automated creation of recurring lotteries.
+- **Administrative Tools**:
+  - Anomaly resolution for mismatched transactions.
+  - Prize distribution tracking.
+  - Comprehensive admin dashboard for statistics and management.
+- **Notifications**:
+  - Discord notifications for major events like lottery completion or anomalies.
+  - Alliance Auth notifications for users about ticket status and winnings.
+
+______________________________________________________________________
+
+## Prerequisites
+
+- [Alliance Auth](https://allianceauth.readthedocs.io/en/v4.5.0/)
+- [Alliance Auth Corp Tools](https://github.com/pvyParts/allianceauth-corp-tools)
+- Django Celery and Django Celery Beat for task scheduling.
+
+______________________________________________________________________
 
 ## Installation
 
-0. This app is built as a submodule of [CorpTools](https://github.com/pvyParts/allianceauth-corp-tools), so please install this first.
+### Step 1 - Install app
 
-1. Install the app:
+```bash
+pip install fortunaisk
+```
 
-   ```bash
-   pip install fortunaisk
-   ```
+### Step 2 - Configure Auth settings
 
-1. Add `'fortunaisk',` to your `INSTALLED_APPS` in your project's `local.py`:
+Add `'fortunaisk'` to your `INSTALLED_APPS` in `local.py`:
 
-   ```python
-   INSTALLED_APPS += ["fortunaisk"]
-   ```
+```python
+INSTALLED_APPS += ["fortunaisk"]
+```
 
-1. Run migrations, collect static files, and restart Auth:
+### Step 3 - Maintain Alliance Auth
 
-   ```bash
-   python manage.py migrate
-   python manage.py setup_tasks
-   python manage.py collectstatic
-   supervisorctl restart all
-   ```
+- Run migrations:
 
-1. Navigate to the following address to set up default cron tasks:
+  ```bash
+  python manage.py migrate
+  ```
 
-   ```bash
-   AUTH_ADDRESS/fortunaisk/admin_create_tasks/
-   ```
+- Gather static files:
 
-1. Set up your permissions as documented below.
+  ```bash
+  python manage.py collectstatic
+  ```
 
-1. Add characters and corp tokens as required.
+- Restart Auth:
 
-1. Optionally, set up update tasks if you want data to auto-update (see the Usage section).
+  ```bash
+  supervisorctl restart all
+  ```
 
-## Usage
+### Step 4 - Configure tasks
 
-### Creating an Automatic Lottery
+Run the following management command to set up periodic tasks:
 
-1. Go to the admin interface and click "Create Automatic Lottery."
+```bash
+python manage.py setup_fortuna_tasks
+```
 
-1. Fill out the form with the following details:
+### Step 5 - Configure Webhooks
 
-   - **Lottery Name**: A unique name for the lottery.
-   - **Frequency**: Set the recurrence (e.g., every month).
-   - **Ticket Price**: Cost of each ticket in ISK.
-   - **Duration**: Time period the lottery will remain open.
-   - **Number of Winners**: Number of winners to be selected.
-   - **Prize Distribution**: Allocate percentages to winners (total must be 100%).
-   - **Max Tickets per User**: (Optional) Limit the number of tickets per user.
-   - **Payment Receiver**: Select the corporation that will receive ticket payments.
+Visit the following URL to configure Discord webhooks:
 
-1. Submit the form to save the configuration.
+```
+AUTH_ADDRESS/admin/fortunaisk/webhookconfiguration/
+```
 
-### Creating a Standard Lottery
-
-1. Go to the admin interface and click "Create a New Lottery."
-
-1. Fill out the form with details similar to an automatic lottery:
-
-   - **Ticket Price**, **Duration**, **Number of Winners**, **Prize Distribution**, and **Max Tickets per User**.
-   - **Payment Receiver** is also configurable.
-
-1. Submit the form to launch the lottery.
-
-### User Participation
-
-- Users can browse active lotteries and view details such as ticket prices and total pots.
-- Participation instructions (sending ISK via a specified corporation) are clearly displayed.
-- Once payments are made, the module automatically verifies transactions and validates entries.
-
-### Managing Winners
-
-- The module automatically selects winners at the end of each lottery.
-- Winners and their prizes are displayed in the history.
-- A dedicated interface allows admins to distribute prizes and mark winners as "rewarded."
-
-### Resolving Anomalies
-
-1. Access the admin dashboard and click "Total Anomalies."
-1. Review listed anomalies, including transaction details.
-1. Use the "Resolve" button to mark anomalies as resolved.
-
-### Lottery History
-
-- Displays past lotteries, including details on tickets sold, participants, and total pots.
-- Winners are listed with their respective rewards.
+______________________________________________________________________
 
 ## Permissions
 
-The table below summarizes the access to various views and features based on user permissions:
+| **Permission**     | **Description**                                                                |
+| ------------------ | ------------------------------------------------------------------------------ |
+| `fortunaisk.user`  | Allows access to the user's personal dashboard and viewing their winnings.     |
+| `fortunaisk.admin` | Grants full administrative rights to manage lotteries, resolve anomalies, etc. |
 
-| **View / Feature**     | **fortunaisk.user** | **fortunaisk.admin** |
-| ---------------------- | ------------------- | -------------------- |
-| `admin_dashboard`      | ❌                  | ✅                   |
-| `resolve_anomaly`      | ❌                  | ✅                   |
-| `distribute_prize`     | ❌                  | ✅                   |
-| `create_auto_lottery`  | ❌                  | ✅                   |
-| `edit_auto_lottery`    | ❌                  | ✅                   |
-| `delete_auto_lottery`  | ❌                  | ✅                   |
-| `lottery_participants` | ❌                  | ✅                   |
-| `terminate_lottery`    | ❌                  | ✅                   |
-| `anomalies_list`       | ❌                  | ✅                   |
-| `lottery_detail`       | ❌                  | ✅                   |
-| `lottery`              | ✅                  | ✅                   |
-| `winner_list`          | ✅                  | ✅                   |
-| `lottery_history`      | ✅                  | ✅                   |
-| `user_dashboard`       | ✅                  | ✅                   |
-| `create_lottery`       | ❌                  | ✅                   |
+______________________________________________________________________
 
-- **✅**: Access Granted
-- **❌**: Access Denied
+## Settings
 
-Ensure the appropriate permissions are assigned to users or groups to provide controlled access to the module's features.
+| **Name**                             | **Description**                              | **Default** |
+| ------------------------------------ | -------------------------------------------- | ----------- |
+| `FORTUNAISK_PAYMENT_VALIDATION_TASK` | Priority level for payment validation tasks. | 1           |
+| `FORTUNAISK_DISCORD_NOTIFICATION`    | Priority level for Discord notifications.    | 5           |
+
+______________________________________________________________________
+
+## Architecture Overview
+
+### Models
+
+- **Lottery**: Core model representing individual lotteries, including ticket price, duration, and winner details.
+- **AutoLottery**: Handles recurring lotteries with customizable schedules and durations.
+- **TicketPurchase**: Tracks individual ticket purchases and their status.
+- **Winner**: Records winners and their prize amounts.
+- **TicketAnomaly**: Logs discrepancies in ticket purchases or payments.
+- **ProcessedPayment**: Maintains a record of processed payments to prevent duplicates.
+- **WebhookConfiguration**: Stores Discord webhook URLs for notifications.
+
+### Tasks
+
+- `check_purchased_tickets`: Validates payments and generates corresponding tickets.
+- `check_lottery_status`: Monitors lotteries and marks them as completed if their duration has expired.
+- `finalize_lottery`: Selects winners and completes the lottery lifecycle.
+- `create_lottery_from_auto_lottery`: Automatically generates a new lottery based on recurring settings.
+
+### Forms
+
+- **LotteryCreateForm**: For creating standard one-time lotteries.
+- **AutoLotteryForm**: For managing recurring lotteries with custom schedules and winner distributions.
+
+### Views and Templates
+
+- **Admin Dashboard**: Central hub for managing lotteries, resolving anomalies, and distributing prizes.
+- **User Dashboard**: Personalized view for users to track their tickets and winnings.
+- **Templates**:
+  - `fortunaisk/base.html`: Base template providing consistent layout and navigation.
+  - **Admin Views**:
+    - `admin_dashboard.html`: Summarizes financial statistics, ongoing lotteries, and unresolved anomalies.
+    - `anomalies_list.html`: Lists all anomalies for resolution.
+    - `lottery_detail.html`: Displays details of a specific lottery, including participants and winners.
+  - **User Views**:
+    - `my_dashboard.html`: Displays a user's ticket purchases and winnings.
+    - `lottery.html`: Shows active lotteries with participation details.
+  - **Lottery Management**:
+    - `create_lottery.html`: Form for creating one-time lotteries.
+    - `create_auto_lottery.html`: Form for setting up recurring lotteries.
+  - **Historical Data**:
+    - `lottery_history.html`: Displays records of past lotteries.
+    - `winner_list.html`: Lists all winners with a podium for top earners.
+
+______________________________________________________________________
+
+## Usage
+
+### User Features
+
+- **Active Lotteries**: Users can view and participate in ongoing lotteries.
+- **Personal Dashboard**: View purchased tickets and winnings.
+- **Lottery History**: Access records of past lotteries and their outcomes.
+
+### Admin Features
+
+- **Create Lotteries**: Set ticket prices, duration, winner count, and prize distribution.
+- **Manage Recurring Lotteries**: Activate or deactivate automated lotteries.
+- **Monitor Participants**: View ticket purchases and participant details.
+- **Resolve Anomalies**: Identify and correct mismatches in ticket purchases or payments.
+
+______________________________________________________________________
 
 ## Contributing
 
@@ -147,10 +184,12 @@ Contributions are welcome! To report an issue or propose a feature:
 
 1. Submit a pull request.
 
+______________________________________________________________________
+
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ______________________________________________________________________
 
-Thank you for using **FortunaISK**! If you have any questions or feedback, feel free to open an issue or contact me directly.
+Thank you for using **FortunaISK**! For questions or feedback, feel free to open an issue or contact the maintainer.

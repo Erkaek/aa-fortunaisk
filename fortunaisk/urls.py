@@ -1,3 +1,5 @@
+# fortunaisk/urls.py
+
 # Django
 from django.urls import path
 

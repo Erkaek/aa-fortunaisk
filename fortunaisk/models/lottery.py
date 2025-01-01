@@ -105,12 +105,7 @@ class Lottery(models.Model):
     )
 
     class Meta:
-        ordering = ["-start_date"]
-        default_permissions = ()  # Désactive les permissions automatiques
-        permissions = [
-            ("user", "can access this app"),
-            ("admin", "can admin this app"),
-        ]
+        default_permissions = ()
 
     def __str__(self) -> str:
         return f"Lottery {self.lottery_reference} [{self.status}]"

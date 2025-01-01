@@ -1,4 +1,4 @@
-# fortunaisk/management/commands/setup_tasks.py
+# fortunaisk/management/commands/setup_fortuna_tasks.py
 
 # Standard Library
 import logging

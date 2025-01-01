@@ -61,14 +61,7 @@ class AuditLog(models.Model):
     )
 
     class Meta:
-        ordering = ["-timestamp"]
-        verbose_name = "Audit Log"
-        verbose_name_plural = "Audit Logs"
-        default_permissions = ()  # Désactive les permissions automatiques
-        permissions = [
-            ("user", "can access this app"),
-            ("admin", "can admin this app"),
-        ]
+        default_permissions = ()
 
     def __str__(self):
         return f"{self.get_action_type_display()} - {self.model} ({self.object_id}) by {self.user}"
