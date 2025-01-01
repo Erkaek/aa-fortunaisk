@@ -25,7 +25,9 @@ class FortunaIskMenu(MenuItemHook):
         )
 
     def render(self, request):
-        if request.user.has_perm("fortunaisk.view_ticketpurchase"):
+        if request.user.has_perm("fortunaisk.can_access_app") or request.user.has_perm(
+            "fortunaisk.can_admin_app"
+        ):
             return super().render(request)
         return ""
 
