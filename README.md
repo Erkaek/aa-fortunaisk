@@ -47,22 +47,13 @@ pip install fortunaisk
 
 Add `'fortunaisk'` to your `INSTALLED_APPS` in `local.py`:
 
-```python
-INSTALLED_APPS += ["fortunaisk"]
-```
-
 ### Step 3 - Maintain Alliance Auth
 
 - Run migrations:
 
   ```bash
+  python manage.py makemigrations
   python manage.py migrate
-  ```
-
-- Gather static files:
-
-  ```bash
-  python manage.py collectstatic
   ```
 
 - Restart Auth:
@@ -91,65 +82,10 @@ ______________________________________________________________________
 
 ## Permissions
 
-| **Permission**     | **Description**                                                                |
-| ------------------ | ------------------------------------------------------------------------------ |
-| `fortunaisk.user`  | Allows access to the user's personal dashboard and viewing their winnings.     |
-| `fortunaisk.admin` | Grants full administrative rights to manage lotteries, resolve anomalies, etc. |
-
-______________________________________________________________________
-
-## Settings
-
-| **Name**                             | **Description**                              | **Default** |
-| ------------------------------------ | -------------------------------------------- | ----------- |
-| `FORTUNAISK_PAYMENT_VALIDATION_TASK` | Priority level for payment validation tasks. | 1           |
-| `FORTUNAISK_DISCORD_NOTIFICATION`    | Priority level for Discord notifications.    | 5           |
-
-______________________________________________________________________
-
-## Architecture Overview
-
-### Models
-
-- **Lottery**: Core model representing individual lotteries, including ticket price, duration, and winner details.
-- **AutoLottery**: Handles recurring lotteries with customizable schedules and durations.
-- **TicketPurchase**: Tracks individual ticket purchases and their status.
-- **Winner**: Records winners and their prize amounts.
-- **TicketAnomaly**: Logs discrepancies in ticket purchases or payments.
-- **ProcessedPayment**: Maintains a record of processed payments to prevent duplicates.
-- **WebhookConfiguration**: Stores Discord webhook URLs for notifications.
-
-### Tasks
-
-- `check_purchased_tickets`: Validates payments and generates corresponding tickets.
-- `check_lottery_status`: Monitors lotteries and marks them as completed if their duration has expired.
-- `finalize_lottery`: Selects winners and completes the lottery lifecycle.
-- `create_lottery_from_auto_lottery`: Automatically generates a new lottery based on recurring settings.
-
-### Forms
-
-- **LotteryCreateForm**: For creating standard one-time lotteries.
-- **AutoLotteryForm**: For managing recurring lotteries with custom schedules and winner distributions.
-
-### Views and Templates
-
-- **Admin Dashboard**: Central hub for managing lotteries, resolving anomalies, and distributing prizes.
-- **User Dashboard**: Personalized view for users to track their tickets and winnings.
-- **Templates**:
-  - `fortunaisk/base.html`: Base template providing consistent layout and navigation.
-  - **Admin Views**:
-    - `admin_dashboard.html`: Summarizes financial statistics, ongoing lotteries, and unresolved anomalies.
-    - `anomalies_list.html`: Lists all anomalies for resolution.
-    - `lottery_detail.html`: Displays details of a specific lottery, including participants and winners.
-  - **User Views**:
-    - `my_dashboard.html`: Displays a user's ticket purchases and winnings.
-    - `lottery.html`: Shows active lotteries with participation details.
-  - **Lottery Management**:
-    - `create_lottery.html`: Form for creating one-time lotteries.
-    - `create_auto_lottery.html`: Form for setting up recurring lotteries.
-  - **Historical Data**:
-    - `lottery_history.html`: Displays records of past lotteries.
-    - `winner_list.html`: Lists all winners with a podium for top earners.
+| **Permission**                   | **Description**                                                                |
+| -------------------------------- | ------------------------------------------------------------------------------ |
+| `fortunaisk.can_access_this_app` | Allows access to the user's personal dashboard and viewing their winnings.     |
+| `fortunaisk.can_admin_this_app`  | Grants full administrative rights to manage lotteries, resolve anomalies, etc. |
 
 ______________________________________________________________________
 
@@ -183,6 +119,31 @@ Contributions are welcome! To report an issue or propose a feature:
    ```
 
 1. Submit a pull request.
+
+______________________________________________________________________
+
+## Update
+
+### Step 1 - Update app
+
+```bash
+pip install -U fortunaisk
+```
+
+### Step 2 - Maintain Alliance Auth
+
+- Run migrations:
+
+  ```bash
+  python manage.py makemigrations
+  python manage.py migrate
+  ```
+
+- Restart Auth:
+
+  ```bash
+  supervisorctl restart all
+  ```
 
 ______________________________________________________________________
 
