@@ -39,7 +39,7 @@ ______________________________________________________________________
 
 ## Prerequisites
 
-- [Alliance Auth](https://allianceauth.readthedocs.io/en/v4.5.0/)
+- [Alliance Auth](https://allianceauth.readthedocs.io/en/v4.5.0/) >=V4
 - [Alliance Auth Corp Tools](https://github.com/pvyParts/allianceauth-corp-tools)
 - Django Celery and Django Celery Beat for task scheduling.
 

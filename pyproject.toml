@@ -6,7 +6,7 @@ requires = [
 
 [project]
 name = "fortunaisk"
-version = "0.2.34"
+version = "0.2.35"
 description = "fortunaisk Plugin for Alliance Auth"
 readme = "README.md"
 keywords = [
@@ -41,7 +41,7 @@ classifiers = [
     "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
 ]
 dependencies = [
-    "allianceauth>=3,<5",
+    "allianceauth>=4,<5",
     "allianceauth-corptools>=2.5.5",
 ]
 urls.Home = "https://github.com/Erkaek/aa-fortunaisk"
