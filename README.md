@@ -27,6 +27,16 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
+## Future Developments
+
+- **Compatibility with Memberaudit and CorpTools**: Provide support for both Memberaudit and CorpTools, allowing users to integrate **FortunaISK** with either member management tool based on their preference.
+
+- **Bulk Ticket Purchases**: Enable users to purchase multiple tickets in a single transaction, streamlining the purchasing process and improving user experience.
+
+- **Prized Lotteries**: Enhance the current lottery system by allowing administrators to offer tangible prizes instead of solely distributing the total ticket revenue. This will provide more diverse reward options and increase participant engagement.
+
+______________________________________________________________________
+
 ## Prerequisites
 
 - [Alliance Auth](https://allianceauth.readthedocs.io/en/v4.5.0/)
