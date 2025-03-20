@@ -19,7 +19,7 @@ from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
 # fortunaisk
 from fortunaisk.models.ticket import TicketPurchase
 
-logger = logging.getLogger(__name__)
+logger = get_extension_logger(__name__)
 
 
 class Lottery(models.Model):

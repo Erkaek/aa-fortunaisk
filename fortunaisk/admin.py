@@ -24,7 +24,7 @@ from .models import (
 )
 from .notifications import send_alliance_auth_notification, send_discord_notification
 
-logger = logging.getLogger(__name__)
+logger = get_extension_logger(__name__)
 
 
 class ExportCSVMixin:

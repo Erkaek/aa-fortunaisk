@@ -5,7 +5,7 @@ import logging
 # Django
 from django.apps import AppConfig, apps
 
-logger = logging.getLogger(__name__)
+logger = get_extension_logger(__name__)
 
 
 class FortunaIskConfig(AppConfig):

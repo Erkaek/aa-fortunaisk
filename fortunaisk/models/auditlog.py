@@ -8,7 +8,7 @@ from django.contrib.auth import get_user_model
 from django.db import models
 from django.utils import timezone
 
-logger = logging.getLogger(__name__)
+logger = get_extension_logger(__name__)
 
 User = get_user_model()
 

@@ -2,6 +2,7 @@
 
 # Standard Library
 import logging
+from allianceauth.services.hooks import get_extension_logger
 
 # Django
 from django.db.models.signals import post_save
@@ -11,7 +12,7 @@ from django.dispatch import receiver
 from fortunaisk.models import TicketAnomaly, TicketPurchase, Winner
 from fortunaisk.notifications import send_alliance_auth_notification
 
-logger = logging.getLogger(__name__)
+logger = get_extension_logger(__name__)
 
 
 @receiver(post_save, sender=TicketPurchase)

@@ -3,6 +3,7 @@
 # Standard Library
 import json
 import logging
+from allianceauth.services.hooks import get_extension_logger
 
 # Third Party
 from celery import shared_task
@@ -16,7 +17,7 @@ from django.utils import timezone
 # fortunaisk
 from fortunaisk.notifications import send_alliance_auth_notification
 
-logger = logging.getLogger(__name__)
+logger = get_extension_logger(__name__)
 
 
 @shared_task(bind=True)

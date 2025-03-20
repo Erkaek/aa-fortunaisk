@@ -3,6 +3,7 @@
 # Standard Library
 import json
 import logging
+from allianceauth.services.hooks import get_extension_logger
 
 # Third Party
 from django_celery_beat.models import IntervalSchedule, PeriodicTask
@@ -14,7 +15,7 @@ from django.dispatch import receiver
 # fortunaisk
 from fortunaisk.models import AutoLottery
 
-logger = logging.getLogger(__name__)
+logger = get_extension_logger(__name__)
 
 
 @receiver(post_save, sender=AutoLottery)

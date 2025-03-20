@@ -16,7 +16,7 @@ from allianceauth.eveonline.models import EveCorporationInfo
 # fortunaisk
 from fortunaisk.models import AutoLottery
 
-logger = logging.getLogger(__name__)
+logger = get_extension_logger(__name__)
 
 
 class AutoLotteryForm(forms.ModelForm):

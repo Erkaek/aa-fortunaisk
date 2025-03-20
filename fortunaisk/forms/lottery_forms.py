@@ -15,7 +15,7 @@ from allianceauth.eveonline.models import EveCorporationInfo
 # fortunaisk
 from fortunaisk.models import Lottery
 
-logger = logging.getLogger(__name__)
+logger = get_extension_logger(__name__)
 
 
 class LotteryCreateForm(forms.ModelForm):

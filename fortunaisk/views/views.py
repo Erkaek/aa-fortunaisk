@@ -2,6 +2,7 @@
 
 # Standard Library
 import logging
+from allianceauth.services.hooks import get_extension_logger
 from decimal import Decimal
 
 # Django
@@ -31,7 +32,7 @@ from fortunaisk.models import (
 from fortunaisk.notifications import send_alliance_auth_notification
 from fortunaisk.tasks import create_lottery_from_auto_lottery
 
-logger = logging.getLogger(__name__)
+logger = get_extension_logger(__name__)
 User = get_user_model()
 
 

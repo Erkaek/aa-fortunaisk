@@ -3,6 +3,7 @@
 # Standard Library
 import datetime
 import logging
+from allianceauth.services.hooks import get_extension_logger
 from decimal import Decimal
 
 # Django
@@ -13,7 +14,7 @@ from django.dispatch import receiver
 # fortunaisk
 from fortunaisk.models.auditlog import AuditLog
 
-logger = logging.getLogger(__name__)
+logger = get_extension_logger(__name__)
 
 
 def table_exists(table_name: str) -> bool:
