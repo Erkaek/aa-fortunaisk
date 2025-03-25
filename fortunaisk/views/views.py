@@ -4,7 +4,6 @@
 import logging
 from decimal import Decimal
 
-
 # Django
 from django.contrib import messages
 from django.contrib.auth import (
@@ -14,8 +13,8 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Avg, Count, DecimalField, F, Q, Sum
 from django.db.models.functions import Coalesce
-from django.shortcuts import get_object_or_404, redirect, render
 from django.http import HttpResponse
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.html import format_html
 from django.utils.translation import gettext as _
 
@@ -322,7 +321,9 @@ def lottery(request):
     """
     List of active lotteries for users and administrators.
     """
-    active_lotteries = Lottery.objects.filter(status="active").prefetch_related("ticket_purchases")
+    active_lotteries = Lottery.objects.filter(status="active").prefetch_related(
+        "ticket_purchases"
+    )
     lotteries_info = []
 
     user_ticket_counts = (
@@ -354,17 +355,21 @@ def lottery(request):
             lottery_id=lot.lottery_reference,
         )
 
-        lotteries_info.append({
-            "lottery": lot,
-            "corporation_name": corp_name,
-            "has_ticket": has_ticket,
-            "instructions": formatted_instructions,
-            "user_ticket_count": user_ticket_count,
-            "max_tickets_per_user": lot.max_tickets_per_user,
-            "tickets_percentage": tickets_percentage,
-        })
+        lotteries_info.append(
+            {
+                "lottery": lot,
+                "corporation_name": corp_name,
+                "has_ticket": has_ticket,
+                "instructions": formatted_instructions,
+                "user_ticket_count": user_ticket_count,
+                "max_tickets_per_user": lot.max_tickets_per_user,
+                "tickets_percentage": tickets_percentage,
+            }
+        )
 
-    return render(request, "fortunaisk/lottery.html", {"active_lotteries": lotteries_info})
+    return render(
+        request, "fortunaisk/lottery.html", {"active_lotteries": lotteries_info}
+    )
 
 
 @login_required
@@ -574,23 +579,29 @@ def anomalies_list(request):
 @can_admin_app
 def lottery_detail(request, lottery_id):
     lottery_obj = get_object_or_404(Lottery, id=lottery_id)
-    participants_qs = lottery_obj.ticket_purchases.select_related("user", "character").all()
+    participants_qs = lottery_obj.ticket_purchases.select_related(
+        "user", "character"
+    ).all()
     paginator_participants = Paginator(participants_qs, 25)
     page_number_participants = request.GET.get("participants_page")
     page_obj_participants = paginator_participants.get_page(page_number_participants)
 
-    anomalies_qs = TicketAnomaly.objects.filter(lottery=lottery_obj).select_related("user", "character")
+    anomalies_qs = TicketAnomaly.objects.filter(lottery=lottery_obj).select_related(
+        "user", "character"
+    )
     paginator_anomalies = Paginator(anomalies_qs, 25)
     page_number_anomalies = request.GET.get("anomalies_page")
     page_obj_anomalies = paginator_anomalies.get_page(page_number_anomalies)
 
-    winners_qs = Winner.objects.filter(ticket__lottery=lottery_obj).select_related("ticket__user", "character")
+    winners_qs = Winner.objects.filter(ticket__lottery=lottery_obj).select_related(
+        "ticket__user", "character"
+    )
     paginator_winners = Paginator(winners_qs, 25)
     page_number_winners = request.GET.get("winners_page")
     page_obj_winners = paginator_winners.get_page(page_number_winners)
 
     # Calcul du nombre de participants uniques (distinct sur 'user')
-    participant_count = participants_qs.values('user').distinct().count()
+    participant_count = participants_qs.values("user").distinct().count()
 
     context = {
         "lottery": lottery_obj,
@@ -638,13 +649,16 @@ def user_dashboard(request):
     }
     return render(request, "fortunaisk/user_dashboard.html", context)
 
+
 @login_required
 def export_winners_csv(request, lottery_id):
     lottery = Lottery.objects.get(id=lottery_id)
     winners = Winner.objects.filter(ticket__lottery=lottery)
     # Créez le CSV
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = f'attachment; filename="winners_{lottery.lottery_reference}.csv"'
+    response = HttpResponse(content_type="text/csv")
+    response["Content-Disposition"] = (
+        f'attachment; filename="winners_{lottery.lottery_reference}.csv"'
+    )
     response.write("Lottery Reference,User,Character,Prize Amount,Won At\n")
     for winner in winners:
         response.write(

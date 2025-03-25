@@ -1,8 +1,13 @@
 # fortunaisk/models/ticket.py
 
+# Standard Library
 from decimal import Decimal
+
+# Django
 from django.contrib.auth import get_user_model
 from django.db import models
+
+# Alliance Auth
 from allianceauth.eveonline.models import EveCharacter
 
 User = get_user_model()
@@ -49,7 +54,9 @@ class TicketPurchase(models.Model):
         verbose_name="Ticket Quantity",
         help_text="Number of tickets purchased in this transaction.",
     )
-    purchase_date = models.DateTimeField(auto_now_add=True, verbose_name="Purchase Date")
+    purchase_date = models.DateTimeField(
+        auto_now_add=True, verbose_name="Purchase Date"
+    )
     # Vous pouvez conserver payment_id si besoin, mais sans unique=True car plusieurs paiements peuvent être regroupés
     payment_id = models.CharField(
         max_length=255, null=True, blank=True, verbose_name="Payment ID"

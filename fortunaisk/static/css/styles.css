@@ -9,8 +9,8 @@ body {
     margin-bottom: 20px;
     border: 1px solid #d4af37; /* gold border */
     border-radius: 8px;
-    background-color: #ffffff;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    background-color: #fff;
+    box-shadow: 0 4px 6px rgb(0 0 0 / 10%);
 }
 
 .table {

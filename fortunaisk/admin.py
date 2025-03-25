@@ -1,25 +1,23 @@
 # fortunaisk/admin.py
 
 """Initialize the FortunaIsk lottery application admin interface."""
+# Standard Library
 import csv
 import json
-from allianceauth.services.hooks import get_extension_logger
 
+# Third Party
+from django_celery_beat.models import IntervalSchedule, PeriodicTask
+from solo.admin import SingletonModelAdmin
 
+# Django
 from django.contrib import admin
 from django.db import models
 from django.http import HttpResponse
 
-from django_celery_beat.models import IntervalSchedule, PeriodicTask
-from solo.admin import SingletonModelAdmin
+# Alliance Auth
+from allianceauth.services.hooks import get_extension_logger
 
-from .models import (
-    AutoLottery,
-    Lottery,
-    TicketAnomaly,
-    WebhookConfiguration,
-    Winner,
-)
+from .models import AutoLottery, Lottery, TicketAnomaly, WebhookConfiguration, Winner
 from .notifications import send_alliance_auth_notification, send_discord_notification
 
 logger = get_extension_logger(__name__)
@@ -34,7 +32,9 @@ class ExportCSVMixin:
         field_names = self.export_fields or [field.name for field in meta.fields]
 
         response = HttpResponse(content_type="text/csv")
-        response["Content-Disposition"] = f"attachment; filename={meta.verbose_name_plural}.csv"
+        response["Content-Disposition"] = (
+            f"attachment; filename={meta.verbose_name_plural}.csv"
+        )
         writer = csv.writer(response)
         writer.writerow(field_names)
         for obj in queryset:
@@ -53,20 +53,36 @@ class FortunaiskModelAdmin(admin.ModelAdmin):
     """
     Custom ModelAdmin requiring 'can_admin_app' permission.
     """
+
     def has_module_permission(self, request):
-        return request.user.has_perm("fortunaisk.can_admin_app") or request.user.is_superuser
+        return (
+            request.user.has_perm("fortunaisk.can_admin_app")
+            or request.user.is_superuser
+        )
 
     def has_view_permission(self, request, obj=None):
-        return request.user.has_perm("fortunaisk.can_admin_app") or request.user.is_superuser
+        return (
+            request.user.has_perm("fortunaisk.can_admin_app")
+            or request.user.is_superuser
+        )
 
     def has_add_permission(self, request):
-        return request.user.has_perm("fortunaisk.can_admin_app") or request.user.is_superuser
+        return (
+            request.user.has_perm("fortunaisk.can_admin_app")
+            or request.user.is_superuser
+        )
 
     def has_change_permission(self, request, obj=None):
-        return request.user.has_perm("fortunaisk.can_admin_app") or request.user.is_superuser
+        return (
+            request.user.has_perm("fortunaisk.can_admin_app")
+            or request.user.is_superuser
+        )
 
     def has_delete_permission(self, request, obj=None):
-        return request.user.has_perm("fortunaisk.can_admin_app") or request.user.is_superuser
+        return (
+            request.user.has_perm("fortunaisk.can_admin_app")
+            or request.user.is_superuser
+        )
 
 
 @admin.register(Lottery)
@@ -331,16 +347,22 @@ class AutoLotteryAdmin(ExportCSVMixin, FortunaiskModelAdmin):
                         "args": json.dumps([obj.id]),
                     },
                 )
-                logger.info(f"Periodic task '{task_name}' created/updated for AutoLottery {obj.id}.")
+                logger.info(
+                    f"Periodic task '{task_name}' created/updated for AutoLottery {obj.id}."
+                )
             else:
                 message = f"AutoLottery {obj.name} has been deactivated."
                 task_name = f"create_lottery_from_autolottery_{obj.id}"
                 try:
                     task = PeriodicTask.objects.get(name=task_name)
                     task.delete()
-                    logger.info(f"Periodic task '{task_name}' deleted for AutoLottery {obj.id}.")
+                    logger.info(
+                        f"Periodic task '{task_name}' deleted for AutoLottery {obj.id}."
+                    )
                 except PeriodicTask.DoesNotExist:
-                    logger.warning(f"Periodic task '{task_name}' does not exist for AutoLottery {obj.id}.")
+                    logger.warning(
+                        f"Periodic task '{task_name}' does not exist for AutoLottery {obj.id}."
+                    )
             send_discord_notification(message=message)
             send_alliance_auth_notification(
                 user=request.user,
@@ -398,12 +420,13 @@ class WinnerAdmin(FortunaiskModelAdmin):
 
 @admin.register(WebhookConfiguration)
 class WebhookConfigurationAdmin(SingletonModelAdmin):
-    fieldsets = (
-        (None, {"fields": ("webhook_url",)}),
-    )
+    fieldsets = ((None, {"fields": ("webhook_url",)}),)
 
     def has_add_permission(self, request):
         return not WebhookConfiguration.objects.exists()
 
     def has_change_permission(self, request, obj=None):
-        return request.user.has_perm("fortunaisk.can_admin_app") or request.user.is_superuser
+        return (
+            request.user.has_perm("fortunaisk.can_admin_app")
+            or request.user.is_superuser
+        )

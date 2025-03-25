@@ -1,16 +1,21 @@
 # fortunaisk/signals/ticket_signals.py
 
+# Standard Library
 import logging
+
+# Django
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from fortunaisk.models import TicketAnomaly, TicketPurchase, Winner
+# fortunaisk
+from fortunaisk.models import TicketAnomaly, Winner
 from fortunaisk.notifications import send_alliance_auth_notification
 
 logger = logging.getLogger(__name__)
 
 # Removed notify_ticket_purchase signal to prevent duplicate notifications.
 # Ticket purchase confirmations are now sent in the payment processing task.
+
 
 @receiver(post_save, sender=Winner)
 def notify_winner(sender, instance, created, **kwargs):
@@ -29,7 +34,10 @@ def notify_winner(sender, instance, created, **kwargs):
             )
             logger.info(f"Winner notification sent to {instance.ticket.user.username}.")
         except Exception as e:
-            logger.error(f"Failed to send winner notification to {instance.ticket.user.username}: {e}", exc_info=True)
+            logger.error(
+                f"Failed to send winner notification to {instance.ticket.user.username}: {e}",
+                exc_info=True,
+            )
 
 
 @receiver(post_save, sender=TicketAnomaly)
@@ -48,6 +56,11 @@ def notify_ticket_anomaly(sender, instance, created, **kwargs):
                 ),
                 level="error",
             )
-            logger.info(f"Anomaly notification sent to {instance.user.username} for payment ID {instance.payment_id}.")
+            logger.info(
+                f"Anomaly notification sent to {instance.user.username} for payment ID {instance.payment_id}."
+            )
         except Exception as e:
-            logger.error(f"Failed to send anomaly notification to {instance.user.username}: {e}", exc_info=True)
+            logger.error(
+                f"Failed to send anomaly notification to {instance.user.username}: {e}",
+                exc_info=True,
+            )

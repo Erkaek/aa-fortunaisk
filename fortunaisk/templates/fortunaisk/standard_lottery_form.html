@@ -84,7 +84,7 @@
                                     </label>
                                     <!-- Local search field -->
                                     <input type="text" class="form-control mb-2" id="paymentReceiverSearch"
-                                           placeholder="{% trans 'Filter the Corporation...' %}">
+                                            placeholder="{% trans 'Filter the Corporation...' %}">
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="fas fa-user"></i></span>
                                         {{ form.payment_receiver }}
@@ -118,8 +118,8 @@
                                                     {% trans "Winner" %} {{ idx|add:"1" }}
                                                 </span>
                                                 <input type="number" name="winners_distribution_entry" class="form-control prize-distribution"
-                                                       value="{{ form.instance.winners_distribution|index:idx|default_if_none:0 }}"
-                                                       min="0" max="100" step="1" required>
+                                                        value="{{ form.instance.winners_distribution|index:idx|default_if_none:0 }}"
+                                                        min="0" max="100" step="1" required>
                                                 <span class="input-group-text">%</span>
                                             </div>
                                         {% endfor %}

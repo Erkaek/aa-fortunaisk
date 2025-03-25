@@ -64,13 +64,13 @@
                         <label for="ticketQty{{ forloop.counter }}" class="form-label">{% trans "Select Tickets:" %}</label>
                         <div class="input-group shadow-sm">
                             <input type="number"
-                                   id="ticketQty{{ forloop.counter }}"
-                                   class="form-control ticket-qty-input"
-                                   value="1"
-                                   min="1"
-                                   {% if info.max_tickets_per_user %}
-                                   max="{{ info.max_tickets_per_user }}"
-                                   {% endif %}>
+                                    id="ticketQty{{ forloop.counter }}"
+                                    class="form-control ticket-qty-input"
+                                    value="1"
+                                    min="1"
+                                    {% if info.max_tickets_per_user %}
+                                    max="{{ info.max_tickets_per_user }}"
+                                    {% endif %}>
                             <span class="input-group-text">{% trans "Ticket(s)" %}</span>
                         </div>
                     </div>
