@@ -6,25 +6,34 @@
 {% endblock page_title %}
 
 {% block details %}
-<div class="container mt-4">
-    <h2 class="text-center mb-4">{% trans "Admin Dashboard" %}</h2>
+<div class="container my-5">
+    <!-- Dashboard Header -->
+    <div class="text-center mb-5">
+        <h2 class="fw-bold" style="color: #27ae60;">
+            <i class="fas fa-cogs me-2" style="color: #f1c40f;"></i>
+            {% trans "Admin Dashboard" %}
+        </h2>
+        <p class="text-muted fs-5">
+            {% trans "Monitor your lotteries and manage the system with fortune on your side." %}
+        </p>
+    </div>
 
-    <!-- Financial Summary and Existing Statistics -->
-    <div class="row mb-4">
+    <!-- Statistics Cards -->
+    <div class="row mb-5">
         <!-- Financial Summary -->
         <div class="col-md-3">
-            <div class="card text-white bg-success mb-3">
+            <div class="card text-white mb-3" style="background: linear-gradient(135deg, #f1c40f, #27ae60);">
                 <div class="card-header">
                     <i class="fas fa-wallet me-1"></i> {% trans "Financial Summary" %}
                 </div>
                 <div class="card-body">
                     <h6 class="card-title">
                         {{ stats.total_tickets_sold|intcomma }}
-                        <small class="text-white-50"> {% trans "Total Tickets Sold" %}</small>
+                        <small class="text-white-50"> {% trans "Tickets Sold" %}</small>
                     </h6>
                     <h6>
                         {{ stats.total_participants|intcomma }}
-                        <small class="text-white-50"> {% trans "Total Participants" %}</small>
+                        <small class="text-white-50"> {% trans "Participants" %}</small>
                     </h6>
                     <h6>
                         {{ stats.total_prizes_distributed|floatformat:2|intcomma }} ISK
@@ -36,59 +45,37 @@
 
         <!-- Total Lotteries -->
         <div class="col-md-3">
-            <div class="card text-white bg-primary mb-3">
+            <div class="card text-white mb-3" style="background: linear-gradient(135deg, #27ae60, #1abc9c);">
                 <div class="card-header">
                     <i class="fas fa-ticket-alt me-1"></i> {% trans "Total Lotteries" %}
                 </div>
                 <div class="card-body">
-                    <h5 class="card-title">
-                        {{ stats.total_lotteries|intcomma }}
-                    </h5>
+                    <h5 class="card-title">{{ stats.total_lotteries|intcomma }}</h5>
                 </div>
             </div>
         </div>
 
-        <!-- Total Anomalies (clickable) -->
+        <!-- Total Anomalies -->
         <div class="col-md-3">
-            <a href="{% url 'fortunaisk:anomalies_list' %}"
-                class="text-decoration-none"
-                style="color: inherit;">
-                <div class="card text-white
-                    {% if stats.total_anomalies > 0 %}
-                        bg-danger
-                    {% else %}
-                        bg-success
-                    {% endif %}
-                    mb-3"
-                    style="cursor: pointer;">
+            <a href="{% url 'fortunaisk:anomalies_list' %}" class="text-decoration-none" style="color: inherit;">
+                <div class="card text-white mb-3" style="background: {% if stats.total_anomalies > 0 %}linear-gradient(135deg, #e74c3c, #c0392b){% else %}linear-gradient(135deg, #27ae60, #1abc9c){% endif %}; cursor: pointer;">
                     <div class="card-header d-flex align-items-center justify-content-between">
                         <span>
                             <i class="fas fa-exclamation-triangle me-1"></i>
                             {% trans "Total Anomalies" %}
                         </span>
-                        <!-- Small indicator -->
                         {% if stats.total_anomalies > 0 %}
-                            <span class="badge bg-light text-dark">
-                                {% trans "Unresolved" %}
-                            </span>
+                            <span class="badge bg-light text-dark">{% trans "Unresolved" %}</span>
                         {% else %}
-                            <span class="badge bg-light text-dark">
-                                {% trans "None" %}
-                            </span>
+                            <span class="badge bg-light text-dark">{% trans "None" %}</span>
                         {% endif %}
                     </div>
                     <div class="card-body">
-                        <h5 class="card-title">
-                            {{ stats.total_anomalies|intcomma }}
-                        </h5>
+                        <h5 class="card-title">{{ stats.total_anomalies|intcomma }}</h5>
                         {% if stats.total_anomalies > 0 %}
-                            <p class="card-text">
-                                {% trans "Click to view or resolve anomalies." %}
-                            </p>
+                            <p class="card-text">{% trans "Click to view anomalies." %}</p>
                         {% else %}
-                            <p class="card-text">
-                                {% trans "No anomalies detected, click to view history." %}
-                            </p>
+                            <p class="card-text">{% trans "No anomalies detected." %}</p>
                         {% endif %}
                     </div>
                 </div>
@@ -97,229 +84,206 @@
 
         <!-- Average Participation -->
         <div class="col-md-3">
-            <div class="card text-white bg-primary mb-3">
+            <div class="card text-white mb-3" style="background: linear-gradient(135deg, #3498db, #2980b9);">
                 <div class="card-header">
                     <i class="fas fa-users me-1"></i> {% trans "Average Participation" %}
                 </div>
                 <div class="card-body">
-                    <h5 class="card-title">
-                        {{ stats.avg_participation|floatformat:2 }}
-                    </h5>
+                    <h5 class="card-title">{{ stats.avg_participation|floatformat:2 }}</h5>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Active Lotteries -->
-    <div class="row mb-4">
+    <!-- Active Lotteries Table -->
+    <div class="row mb-5">
         <div class="col-md-12">
-            <h4>{% trans "Active Lotteries" %}</h4>
+            <h4 class="mb-3" style="color: #27ae60;">
+                <i class="fas fa-ticket-alt me-2"></i>{% trans "Active Lotteries" %}
+            </h4>
             {% if active_lotteries %}
-                <div class="table-responsive">
-                    <table class="table table-striped table-hover">
-                        <thead class="table-dark">
-                            <tr>
-                                <th scope="col">{% trans "Reference" %}</th>
-                                <th scope="col">{% trans "Status" %}</th>
-                                <th scope="col">{% trans "Ticket Price (ISK)" %}</th>
-                                <th scope="col">{% trans "Total Pot (ISK)" %}</th>
-                                <th scope="col">{% trans "Participants" %}</th>
-                                <th scope="col">{% trans "Tickets Sold" %}</th>
-                                <th scope="col">{% trans "Actions" %}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for lottery in active_lotteries %}
-                            <tr>
-                                <td>{{ lottery.lottery_reference }}</td>
-                                <td>
-                                    {% if lottery.status == "active" %}
-                                        <span class="badge bg-success">{% trans "Active" %}</span>
-                                    {% elif lottery.status == "completed" %}
-                                        <span class="badge bg-secondary">{% trans "Completed" %}</span>
-                                    {% elif lottery.status == "cancelled" %}
-                                        <span class="badge bg-danger">{% trans "Cancelled" %}</span>
-                                    {% else %}
-                                        {{ lottery.status }}
-                                    {% endif %}
-                                </td>
-                                <td>{{ lottery.ticket_price|floatformat:2|intcomma }}</td>
-                                <td>{{ lottery.total_pot|floatformat:2|intcomma }}</td>
-                                <td>{{ lottery.participant_count|intcomma }}</td>
-                                <td>{{ lottery.tickets_sold|intcomma }}</td>
-                                <td>
-                                    <a href="{% url 'fortunaisk:lottery_detail' lottery.id %}"
-                                        class="btn btn-sm btn-info">
-                                        <i class="fas fa-chart-pie"></i>
-                                        {% trans "Dashboard" %}
-                                    </a>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th scope="col">{% trans "Reference" %}</th>
+                            <th scope="col">{% trans "Status" %}</th>
+                            <th scope="col">{% trans "Ticket Price (ISK)" %}</th>
+                            <th scope="col">{% trans "Total Pot (ISK)" %}</th>
+                            <th scope="col">{% trans "Participants" %}</th>
+                            <th scope="col">{% trans "Tickets Sold" %}</th>
+                            <th scope="col">{% trans "Actions" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for lottery in active_lotteries %}
+                        <tr>
+                            <td>{{ lottery.lottery_reference }}</td>
+                            <td>
+                                {% if lottery.status == "active" %}
+                                    <span class="badge bg-success">{% trans "Active" %}</span>
+                                {% elif lottery.status == "pending" %}
+                                    <span class="badge bg-info">
+                                        <i class="fas fa-spinner fa-spin me-1"></i> {% trans "Pending" %}
+                                    </span>
+                                {% elif lottery.status == "completed" %}
+                                    <span class="badge bg-secondary">{% trans "Completed" %}</span>
+                                {% elif lottery.status == "cancelled" %}
+                                    <span class="badge bg-danger">{% trans "Cancelled" %}</span>
+                                {% else %}
+                                    {{ lottery.status }}
+                                {% endif %}
+                            </td>
+                            <td>{{ lottery.ticket_price|floatformat:2|intcomma }}</td>
+                            <td>{{ lottery.total_pot|floatformat:2|intcomma }}</td>
+                            <td>{{ lottery.participant_count|intcomma }}</td>
+                            <td>{{ lottery.tickets_sold|intcomma }}</td>
+                            <td>
+                                <a href="{% url 'fortunaisk:lottery_detail' lottery.id %}" class="btn btn-sm btn-info">
+                                    <i class="fas fa-chart-pie"></i> {% trans "Dashboard" %}
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
             {% else %}
-                <div class="alert alert-info text-center">
-                    <i class="fas fa-info-circle alert-icon"></i>
-                    {% trans "No active lotteries found." %}
-                </div>
+            <div class="alert alert-info text-center">
+                <i class="fas fa-info-circle"></i> {% trans "No active lotteries found." %}
+            </div>
             {% endif %}
         </div>
     </div>
 
-    <!-- Prizes to Distribute (Only show undistributed) -->
-    <div class="row mb-4">
+    <!-- Prizes to Distribute -->
+    <div class="row mb-5">
         <div class="col-md-12">
-            <h4>{% trans "Prizes to Distribute" %}</h4>
+            <h4 class="mb-3" style="color: #27ae60;">
+                <i class="fas fa-gift me-2"></i>{% trans "Prizes to Distribute" %}
+            </h4>
             {% if winners %}
-                <div class="table-responsive">
-                    <table class="table table-bordered table-hover">
-                        <thead class="table-success">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                    <thead class="table-success">
+                        <tr>
+                            <th scope="col">{% trans "Lottery Reference" %}</th>
+                            <th scope="col">{% trans "User" %}</th>
+                            <th scope="col">{% trans "Character" %}</th>
+                            <th scope="col">{% trans "Prize Amount (ISK)" %}</th>
+                            <th scope="col">{% trans "Won At" %}</th>
+                            <th scope="col">{% trans "Distributed" %}</th>
+                            <th scope="col">{% trans "Actions" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for winner in winners %}
+                            {% if not winner.distributed %}
                             <tr>
-                                <th scope="col">{% trans "Lottery Reference" %}</th>
-                                <th scope="col">{% trans "User" %}</th>
-                                <th scope="col">{% trans "Character" %}</th>
-                                <th scope="col">{% trans "Prize Amount (ISK)" %}</th>
-                                <th scope="col">{% trans "Won At" %}</th>
-                                <th scope="col">{% trans "Distributed" %}</th>
-                                <th scope="col">{% trans "Actions" %}</th>
+                                <td>{{ winner.ticket.lottery.lottery_reference }}</td>
+                                <td>{{ winner.ticket.user.username }}</td>
+                                <td>
+                                    {% if winner.character %}
+                                        {{ winner.character }}
+                                    {% else %}
+                                        {% trans "N/A" %}
+                                    {% endif %}
+                                </td>
+                                <td>{{ winner.prize_amount|floatformat:2|intcomma }}</td>
+                                <td>{{ winner.won_at|date:"Y-m-d H:i" }}</td>
+                                <td>
+                                    <span class="badge bg-warning">{% trans "No" %}</span>
+                                </td>
+                                <td>
+                                    <form action="{% url 'fortunaisk:distribute_prize' winner.id %}" method="post" style="display:inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-primary" onclick="return confirm('{% trans "Have you distributed the prize to this winner?" %}');">
+                                            <i class="fas fa-hand-holding-usd"></i> {% trans "Distribute Prize" %}
+                                        </button>
+                                    </form>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            {% comment %}
-                                We only display winners where distributed=False,
-                                so we skip the row if distributed is True.
-                            {% endcomment %}
-                            {% for winner in winners %}
-                                {% if not winner.distributed %}
-                                <tr>
-                                    <td>{{ winner.ticket.lottery.lottery_reference }}</td>
-                                    <td>{{ winner.ticket.user.username }}</td>
-                                    <td>
-                                        {% if winner.character %}
-                                            {{ winner.character }}
-                                        {% else %}
-                                            {% trans "N/A" %}
-                                        {% endif %}
-                                    </td>
-                                    <td>{{ winner.prize_amount|floatformat:2|intcomma }}</td>
-                                    <td>{{ winner.won_at|date:"Y-m-d H:i" }}</td>
-                                    <td>
-                                        <span class="badge bg-warning">
-                                            {% trans "No" %}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <!-- Distribute form -->
-                                        <form action="{% url 'fortunaisk:distribute_prize' winner.id %}"
-                                                method="post"
-                                                style="display:inline;">
-                                            {% csrf_token %}
-                                            <button type="submit"
-                                                    class="btn btn-sm btn-primary"
-                                                    onclick="return confirm('{% trans "Have you distributed the prize to this winner?" %}');">
-                                                <i class="fas fa-hand-holding-usd"></i>
-                                                {% trans "Distribute Prize" %}
-                                            </button>
-                                        </form>
-                                    </td>
-                                </tr>
-                                {% endif %}
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
             {% else %}
-                <div class="alert alert-info text-center">
-                    <i class="fas fa-info-circle alert-icon"></i>
-                    {% trans "No prizes to distribute at the moment." %}
-                </div>
+            <div class="alert alert-info text-center">
+                <i class="fas fa-info-circle"></i> {% trans "No prizes to distribute at the moment." %}
+            </div>
             {% endif %}
         </div>
     </div>
 
     <!-- Automatic Lotteries -->
-    <div class="row mb-4">
+    <div class="row mb-5">
         <div class="col-md-12">
-            <h4>{% trans "Automatic Lotteries" %}</h4>
+            <h4 class="mb-3" style="color: #27ae60;">
+                <i class="fas fa-sync me-2"></i>{% trans "Automatic Lotteries" %}
+            </h4>
             <div class="d-flex justify-content-end mb-3">
-                <a href="{% url 'fortunaisk:lottery_create' %}"
-                    class="btn btn-primary me-2">
-                    <i class="fas fa-plus-circle"></i>
-                    {% trans "Create Lottery" %}
+                <a href="{% url 'fortunaisk:lottery_create' %}" class="btn btn-primary me-2">
+                    <i class="fas fa-plus-circle"></i> {% trans "Create Lottery" %}
                 </a>
-                <a href="{% url 'fortunaisk:auto_lottery_create' %}"
-                    class="btn btn-success">
-                    <i class="fas fa-sync"></i>
-                    {% trans "Create Automatic Lottery" %}
+                <a href="{% url 'fortunaisk:auto_lottery_create' %}" class="btn btn-success">
+                    <i class="fas fa-sync"></i> {% trans "Create Automatic Lottery" %}
                 </a>
             </div>
             {% if autolotteries %}
-                <div class="table-responsive">
-                    <table class="table table-striped table-hover">
-                        <thead class="table-dark">
-                            <tr>
-                                <th scope="col">{% trans "Name" %}</th>
-                                <th scope="col">{% trans "Frequency" %}</th>
-                                <th scope="col">{% trans "Ticket Price (ISK)" %}</th>
-                                <th scope="col">{% trans "Duration" %}</th>
-                                <th scope="col">{% trans "Payment Receiver" %}</th>
-                                <th scope="col">{% trans "Number of Winners" %}</th>
-                                <th scope="col">{% trans "Is Active" %}</th>
-                                <th scope="col">{% trans "Actions" %}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for autolottery in autolotteries %}
-                            <tr>
-                                <td>{{ autolottery.name }}</td>
-                                <td>
-                                    {{ autolottery.frequency }}
-                                    {{ autolottery.get_frequency_unit_display }}
-                                </td>
-                                <td>{{ autolottery.ticket_price|floatformat:2|intcomma }}</td>
-                                <td>
-                                    {{ autolottery.duration_value }}
-                                    {{ autolottery.get_duration_unit_display }}
-                                </td>
-                                <td>
-                                    {% if autolottery.payment_receiver %}
-                                        {{ autolottery.payment_receiver.corporation_name }}
-                                    {% else %}
-                                        {% trans "Unknown Corporation" %}
-                                    {% endif %}
-                                </td>
-                                <td>{{ autolottery.winner_count }}</td>
-                                <td>
-                                    {% if autolottery.is_active %}
-                                        <span class="badge bg-success">{% trans "Yes" %}</span>
-                                    {% else %}
-                                        <span class="badge bg-secondary">{% trans "No" %}</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <a href="{% url 'fortunaisk:auto_lottery_edit' autolottery.id %}"
-                                        class="btn btn-sm btn-warning">
-                                        <i class="fas fa-edit"></i>
-                                        {% trans "Edit" %}
-                                    </a>
-                                    <a href="{% url 'fortunaisk:auto_lottery_delete' autolottery.id %}"
-                                        class="btn btn-sm btn-danger">
-                                        <i class="fas fa-trash"></i>
-                                        {% trans "Delete" %}
-                                    </a>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th scope="col">{% trans "Name" %}</th>
+                            <th scope="col">{% trans "Frequency" %}</th>
+                            <th scope="col">{% trans "Ticket Price (ISK)" %}</th>
+                            <th scope="col">{% trans "Duration" %}</th>
+                            <th scope="col">{% trans "Payment Receiver" %}</th>
+                            <th scope="col">{% trans "Number of Winners" %}</th>
+                            <th scope="col">{% trans "Is Active" %}</th>
+                            <th scope="col">{% trans "Actions" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for autolottery in autolotteries %}
+                        <tr>
+                            <td>{{ autolottery.name }}</td>
+                            <td>{{ autolottery.frequency }} {{ autolottery.get_frequency_unit_display }}</td>
+                            <td>{{ autolottery.ticket_price|floatformat:2|intcomma }}</td>
+                            <td>{{ autolottery.duration_value }} {{ autolottery.get_duration_unit_display }}</td>
+                            <td>
+                                {% if autolottery.payment_receiver %}
+                                    {{ autolottery.payment_receiver.corporation_name }}
+                                {% else %}
+                                    {% trans "Unknown Corporation" %}
+                                {% endif %}
+                            </td>
+                            <td>{{ autolottery.winner_count }}</td>
+                            <td>
+                                {% if autolottery.is_active %}
+                                    <span class="badge bg-success">{% trans "Yes" %}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{% trans "No" %}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'fortunaisk:auto_lottery_edit' autolottery.id %}" class="btn btn-sm btn-warning">
+                                    <i class="fas fa-edit"></i> {% trans "Edit" %}
+                                </a>
+                                <a href="{% url 'fortunaisk:auto_lottery_delete' autolottery.id %}" class="btn btn-sm btn-danger">
+                                    <i class="fas fa-trash"></i> {% trans "Delete" %}
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
             {% else %}
-                <div class="alert alert-info text-center">
-                    <i class="fas fa-info-circle"></i>
-                    {% trans "No automatic lotteries found." %}
-                </div>
+            <div class="alert alert-info text-center">
+                <i class="fas fa-info-circle"></i> {% trans "No automatic lotteries found." %}
+            </div>
             {% endif %}
         </div>
     </div>

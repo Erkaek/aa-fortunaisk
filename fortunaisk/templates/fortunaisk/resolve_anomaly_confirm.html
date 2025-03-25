@@ -1,28 +1,41 @@
 {% extends "fortunaisk/base.html" %}
-{% load i18n humanize fortunaisk_tags static %}
+{% load i18n static %}
 
 {% block page_title %}
     {% trans "Resolve Anomaly" %}
 {% endblock page_title %}
 
 {% block details %}
-<div class="container mt-4">
-    <h2 class="text-center mb-4">
-        {% trans "Resolve Anomaly" %}: {{ anomaly.id }}
-    </h2>
-
-    <div class="alert alert-warning">
-        <p>{% trans "Are you sure you want to resolve this anomaly?" %}</p>
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <!-- Card for resolving anomaly -->
+            <div class="card shadow-lg border-0">
+                <div class="card-header text-white" style="background: linear-gradient(135deg, #f1c40f, #27ae60);">
+                    <h4 class="mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        {% trans "Resolve Anomaly" %}: {{ anomaly.id }}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning" role="alert">
+                        <i class="fas fa-info-circle me-2"></i>
+                        {% trans "Are you sure you want to resolve this anomaly?" %}
+                    </div>
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'fortunaisk:admin_dashboard' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-1"></i> {% trans "Cancel" %}
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-check me-1"></i> {% trans "Yes, Resolve" %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
-
-    <form method="post">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-success">
-            {% trans "Yes, Resolve" %}
-        </button>
-        <a href="{% url 'fortunaisk:admin_dashboard' %}" class="btn btn-secondary">
-            {% trans "Cancel" %}
-        </a>
-    </form>
 </div>
 {% endblock details %}

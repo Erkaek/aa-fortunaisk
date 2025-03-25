@@ -2,7 +2,6 @@
 
 # Standard Library
 import logging
-from allianceauth.services.hooks import get_extension_logger
 
 # Django
 from django.db.models.signals import post_save, pre_save

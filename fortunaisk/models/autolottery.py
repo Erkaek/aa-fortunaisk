@@ -14,7 +14,7 @@ from django.utils.translation import gettext as _
 # Alliance Auth
 from allianceauth.eveonline.models import EveCorporationInfo
 
-logger = get_extension_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class AutoLottery(models.Model):

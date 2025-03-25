@@ -1,21 +1,19 @@
 # fortunaisk/admin.py
 
-# Standard Library
+"""Initialize the FortunaIsk lottery application admin interface."""
 import csv
 import json
-import logging
+from allianceauth.services.hooks import get_extension_logger
 
-# Third Party
-from django_celery_beat.models import IntervalSchedule, PeriodicTask
-from solo.admin import SingletonModelAdmin
 
-# Django
 from django.contrib import admin
 from django.db import models
 from django.http import HttpResponse
 
+from django_celery_beat.models import IntervalSchedule, PeriodicTask
+from solo.admin import SingletonModelAdmin
+
 from .models import (
-    AuditLog,
     AutoLottery,
     Lottery,
     TicketAnomaly,
@@ -36,9 +34,7 @@ class ExportCSVMixin:
         field_names = self.export_fields or [field.name for field in meta.fields]
 
         response = HttpResponse(content_type="text/csv")
-        response["Content-Disposition"] = (
-            f"attachment; filename={meta.verbose_name_plural}.csv"
-        )
+        response["Content-Disposition"] = f"attachment; filename={meta.verbose_name_plural}.csv"
         writer = csv.writer(response)
         writer.writerow(field_names)
         for obj in queryset:
@@ -55,48 +51,22 @@ class ExportCSVMixin:
 
 class FortunaiskModelAdmin(admin.ModelAdmin):
     """
-    Custom ModelAdmin that requires 'can_admin_app' permission.
+    Custom ModelAdmin requiring 'can_admin_app' permission.
     """
-
     def has_module_permission(self, request):
-        if (
-            request.user.has_perm("fortunaisk.can_admin_app")
-            or request.user.is_superuser
-        ):
-            return True
-        return False
+        return request.user.has_perm("fortunaisk.can_admin_app") or request.user.is_superuser
 
     def has_view_permission(self, request, obj=None):
-        if (
-            request.user.has_perm("fortunaisk.can_admin_app")
-            or request.user.is_superuser
-        ):
-            return True
-        return False
+        return request.user.has_perm("fortunaisk.can_admin_app") or request.user.is_superuser
 
     def has_add_permission(self, request):
-        if (
-            request.user.has_perm("fortunaisk.can_admin_app")
-            or request.user.is_superuser
-        ):
-            return True
-        return False
+        return request.user.has_perm("fortunaisk.can_admin_app") or request.user.is_superuser
 
     def has_change_permission(self, request, obj=None):
-        if (
-            request.user.has_perm("fortunaisk.can_admin_app")
-            or request.user.is_superuser
-        ):
-            return True
-        return False
+        return request.user.has_perm("fortunaisk.can_admin_app") or request.user.is_superuser
 
     def has_delete_permission(self, request, obj=None):
-        if (
-            request.user.has_perm("fortunaisk.can_admin_app")
-            or request.user.is_superuser
-        ):
-            return True
-        return False
+        return request.user.has_perm("fortunaisk.can_admin_app") or request.user.is_superuser
 
 
 @admin.register(Lottery)
@@ -157,7 +127,7 @@ class LotteryAdmin(ExportCSVMixin, FortunaiskModelAdmin):
     ]
 
     def has_add_permission(self, request):
-        # Nous n'autorisons pas la création via l'admin pour les loteries standards
+        # Creation via admin non autorisée pour les loteries standards.
         return False
 
     def save_model(self, request, obj, form, change):
@@ -168,22 +138,21 @@ class LotteryAdmin(ExportCSVMixin, FortunaiskModelAdmin):
                 old_obj = None
         super().save_model(request, obj, form, change)
 
-        if change and old_obj:
-            if old_obj.status != obj.status:
-                if obj.status == "completed":
-                    message = f"Lottery {obj.lottery_reference} completed."
-                elif obj.status == "cancelled":
-                    message = f"Lottery {obj.lottery_reference} cancelled."
-                else:
-                    message = f"Lottery {obj.lottery_reference} updated."
+        if change and old_obj and old_obj.status != obj.status:
+            if obj.status == "completed":
+                message = f"Lottery {obj.lottery_reference} completed."
+            elif obj.status == "cancelled":
+                message = f"Lottery {obj.lottery_reference} cancelled."
+            else:
+                message = f"Lottery {obj.lottery_reference} updated."
 
-                send_alliance_auth_notification(
-                    user=request.user,
-                    title="Lottery Status Changed",
-                    message=message,
-                    level="info",
-                )
-                send_discord_notification(message=message)
+            send_alliance_auth_notification(
+                user=request.user,
+                title="Lottery Status Changed",
+                message=message,
+                level="info",
+            )
+            send_discord_notification(message=message)
 
     @admin.action(description="Mark selected lotteries as completed")
     def mark_completed(self, request, queryset):
@@ -240,11 +209,7 @@ class LotteryAdmin(ExportCSVMixin, FortunaiskModelAdmin):
 
     @admin.display(description="Number of Participants")
     def participant_count(self, obj):
-        """
-        Affiche le nombre de participants dans la loterie.
-        """
-        count = obj.ticket_purchases.count()
-        return count
+        return obj.ticket_purchases.count()
 
 
 @admin.register(TicketAnomaly)
@@ -312,7 +277,6 @@ class AutoLotteryAdmin(ExportCSVMixin, FortunaiskModelAdmin):
     )
     search_fields = ("name",)
     actions = ["export_as_csv"]
-    readonly_fields = ()
     fields = (
         "is_active",
         "name",
@@ -346,8 +310,6 @@ class AutoLotteryAdmin(ExportCSVMixin, FortunaiskModelAdmin):
         if change:
             if obj.is_active:
                 message = f"AutoLottery {obj.name} is now active."
-
-                # Définir la période basée sur la fréquence et l'unité
                 if obj.frequency_unit == "minutes":
                     period = IntervalSchedule.MINUTES
                 elif obj.frequency_unit == "hours":
@@ -355,13 +317,11 @@ class AutoLotteryAdmin(ExportCSVMixin, FortunaiskModelAdmin):
                 elif obj.frequency_unit == "days":
                     period = IntervalSchedule.DAYS
                 else:
-                    # fallback par défaut
                     period = IntervalSchedule.DAYS
                 interval, created = IntervalSchedule.objects.get_or_create(
                     every=obj.frequency,
                     period=period,
                 )
-
                 task_name = f"create_lottery_from_autolottery_{obj.id}"
                 PeriodicTask.objects.update_or_create(
                     name=task_name,
@@ -371,23 +331,16 @@ class AutoLotteryAdmin(ExportCSVMixin, FortunaiskModelAdmin):
                         "args": json.dumps([obj.id]),
                     },
                 )
-                logger.info(
-                    f"Periodic task '{task_name}' created/updated for AutoLottery {obj.id}."
-                )
+                logger.info(f"Periodic task '{task_name}' created/updated for AutoLottery {obj.id}.")
             else:
                 message = f"AutoLottery {obj.name} has been deactivated."
                 task_name = f"create_lottery_from_autolottery_{obj.id}"
                 try:
                     task = PeriodicTask.objects.get(name=task_name)
                     task.delete()
-                    logger.info(
-                        f"Periodic task '{task_name}' deleted for AutoLottery {obj.id}."
-                    )
+                    logger.info(f"Periodic task '{task_name}' deleted for AutoLottery {obj.id}.")
                 except PeriodicTask.DoesNotExist:
-                    logger.warning(
-                        f"Periodic task '{task_name}' does not exist for AutoLottery {obj.id}."
-                    )
-
+                    logger.warning(f"Periodic task '{task_name}' does not exist for AutoLottery {obj.id}.")
             send_discord_notification(message=message)
             send_alliance_auth_notification(
                 user=request.user,
@@ -446,45 +399,11 @@ class WinnerAdmin(FortunaiskModelAdmin):
 @admin.register(WebhookConfiguration)
 class WebhookConfigurationAdmin(SingletonModelAdmin):
     fieldsets = (
-        (
-            None,
-            {
-                "fields": ("webhook_url",),
-            },
-        ),
+        (None, {"fields": ("webhook_url",)}),
     )
 
     def has_add_permission(self, request):
-        if WebhookConfiguration.objects.exists():
-            return False
-        return True
+        return not WebhookConfiguration.objects.exists()
 
     def has_change_permission(self, request, obj=None):
-        # Vérifier si l'utilisateur a la permission 'can_admin_app'
-        if (
-            request.user.has_perm("fortunaisk.can_admin_app")
-            or request.user.is_superuser
-        ):
-            return True
-        return False
-
-
-@admin.register(AuditLog)
-class AuditLogAdmin(FortunaiskModelAdmin):
-    list_display = ("timestamp", "user", "action_type", "model", "object_id")
-    list_filter = ("action_type", "model", "user")
-    search_fields = ("user__username", "model", "object_id")
-    readonly_fields = (
-        "user",
-        "action_type",
-        "timestamp",
-        "model",
-        "object_id",
-        "changes",
-    )
-
-    def has_add_permission(self, request):
-        return False
-
-    def has_change_permission(self, request, obj=None):
-        return False
+        return request.user.has_perm("fortunaisk.can_admin_app") or request.user.is_superuser

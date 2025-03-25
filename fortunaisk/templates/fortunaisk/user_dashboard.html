@@ -1,78 +1,101 @@
 {% extends "fortunaisk/base.html" %}
-{% load i18n humanize fortunaisk_tags %}
+{% load i18n static humanize fortunaisk_tags %}
 
 {% block page_title %}
     {% trans "My Dashboard" %}
 {% endblock page_title %}
 
 {% block details %}
-<div class="container mt-4">
-    <h2 class="text-center mb-4">{% trans "My Dashboard" %}</h2>
+<div class="container my-5">
+    <!-- Dashboard Header -->
+    <div class="text-center mb-5">
+        <h2 class="fw-bold" style="color: #27ae60;">
+            <i class="fas fa-wallet me-2" style="color: #f1c40f;"></i>
+            {% trans "My Dashboard" %}
+        </h2>
+        <p class="text-muted fs-5">
+            {% trans "Keep track of your ticket purchases and winnings to see your luck in action!" %}
+        </p>
+    </div>
 
-    <!-- Section des Achats de Billets -->
-    <h3 class="mb-3">{% trans "My Ticket Purchases" %}</h3>
+    <!-- Ticket Purchases Section -->
+    <h3 class="mb-4" style="color: #3498db;">
+        <i class="fas fa-ticket-alt me-2"></i> {% trans "My Ticket Purchases" %}
+    </h3>
     {% if ticket_purchases %}
-    <div class="d-flex flex-wrap justify-content-center gap-4 mb-4">
-        {% for purchase in ticket_purchases %}
-        <div class="card shadow" style="width: 20rem;">
-            <div class="card-header bg-info text-white">
-                <h5 class="mb-0">
-                    <i class="fas fa-ticket-alt"></i>
-                    {% trans "Ticket" %}
-                </h5>
+        {% regroup ticket_purchases by lottery as grouped_tickets %}
+        <div class="row g-4 mb-5">
+            {% for group in grouped_tickets %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card shadow-sm border-0" style="width: 20rem;">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-ticket-alt me-1"></i>
+                            {% trans "Ticket for" %} {{ group.grouper.lottery_reference }}
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p>
+                            <strong>{% trans "Tickets Purchased:" %}</strong>
+                            {{ group.list.0.quantity|intcomma }} Ticket(s)
+                        </p>
+                        <p>
+                            <strong>{% trans "Total Spent:" %}</strong>
+                            {{ group.list.0.amount|floatformat:2|intcomma }} ISK
+                        </p>
+                        <p>
+                            <strong>{% trans "Last Purchase:" %}</strong>
+                            {% with last_purchase=group.list|last %}
+                                {{ last_purchase.purchase_date|date:"Y-m-d H:i" }}
+                            {% endwith %}
+                        </p>
+                    </div>
+                </div>
             </div>
-            <div class="card-body">
-                <p>
-                    <strong>{% trans "Lottery Reference" %}:</strong>
-                    {{ purchase.lottery.lottery_reference }}
-                </p>
-                <p>
-                    <strong>{% trans "Date" %}:</strong>
-                    {{ purchase.purchase_date|date:"Y-m-d H:i" }}
-                </p>
-            </div>
+            {% endfor %}
         </div>
-        {% endfor %}
-    </div>
     {% else %}
-    <div class="alert alert-info text-center">
-        <i class="fas fa-info-circle"></i>
-        {% trans "You have not made any ticket purchases." %}
-    </div>
+        <div class="alert alert-info text-center">
+            <i class="fas fa-info-circle me-2"></i>
+            {% trans "You have not made any ticket purchases." %}
+        </div>
     {% endif %}
 
-    <!-- Section des Gains -->
-    <h3 class="mb-3">{% trans "My Winnings" %}</h3>
+    <!-- Winnings Section -->
+    <h3 class="mb-4" style="color: #2ecc71;">
+        <i class="fas fa-trophy me-2"></i> {% trans "My Winnings" %}
+    </h3>
     {% if winnings %}
-    <div class="d-flex flex-wrap justify-content-center gap-4">
+    <div class="row g-4">
         {% for win in winnings %}
-        <div class="card shadow" style="width: 20rem;">
-            <div class="card-header bg-success text-white">
-                <h5 class="mb-0">
-                    <i class="fas fa-trophy"></i>
-                    {% trans "Winner" %}
-                </h5>
-            </div>
-            <div class="card-body">
-                <p>
-                    <strong>{% trans "Lottery Reference" %}:</strong>
-                    {{ win.ticket.lottery.lottery_reference }}
-                </p>
-                <p>
-                    <strong>{% trans "Win Date" %}:</strong>
-                    {{ win.won_at|date:"Y-m-d H:i" }}
-                </p>
-                <p>
-                    <strong>{% trans "Prize" %}:</strong>
-                    {{ win.prize_amount|floatformat:2 }} ISK
-                </p>
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow-sm border-0" style="width: 20rem;">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-trophy me-1"></i> {% trans "Winner" %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p>
+                        <strong>{% trans "Lottery Reference:" %}</strong>
+                        {{ win.ticket.lottery.lottery_reference }}
+                    </p>
+                    <p>
+                        <strong>{% trans "Win Date:" %}</strong>
+                        {{ win.won_at|date:"Y-m-d H:i" }}
+                    </p>
+                    <p>
+                        <strong>{% trans "Prize:" %}</strong>
+                        <span class="text-warning fw-bold">{{ win.prize_amount|floatformat:2|intcomma }} ISK</span>
+                    </p>
+                </div>
             </div>
         </div>
         {% endfor %}
     </div>
     {% else %}
     <div class="alert alert-info text-center">
-        <i class="fas fa-info-circle"></i>
+        <i class="fas fa-info-circle me-2"></i>
         {% trans "You have not won any lotteries yet." %}
     </div>
     {% endif %}

@@ -1,6 +1,5 @@
 # fortunaisk/models/__init__.py
 
-from .auditlog import AuditLog
 from .autolottery import AutoLottery
 from .general import General
 from .lottery import Lottery
@@ -15,7 +14,6 @@ __all__ = [
     "Winner",
     "TicketAnomaly",
     "WebhookConfiguration",
-    "AuditLog",
     "ProcessedPayment",
     "General",
 ]

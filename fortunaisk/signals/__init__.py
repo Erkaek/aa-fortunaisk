@@ -1,7 +1,6 @@
 # fortunaisk/signals/__init__.py
 
 from . import (
-    auditlog_signals,
     autolottery_signals,
     lottery_signals,
     ticket_signals,
@@ -9,7 +8,6 @@ from . import (
 )
 
 __all__ = [
-    "auditlog_signals",
     "lottery_signals",
     "webhook_signals",
     "autolottery_signals",

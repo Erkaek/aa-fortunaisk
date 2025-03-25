@@ -1,25 +1,20 @@
 # fortunaisk/models/lottery.py
 
-# Standard Library
 import logging
 import random
 import string
 from datetime import timedelta
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 
-# Django
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import Sum
 from django.utils import timezone
 from django.utils.translation import gettext as _
 
-# Alliance Auth
-from allianceauth.eveonline.models import EveCharacter, EveCorporationInfo
+from allianceauth.eveonline.models import EveCorporationInfo
 
-# fortunaisk
-from fortunaisk.models.ticket import TicketPurchase
-
-logger = get_extension_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class Lottery(models.Model):
@@ -84,7 +79,7 @@ class Lottery(models.Model):
     total_pot = models.DecimalField(
         max_digits=25,
         decimal_places=2,
-        default=0,
+        default=Decimal("0.00"),
         verbose_name="Total Pot (ISK)",
         help_text="Total ISK pot from ticket purchases.",
     )
@@ -100,9 +95,7 @@ class Lottery(models.Model):
         verbose_name="Duration Unit",
         help_text="Unit of time for lottery duration.",
     )
-    winner_count = models.PositiveIntegerField(
-        default=1, verbose_name="Number of Winners"
-    )
+    winner_count = models.PositiveIntegerField(default=1, verbose_name="Number of Winners")
 
     class Meta:
         default_permissions = ()
@@ -118,25 +111,17 @@ class Lottery(models.Model):
                 return reference
 
     def clean(self):
-        """Validate that winners_distribution sums to 100% and matches winner_count."""
+        """Validate that winners_distribution sums to 100 and matches winner_count."""
         if self.winners_distribution:
             if len(self.winners_distribution) != self.winner_count:
-                raise ValidationError(
-                    {
-                        "winners_distribution": _(
-                            "Distribution must match the number of winners."
-                        )
-                    }
-                )
+                raise ValidationError({
+                    "winners_distribution": _("Distribution must match the number of winners.")
+                })
             total = sum(self.winners_distribution)
             if abs(total - 100.0) > 0.001:
-                raise ValidationError(
-                    {
-                        "winners_distribution": _(
-                            "The sum of percentages must equal 100."
-                        )
-                    }
-                )
+                raise ValidationError({
+                    "winners_distribution": _("The sum of percentages must equal 100.")
+                })
 
     def save(self, *args, **kwargs) -> None:
         self.clean()
@@ -144,8 +129,6 @@ class Lottery(models.Model):
             self.lottery_reference = self.generate_unique_reference()
         self.end_date = self.start_date + self.get_duration_timedelta()
         super().save(*args, **kwargs)
-        if self._state.adding:
-            pass  # Any post-creation logic
 
     def get_duration_timedelta(self) -> timedelta:
         if self.duration_unit == "hours":
@@ -157,92 +140,99 @@ class Lottery(models.Model):
         return timedelta(hours=self.duration_value)
 
     def update_total_pot(self):
-        """Recalculate the pot based on ticket_price * number of purchased tickets."""
-        ticket_count = self.ticket_purchases.count()
-        self.total_pot = self.ticket_price * Decimal(ticket_count)
+        """Recalculate the pot based on the sum of ticket purchase amounts."""
+        self.total_pot = self.ticket_purchases.aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
         self.save(update_fields=["total_pot"])
 
     def complete_lottery(self):
         """
         Trigger the completion of the lottery:
-        - Update the pot
-        - Launch the Celery task to finalize the lottery
+        - Update the pot.
+        - Launch the Celery task to finalize the lottery.
         """
         if self.status != "active":
-            logger.info(
-                f"Lottery {self.lottery_reference} is not active. Current status: {self.status}"
-            )
+            logger.info(f"Lottery {self.lottery_reference} is not active. Current status: {self.status}")
             return
 
         self.update_total_pot()
 
         if self.total_pot <= Decimal("0"):
-            logger.error(
-                f"Lottery {self.lottery_reference} pot is 0. Marking completed."
-            )
+            logger.error(f"Lottery {self.lottery_reference} pot is 0. Marking as completed.")
             self.status = "completed"
             self.save(update_fields=["status"])
             return
 
-        # fortunaisk
         from fortunaisk.tasks import finalize_lottery
-
         finalize_lottery.delay(self.id)
-        logger.info(
-            f"Task finalize_lottery initiated for lottery {self.lottery_reference}."
-        )
+        logger.info(f"Task finalize_lottery initiated for lottery {self.lottery_reference}.")
 
     def select_winners(self):
         """
-        Randomly select winner_count tickets (or fewer if not enough).
-        Create a Winner for each selected ticket.
+        Select winners using weighted random selection based on the 'quantity' field.
+        Each TicketPurchase record represents a number of tickets.
+        The prize for each winner is calculated based on the winners_distribution.
         """
-        # fortunaisk
-        from fortunaisk.models.ticket import Winner
+        # Re-read the pot total
+        total_pot = self.ticket_purchases.aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
+        logger.debug(f"Total pot for lottery {self.lottery_reference} is {total_pot} ISK.")
 
-        tickets = TicketPurchase.objects.filter(lottery=self)
-        ticket_ids = list(tickets.values_list("id", flat=True))
-        if not ticket_ids:
+        if total_pot <= Decimal("0"):
+            logger.error(f"Total pot is 0 for lottery {self.lottery_reference}. Cannot select winners.")
+            return []
+
+        from fortunaisk.models.ticket import Winner, TicketPurchase
+
+        purchases = TicketPurchase.objects.filter(lottery=self, status="processed")
+        if not purchases.exists():
             logger.info(f"No tickets in lottery {self.lottery_reference}.")
             return []
 
-        if len(ticket_ids) < self.winner_count:
-            logger.warning(f"Not enough tickets to select {self.winner_count} winners.")
-            selected_ids = ticket_ids
+        entries = list(purchases)
+        weights = [entry.quantity for entry in entries]
+        total_quantity = sum(weights)
+        logger.debug(f"Total ticket quantity for lottery {self.lottery_reference} is {total_quantity}.")
+
+        if total_quantity == 0:
+            logger.warning(f"Total ticket quantity is 0 for lottery {self.lottery_reference}.")
+            return []
+
+        # Utiliser une distribution par défaut si nécessaire
+        if not self.winners_distribution or len(self.winners_distribution) != self.winner_count:
+            distribution = [Decimal("100")] * self.winner_count
         else:
-            # Standard Library
-            selected_ids = random.sample(ticket_ids, self.winner_count)
+            distribution = [Decimal(str(p)) for p in self.winners_distribution]
+
+        # Sélection pondérée
+        selected_entries = random.choices(entries, weights=weights, k=self.winner_count)
 
         winners = []
-        for idx, ticket_id in enumerate(selected_ids):
+        for idx, purchase in enumerate(selected_entries):
             try:
-                ticket = tickets.get(id=ticket_id)
-                percentage_decimal = Decimal(str(self.winners_distribution[idx]))
-                prize_amount = (self.total_pot * percentage_decimal) / Decimal("100")
-                prize_amount = prize_amount.quantize(Decimal("0.01"))
+                percentage = distribution[idx]
+                prize_amount = (total_pot * percentage / Decimal("100")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+                logger.debug(
+                    f"Lottery {self.lottery_reference}: For TicketPurchase ID {purchase.id}, "
+                    f"using distribution {percentage}% => prize amount {prize_amount} ISK."
+                )
                 winner = Winner.objects.create(
-                    character=ticket.character,
-                    ticket=ticket,
+                    character=purchase.character,
+                    ticket=purchase,
                     prize_amount=prize_amount,
                 )
                 winners.append(winner)
-            except EveCharacter.DoesNotExist:
-                logger.warning(
-                    f"The EveCharacter for ticket ID {ticket_id} does not exist. Skipping."
-                )
-                continue
             except Exception as e:
-                logger.error(
-                    f"Error creating Winner for ticket ID {ticket_id}: {e}",
-                    exc_info=True,
-                )
+                logger.error(f"Error creating Winner for TicketPurchase ID {purchase.id}: {e}", exc_info=True)
                 continue
 
         return winners
 
     @property
     def winners(self):
-        # fortunaisk
         from fortunaisk.models.ticket import Winner
-
         return Winner.objects.filter(ticket__lottery=self)
+
+    @property
+    def total_tickets(self):
+        """Return the total number of tickets purchased for this lottery."""
+        agg = self.ticket_purchases.aggregate(total=models.Sum('quantity'))
+        return agg['total'] or 0

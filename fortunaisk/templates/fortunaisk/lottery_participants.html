@@ -1,34 +1,68 @@
 {% extends "fortunaisk/base.html" %}
-{% load i18n %}
+{% load i18n humanize static %}
 
 {% block page_title %}
     {% trans "Lottery Participants" %}
 {% endblock page_title %}
 
 {% block details %}
-<div class="container mt-4">
-    <h2 class="text-center mb-4">
-        {% trans "Participants for Lottery:" %} {{ lottery.lottery_reference }}
-    </h2>
+<div class="container my-5">
+    <!-- Header Section -->
+    <div class="text-center mb-5">
+        <h2 class="fw-bold" style="color: #f1c40f;">
+            <i class="fas fa-users me-2" style="color: #27ae60;"></i>
+            {% trans "Participants for Lottery:" %} <strong>{{ lottery.lottery_reference }}</strong>
+        </h2>
+        <p class="text-muted fs-5">
+            {% trans "Review the participants and their contributions." %}
+        </p>
+    </div>
 
     {% if participants %}
-    <div class="d-flex flex-wrap justify-content-center gap-4">
+    <div class="row g-4">
         {% for purchase in participants %}
-        <div class="card shadow" style="width: 20rem;">
-            <div class="card-header bg-info text-white">
-                <h5 class="mb-0">{% trans "Participant" %}</h5>
-            </div>
-            <div class="card-body">
-                <p><strong>{% trans "User" %}:</strong> {{ purchase.user.username }}</p>
-                <p><strong>{% trans "Character" %}:</strong> {{ purchase.character.character_name }}</p>
-                <p><strong>{% trans "Amount" %}:</strong> {{ purchase.amount }} ISK</p>
-                <p><strong>{% trans "Purchase Date" %}:</strong> {{ purchase.purchase_date|date:"Y-m-d H:i" }}</p>
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow-sm border-0" style="width: 20rem;">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user me-1"></i> {% trans "Participant" %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p>
+                        <strong>{% trans "User:" %}</strong>
+                        <span>{{ purchase.user.username }}</span>
+                    </p>
+                    <p>
+                        <strong>{% trans "Character:" %}</strong>
+                        <span>
+                            {% if purchase.character %}
+                                {{ purchase.character.character_name }}
+                            {% else %}
+                                <span class="text-muted">{% trans "N/A" %}</span>
+                            {% endif %}
+                        </span>
+                    </p>
+                    <p>
+                        <strong>{% trans "Amount:" %}</strong>
+                        <span class="text-warning fw-bold">{{ purchase.amount|floatformat:2|intcomma }} ISK</span>
+                    </p>
+                    <p>
+                        <strong>{% trans "Tickets Purchased:" %}</strong>
+                        <span class="text-info fw-bold">{{ purchase.quantity|intcomma }}</span>
+                    </p>
+                    <p>
+                        <strong>{% trans "Purchase Date:" %}</strong>
+                        <span>{{ purchase.purchase_date|date:"Y-m-d H:i" }}</span>
+                    </p>
+                </div>
             </div>
         </div>
         {% endfor %}
     </div>
     {% else %}
     <div class="alert alert-info text-center">
+        <i class="fas fa-info-circle me-2"></i>
         {% trans "No participants for this lottery." %}
     </div>
     {% endif %}

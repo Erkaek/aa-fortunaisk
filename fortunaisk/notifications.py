@@ -16,7 +16,7 @@ from allianceauth.notifications import notify
 
 from .models import WebhookConfiguration
 
-logger = get_extension_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def get_webhook_url() -> str:

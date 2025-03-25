@@ -1,3 +1,4 @@
+# fortunaisk/views/__init__.py
 from .views import (
     admin_dashboard,
     anomalies_list,
@@ -14,6 +15,7 @@ from .views import (
     terminate_lottery,
     user_dashboard,
     winner_list,
+    export_winners_csv,
 )
 
 __all__ = [
@@ -32,4 +34,5 @@ __all__ = [
     "terminate_lottery",
     "user_dashboard",
     "anomalies_list",
+    "export_winners_csv",
 ]

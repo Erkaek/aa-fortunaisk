@@ -6,32 +6,31 @@
 {% endblock page_title %}
 
 {% block details %}
-<div class="container mt-5">
+<div class="container my-5">
     <div class="row justify-content-center">
         <div class="col-md-8">
-            <div class="card shadow-lg">
-                <div class="card-header bg-danger text-white">
-                    <h4 class="mb-0">{% trans "Delete Automatic Lottery" %}</h4>
+            <div class="card shadow-lg border-0">
+                <div class="card-header text-white" style="background: linear-gradient(135deg, #e74c3c, #c0392b);">
+                    <h4 class="mb-0">
+                        <i class="fas fa-trash me-2"></i>
+                        {% trans "Delete Automatic Lottery" %}
+                    </h4>
                 </div>
                 <div class="card-body">
                     <p class="lead">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
                         {% trans "Are you sure you want to delete the automatic lottery" %}
                         <strong>{{ autolottery.name }}</strong>?
                     </p>
                     <form method="post">
                         {% csrf_token %}
                         <div class="d-flex justify-content-end">
-                            <a href="{% url 'fortunaisk:admin_dashboard' %}" class="btn btn-secondary me-2">
+                            <a href="{% url 'fortunaisk:admin_dashboard' %}" class="btn btn-outline-secondary me-2">
+                                <i class="fas fa-arrow-left me-1"></i>
                                 {% trans "Cancel" %}
                             </a>
                             <button type="submit" class="btn btn-danger">
-                                <i class="fas fa-trash me-1"></i> {% trans "Delete" %}
+                                <i class="fas fa-trash me-1"></i>
+                                {% trans "Delete" %}
                             </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock details %}
+                        </div

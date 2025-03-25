@@ -1,4 +1,3 @@
-<!-- fortunaisk/templates/fortunaisk/lottery_detail.html -->
 {% extends "fortunaisk/base.html" %}
 {% load i18n humanize fortunaisk_tags static %}
 
@@ -7,13 +6,16 @@
 {% endblock page_title %}
 
 {% block details %}
-<div class="container mt-5">
+<div class="container my-5">
     <!-- Page Header -->
-    <div class="mb-4">
-        <h2 class="text-center">
-            <i class="fas fa-trophy text-warning"></i>
+    <div class="mb-5 text-center">
+        <h2 class="fw-bold" style="color: #f1c40f;">
+            <i class="fas fa-trophy me-2" style="color: #27ae60;"></i>
             {% trans "Lottery Detail" %}: <strong>{{ lottery.lottery_reference }}</strong>
         </h2>
+        <p class="text-muted fs-5">
+            {% trans "Review the details and manage the lottery settings." %}
+        </p>
     </div>
 
     <!-- Action Buttons -->
@@ -23,26 +25,25 @@
             {% csrf_token %}
             <button type="submit" class="btn btn-outline-danger btn-sm"
                     onclick="return confirm('{% trans "Are you sure you want to cancel this lottery prematurely?" %}');">
-                <i class="fas fa-stop-circle"></i>
-                {% trans "Cancel" %}
+                <i class="fas fa-stop-circle"></i> {% trans "Cancel" %}
             </button>
         </form>
         {% endif %}
         <a href="{% url 'fortunaisk:lottery_participants' lottery.id %}" class="btn btn-outline-primary btn-sm">
-            <i class="fas fa-users"></i>
-            {% trans "View Participants" %}
+            <i class="fas fa-users"></i> {% trans "View Participants" %}
         </a>
+        {# Export CSV button removed because it's not needed #}
     </div>
 
-    <!-- Lottery Information -->
+    <!-- Lottery Information Section -->
     <div class="row mb-5">
+        <!-- General Information Card -->
         <div class="col-lg-6 mb-4">
-            <div class="card shadow-sm">
+            <div class="card shadow-sm border-0">
                 <div class="card-header bg-primary text-white">
                     <i class="fas fa-info-circle"></i> {% trans "Lottery Information" %}
                 </div>
                 <ul class="list-group list-group-flush">
-                    <!-- Status -->
                     <li class="list-group-item d-flex justify-content-between align-items-center">
                         <strong>{% trans "Status" %}</strong>
                         {% if lottery.status == "active" %}
@@ -55,22 +56,18 @@
                             <span class="badge bg-dark">{{ lottery.status }}</span>
                         {% endif %}
                     </li>
-                    <!-- Ticket Price -->
                     <li class="list-group-item d-flex justify-content-between align-items-center">
                         <strong>{% trans "Ticket Price (ISK)" %}</strong>
                         <span>{{ lottery.ticket_price|floatformat:2 }}</span>
                     </li>
-                    <!-- Total Pot -->
                     <li class="list-group-item d-flex justify-content-between align-items-center">
                         <strong>{% trans "Total Pot (ISK)" %}</strong>
                         <span>{{ lottery.total_pot|intcomma }}</span>
                     </li>
-                    <!-- Winner Count -->
                     <li class="list-group-item d-flex justify-content-between align-items-center">
                         <strong>{% trans "Winner Count" %}</strong>
                         <span>{{ lottery.winner_count }}</span>
                     </li>
-                    <!-- Max Tickets per User -->
                     <li class="list-group-item d-flex justify-content-between align-items-center">
                         <strong>{% trans "Max Tickets per User" %}</strong>
                         <span>
@@ -81,7 +78,6 @@
                             {% endif %}
                         </span>
                     </li>
-                    <!-- Start / End Date -->
                     <li class="list-group-item d-flex justify-content-between align-items-center">
                         <strong>{% trans "Start Date" %}</strong>
                         <span>{{ lottery.start_date|date:"Y-m-d H:i" }}</span>
@@ -93,14 +89,13 @@
                 </ul>
             </div>
         </div>
-
+        <!-- Additional Information Card -->
         <div class="col-lg-6 mb-4">
-            <div class="card shadow-sm">
+            <div class="card shadow-sm border-0">
                 <div class="card-header bg-success text-white">
                     <i class="fas fa-cogs"></i> {% trans "Additional Information" %}
                 </div>
                 <ul class="list-group list-group-flush">
-                    <!-- Payment Receiver -->
                     <li class="list-group-item d-flex justify-content-between align-items-center">
                         <strong>{% trans "Payment Receiver" %}</strong>
                         <span>
@@ -111,12 +106,10 @@
                             {% endif %}
                         </span>
                     </li>
-                    <!-- Duration -->
                     <li class="list-group-item d-flex justify-content-between align-items-center">
                         <strong>{% trans "Duration" %}</strong>
                         <span>{{ lottery.duration_value }} {{ lottery.get_duration_unit_display }}</span>
                     </li>
-                    <!-- Winners Distribution -->
                     <li class="list-group-item">
                         <strong>{% trans "Winners Distribution" %}:</strong>
                         <div class="mt-2">
@@ -125,33 +118,28 @@
                                 <li class="d-flex align-items-center mb-2">
                                     <i class="fas fa-award me-2 text-warning"></i>
                                     <span class="fw-bold">{% trans "Winner" %} {{ forloop.counter }}:</span>
-                                    <span class="ms-2 badge bg-info text-dark">{{ percentage }}%</span>
+                                    <span class="ms-2 badge bg-info text-light">{{ percentage }}%</span>
                                 </li>
                                 {% endfor %}
                             </ul>
                         </div>
                     </li>
-                    <!-- Number of Participants -->
                     <li class="list-group-item d-flex justify-content-between align-items-center">
                         <strong>{% trans "Number of Participants" %}</strong>
-                        <span>{{ lottery.ticket_purchases.count }}</span>
+                        <span>{{ participant_count }}</span>
                     </li>
                 </ul>
             </div>
         </div>
     </div>
 
-    <!-- Winners Table -->
+    <!-- Winners Table Section -->
     <div class="row mb-5">
         <div class="col-12">
-            <div class="card shadow-sm">
+            <div class="card shadow-sm border-0">
                 <div class="card-header bg-warning text-white d-flex justify-content-between align-items-center">
                     <h4 class="mb-0"><i class="fas fa-award"></i> {% trans "Winners" %}</h4>
-                    {% if perms.fortunaisk.admin and winners %}
-                        <a href="{% url 'fortunaisk:export_winners_csv' lottery.id %}" class="btn btn-sm btn-light">
-                            <i class="fas fa-file-csv"></i> {% trans "Export CSV" %}
-                        </a>
-                    {% endif %}
+                    {# Export CSV button removed #}
                 </div>
                 <div class="card-body">
                     {% if winners %}
@@ -180,16 +168,16 @@
                                                 <span class="text-muted">{% trans "N/A" %}</span>
                                             {% endif %}
                                         </td>
-                                        <td>{{ winner.prize_amount|floatformat:2 }}</td>
+                                        <td>{{ winner.prize_amount|floatformat:2|intcomma }}</td>
                                         <td>{{ winner.won_at|date:"Y-m-d H:i" }}</td>
                                         <td>
                                             {% if winner.distributed %}
                                                 <span class="badge bg-success">
-                                                    <i class="fas fa-check-circle"></i> {% trans "Yes" %}
+                                                    <i class="fas fa-check-circle me-1"></i> {% trans "Yes" %}
                                                 </span>
                                             {% else %}
                                                 <span class="badge bg-warning text-dark">
-                                                    <i class="fas fa-exclamation-triangle"></i> {% trans "No" %}
+                                                    <i class="fas fa-exclamation-triangle me-1"></i> {% trans "No" %}
                                                 </span>
                                             {% endif %}
                                         </td>
@@ -200,8 +188,7 @@
                                                         {% csrf_token %}
                                                         <button type="submit" class="btn btn-sm btn-primary"
                                                                 onclick="return confirm('{% trans "Have you distributed the prize to this winner?" %}');">
-                                                            <i class="fas fa-hand-holding-usd"></i>
-                                                            {% trans "Distribute Prize" %}
+                                                            <i class="fas fa-hand-holding-usd"></i> {% trans "Distribute Prize" %}
                                                         </button>
                                                     </form>
                                                 {% else %}

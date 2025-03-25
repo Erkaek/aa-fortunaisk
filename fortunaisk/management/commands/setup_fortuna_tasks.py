@@ -9,7 +9,7 @@ from django.core.management.base import BaseCommand
 # fortunaisk
 from fortunaisk.tasks import setup_periodic_tasks
 
-logger = get_extension_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):

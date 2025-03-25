@@ -9,7 +9,6 @@ When a WebhookConfiguration instance is saved or deleted, this clears the
 
 # Standard Library
 import logging
-from allianceauth.services.hooks import get_extension_logger
 
 # Django
 from django.core.cache import cache
@@ -19,7 +18,7 @@ from django.dispatch import receiver
 # fortunaisk
 from fortunaisk.models import WebhookConfiguration
 
-logger = get_extension_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 @receiver(post_save, sender=WebhookConfiguration)

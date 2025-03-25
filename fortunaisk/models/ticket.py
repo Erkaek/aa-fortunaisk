@@ -1,13 +1,8 @@
 # fortunaisk/models/ticket.py
 
-# Standard Library
 from decimal import Decimal
-
-# Django
 from django.contrib.auth import get_user_model
 from django.db import models
-
-# Alliance Auth
 from allianceauth.eveonline.models import EveCharacter
 
 User = get_user_model()
@@ -41,18 +36,23 @@ class TicketPurchase(models.Model):
         verbose_name="Eve Character",
         help_text="Eve character that made the payment (if identifiable).",
     )
+    # amount représente le coût total pour l'achat (ticket_price * quantity)
     amount = models.DecimalField(
         max_digits=25,
         decimal_places=2,
         default=Decimal("0"),
-        verbose_name="Ticket Amount",
-        help_text="Amount of ISK paid for this ticket.",
+        verbose_name="Total Ticket Amount",
+        help_text="Total cost of the lottery tickets purchased in ISK.",
     )
-    purchase_date = models.DateTimeField(
-        auto_now_add=True, verbose_name="Purchase Date"
+    quantity = models.PositiveIntegerField(
+        default=1,
+        verbose_name="Ticket Quantity",
+        help_text="Number of tickets purchased in this transaction.",
     )
+    purchase_date = models.DateTimeField(auto_now_add=True, verbose_name="Purchase Date")
+    # Vous pouvez conserver payment_id si besoin, mais sans unique=True car plusieurs paiements peuvent être regroupés
     payment_id = models.CharField(
-        max_length=255, null=True, blank=True, verbose_name="Payment ID", unique=True
+        max_length=255, null=True, blank=True, verbose_name="Payment ID"
     )
     status = models.CharField(
         max_length=20,
@@ -66,9 +66,8 @@ class TicketPurchase(models.Model):
 
     def __str__(self) -> str:
         return (
-            f"TicketPurchase(user={self.user.username}, "
-            f"lottery={self.lottery.lottery_reference}, "
-            f"amount={self.amount}, status={self.status})"
+            f"TicketPurchase(user={self.user.username}, lottery={self.lottery.lottery_reference}, "
+            f"quantity={self.quantity}, total_amount={self.amount}, status={self.status})"
         )
 
 
