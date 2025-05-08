@@ -55,10 +55,33 @@
                         </li>
                     </ul>
 
-                    <div class="mb-3">
-                        <strong>{% trans "Tickets Purchased:" %}</strong>
-                        <span class="badge bg-warning">{{ info.user_ticket_count }}</span>
-                    </div>
+                    {% if info.max_tickets_per_user %}
+                        <div class="progress mb-4" style="height: 1.5rem;">
+                            <div
+                            class="progress-bar progress-bar-striped progress-bar-animated bg-warning fw-bold"
+                            role="progressbar"
+                            style="width: {{ info.tickets_percentage }}%;"
+                            aria-valuenow="{{ info.user_ticket_count }}"
+                            aria-valuemin="0"
+                            aria-valuemax="{{ info.max_tickets_per_user }}"
+                            >
+                            {{ info.user_ticket_count }}/{{ info.max_tickets_per_user }}
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="progress mb-4" style="height: 1.5rem;">
+                            <div
+                            class="progress-bar progress-bar-striped progress-bar-animated bg-warning fw-bold"
+                            role="progressbar"
+                            style="width: 100%;"
+                            aria-valuenow="{{ info.user_ticket_count }}"
+                            aria-valuemin="0"
+                            aria-valuemax="{{ info.user_ticket_count }}"
+                            >
+                            {{ info.user_ticket_count }} / ♾️
+                            </div>
+                        </div>
+                        {% endif %}
 
                     <!-- Ticket Quantity Selector -->
                     <div class="mb-3">
