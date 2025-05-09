@@ -1,6 +1,6 @@
-# fortunaisk/templates/fortunaisk/anomalies_list.html -->
+{# fortunaisk/templates/fortunaisk/anomalies_list.html #}
 {% extends "fortunaisk/base.html" %}
-{% load i18n humanize %}
+{% load i18n humanize static %}
 
 {% block page_title %}
     {% trans "All Anomalies" %}
@@ -73,9 +73,12 @@
                             <td>{{ anomaly.payment_id }}</td>
                             <td>{{ anomaly.recorded_at|date:"Y-m-d H:i" }}</td>
                             <td>
-                                <form action="{% url 'fortunaisk:resolve_anomaly' anomaly.id %}" method="post" style="display:inline;">
+                                <form action="{% url 'fortunaisk:resolve_anomaly' anomaly.id %}"
+                                      method="post" style="display:inline;">
                                     {% csrf_token %}
-                                    <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('{% trans "Are you sure you want to resolve this anomaly?" %}');">
+                                    <button type="submit"
+                                            class="btn btn-sm btn-success"
+                                            onclick="return confirm('{% trans "Are you sure you want to resolve this anomaly?" %}');">
                                         <i class="fas fa-check-circle"></i>
                                         {% trans "Resolve" %}
                                     </button>

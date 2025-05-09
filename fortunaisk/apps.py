@@ -1,13 +1,10 @@
 # fortunaisk/apps.py
-# Standard Library
 import importlib
 import logging
 
-# Django
 from django.apps import AppConfig, apps
 
 logger = logging.getLogger(__name__)
-
 
 class FortunaIskConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
@@ -34,7 +31,6 @@ class FortunaIskConfig(AppConfig):
         try:
             # On importe la fonction qui crée/maj les cron
             from .tasks import setup_periodic_tasks
-
             setup_periodic_tasks()
             logger.info("FortunaIsk periodic tasks configured.")
         except Exception as e:

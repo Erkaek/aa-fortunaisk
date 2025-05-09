@@ -1,4 +1,4 @@
-# fortunaisk/templates/fortunaisk/distribute_prize_confirm.html -->
+{# fortunaisk/templates/fortunaisk/lottery_detail.html #}
 {% extends "fortunaisk/base.html" %}
 {% load i18n humanize fortunaisk_tags static %}
 
@@ -59,7 +59,7 @@
                     </li>
                     <li class="list-group-item d-flex justify-content-between align-items-center">
                         <strong>{% trans "Ticket Price (ISK)" %}</strong>
-                        <span>{{ lottery.ticket_price|floatformat:2 }}</span>
+                        <span>{{ lottery.ticket_price|intcomma }}</span>
                     </li>
                     <li class="list-group-item d-flex justify-content-between align-items-center">
                         <strong>{% trans "Total Pot (ISK)" %}</strong>
@@ -128,6 +128,10 @@
                     <li class="list-group-item d-flex justify-content-between align-items-center">
                         <strong>{% trans "Number of Participants" %}</strong>
                         <span>{{ participant_count }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <strong>{% trans "Number of Tickets Sold" %}</strong>
+                        <span>{{ tickets_sold }}</span>
                     </li>
                 </ul>
             </div>

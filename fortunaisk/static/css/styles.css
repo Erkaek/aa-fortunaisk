@@ -1,84 +1,108 @@
-/* static/css/styles.css */
-
+/* ============================
+   Global
+   ============================ */
 body {
-    background-color: #f8f9fa;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #fdf6e3;  /* light background pour FortunaIsk */
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-.card {
-    margin-bottom: 20px;
-    border: 1px solid #d4af37; /* gold border */
-    border-radius: 8px;
-    background-color: #fff;
-    box-shadow: 0 4px 6px rgb(0 0 0 / 10%);
+/* ============================
+   Top Navbar (FortunaIsk)
+   ============================ */
+nav.navbar.navbar-expand-lg {
+  background: linear-gradient(135deg, #f1c40f, #27ae60);
+}
+nav.navbar.navbar-expand-lg .navbar-brand,
+nav.navbar.navbar-expand-lg .nav-link {
+  color: #fff !important;
+  font-weight: 600;
+}
+nav.navbar.navbar-expand-lg .navbar-brand:hover,
+nav.navbar.navbar-expand-lg .nav-link:hover {
+  color: #f1c40f !important;
 }
 
-.table {
-    width: 100%;
-    margin-bottom: 1rem;
-    border-collapse: collapse;
-    color: #212529;
+/* ============================
+   Scope FortunaIsk App
+   ============================ */
+.fortunaisk-app .card {
+  margin-bottom: 20px;
+  border: 1px solid #d4af37; /* gold border */
+  border-radius: 8px;
+  background-color: #fff;
+  box-shadow: 0 4px 6px rgb(0 0 0 / 10%);
 }
 
-.table th, .table td {
-    padding: 10px;
-    text-align: left;
-    border-bottom: 1px solid #d4af37;
+/* Tables */
+.fortunaisk-app .table {
+  width: 100%;
+  margin-bottom: 1rem;
+  border-collapse: collapse;
+  color: #212529;
+}
+.fortunaisk-app .table th,
+.fortunaisk-app .table td {
+  padding: 10px;
+  text-align: left;
+  border-bottom: 1px solid #d4af37;
+}
+.fortunaisk-app .table th {
+  background-color: #28a745; /* green */
+  color: #ffd700;            /* gold text */
+}
+.fortunaisk-app .table tr:hover {
+  background-color: #e8f5e9; /* light green */
 }
 
-.table th {
-    background-color: #28a745; /* green */
-    color: #ffd700; /* gold text */
+/* Alerts */
+.fortunaisk-app .alert {
+  padding: 10px 20px;
+  border-radius: 5px;
 }
 
-.table tr:hover {
-    background-color: #e8f5e9; /* light green */
+/* Utility colors */
+.fortunaisk-app .bg-gold    { background-color: #ffd700 !important; }
+.fortunaisk-app .text-gold  { color: #ffd700 !important; }
+.fortunaisk-app .bg-green   { background-color: #28a745 !important; }
+.fortunaisk-app .text-green { color: #28a745 !important; }
+
+/* Buttons */
+.fortunaisk-app .btn-green {
+  background-color: #28a745;
+  border-color: #28a745;
+  color: #fff;
+}
+.fortunaisk-app .btn-green:hover,
+.fortunaisk-app .btn-green:focus {
+  background-color: #218838;
+  border-color: #1e7e34;
+}
+.fortunaisk-app .btn-gold {
+  background-color: #ffd700;
+  border-color: #ffd700;
+  color: #000;
+}
+.fortunaisk-app .btn-gold:hover,
+.fortunaisk-app .btn-gold:focus {
+  background-color: #e6c200;
+  border-color: #ccb700;
 }
 
-.alert {
-    padding: 10px 20px;
-    border-radius: 5px;
+/* ============================
+   Sidebar override (AllianceAuth)
+   ============================ */
+.fortunaisk-app ul#sidebar-menu,
+.fortunaisk-app ul#sidebar-menu.pt-2 {
+  padding-top: 0 !important;
 }
 
-.alert-icon {
-    margin-right: 8px;
+nav.navbar .navbar-brand,
+nav.navbar .nav-link {
+  padding: 0.75rem 1rem !important;
 }
 
-.bg-gold {
-    background-color: #ffd700 !important;
-}
-
-.text-gold {
-    color: #ffd700 !important;
-}
-
-.bg-green {
-    background-color: #28a745 !important;
-}
-
-.text-green {
-    color: #28a745 !important;
-}
-
-/* Button styling for theme consistency */
-.btn-green {
-    background-color: #28a745;
-    border-color: #28a745;
-    color: #fff;
-}
-
-.btn-green:hover, .btn-green:focus {
-    background-color: #218838;
-    border-color: #1e7e34;
-}
-
-.btn-gold {
-    background-color: #ffd700;
-    border-color: #ffd700;
-    color: #000;
-}
-
-.btn-gold:hover, .btn-gold:focus {
-    background-color: #e6c200;
-    border-color: #ccb700;
+nav.navbar .navbar-nav .nav-item.active > .nav-link {
+  color: #27ae60 !important;             /* votre vert thème */
+  background-color: rgba(39,174,96,0.1);  /* léger fond vert pâle */
+  border-radius: 0.25rem;
 }

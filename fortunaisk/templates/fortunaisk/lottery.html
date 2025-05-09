@@ -1,4 +1,4 @@
-# fortunaisk/templates/fortunaisk/lottery.html -->
+{# fortunaisk/templates/fortunaisk/lottery.html #}
 {% extends "fortunaisk/base.html" %}
 {% load i18n l10n humanize my_filters static %}
 
@@ -7,209 +7,198 @@
 {% endblock page_title %}
 
 {% block details %}
-<div class="container my-5">
+  <link rel="stylesheet" href="{% static 'css/clover.css' %}">
+
+  {# ② Conteneur plein écran pour les trèfles #}
+  <div id="clover-explosion-container"></div>
+
+  <div class="container my-5">
     <!-- Hero Section -->
     <div class="text-center mb-5">
-        <h1 class="fw-bold" style="font-size: 2.5rem; color: #2ecc71;">
-            <i class="fas fa-clover me-2" style="font-size: 2rem; color: #f1c40f;"></i>
-            {% trans "Fortune Lotteries" %}
-        </h1>
-        <p class="lead text-muted">
-            {% trans "Unlock your luck! Pick your tickets and seize the opportunity to win big prizes." %}
-        </p>
+      <h1 class="fw-bold" style="font-size:2.5rem; color:#2ecc71;">
+        <i class="fas fa-clover me-2" style="font-size:2rem; color:#f1c40f;"></i>
+        {% trans "Fortune Lotteries" %}
+      </h1>
+      <p class="lead text-muted">
+        {% trans "Unlock your luck! Pick your tickets and seize the opportunity to win big prizes." %}
+      </p>
     </div>
 
     <!-- Tip Section -->
-    <div class="alert alert-info text-center mb-5 shadow-sm" role="alert" style="border-radius: 0.5rem; font-size: 1rem;">
-        <i class="fas fa-lightbulb me-2"></i>
-        {% trans "Tip: Select the number of tickets you wish to purchase and watch the total amount update instantly. Then, copy the Lottery ID and Total Amount, and make your payment to the designated receiver." %}
+    <div class="alert alert-info text-center mb-5 shadow-sm"
+         role="alert" style="border-radius:0.5rem; font-size:1rem;">
+      <i class="fas fa-lightbulb me-2"></i>
+      {% trans "Tip: Select the number of tickets you wish to purchase and watch the total amount update instantly. Then, copy the Lottery ID and Total Amount, and make your payment to the designated receiver." %}
     </div>
 
     {% if active_lotteries %}
-    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+      <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
         {% for info in active_lotteries %}
-        <div class="col">
-            <div class="card h-100 shadow lottery-card" data-ticket-price="{{ info.lottery.ticket_price }}">
-                <div class="card-header text-white shadow-sm" style="background: linear-gradient(135deg, #f1c40f, #27ae60);">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-barcode me-2"></i> {{ info.lottery.lottery_reference }}
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <ul class="list-unstyled small mb-3">
-                        <li><strong>{% trans "Starts:" %}</strong> {{ info.lottery.start_date|date:"Y-m-d H:i" }}</li>
-                        <li><strong>{% trans "Ends:" %}</strong> {{ info.lottery.end_date|date:"Y-m-d H:i" }}</li>
-                        <li>
-                            <strong>{% trans "Price:" %}</strong>
-                            <span class="text-warning fw-bold">
-                                {% localize on %}{{ info.lottery.ticket_price|floatformat:2|intcomma }}{% endlocalize %} ISK
-                            </span>
-                        </li>
-                        <li>
-                            <strong>{% trans "Receiver:" %}</strong>
-                            <span class="text-primary fw-bold">{{ info.corporation_name }}</span>
-                        </li>
-                        <li>
-                            <strong>{% trans "Winners:" %}</strong>
-                            <span class="badge bg-warning">{{ info.lottery.winner_count }}</span>
-                        </li>
-                    </ul>
+          <div class="col">
+            <div class="card h-100 shadow lottery-card"
+                 data-ticket-price="{{ info.lottery.ticket_price }}">
+              <div class="card-header text-white shadow-sm"
+                   style="background: linear-gradient(135deg,#f1c40f,#27ae60);">
+                <h5 class="card-title mb-0">
+                  <i class="fas fa-barcode me-2"></i>
+                  {{ info.lottery.lottery_reference }}
+                </h5>
+              </div>
+              <div class="card-body">
+                <ul class="list-unstyled small mb-3">
+                  <li><strong>{% trans "Starts:" %}</strong> {{ info.lottery.start_date|date:"Y-m-d H:i" }}</li>
+                  <li><strong>{% trans "Ends:" %}</strong> {{ info.lottery.end_date|date:"Y-m-d H:i" }}</li>
+                  <li>
+                    <strong>{% trans "Price:" %}</strong>
+                    <span class="text-warning fw-bold">
+                      {% localize on %}{{ info.lottery.ticket_price|floatformat:2|intcomma }}{% endlocalize %} ISK
+                    </span>
+                  </li>
+                  <li><strong>{% trans "Receiver:" %}</strong> <span class="text-primary fw-bold">{{ info.corporation_name }}</span></li>
+                  <li><strong>{% trans "Winners:" %}</strong> <span class="badge bg-warning">{{ info.lottery.winner_count }}</span></li>
+                </ul>
 
-                    {% if info.max_tickets_per_user %}
-                        <div class="progress mb-4" style="height: 1.5rem;">
-                            <div
-                            class="progress-bar progress-bar-striped progress-bar-animated bg-warning fw-bold"
-                            role="progressbar"
-                            style="width: {{ info.tickets_percentage }}%;"
-                            aria-valuenow="{{ info.user_ticket_count }}"
-                            aria-valuemin="0"
-                            aria-valuemax="{{ info.max_tickets_per_user }}"
-                            >
-                            {{ info.user_ticket_count }}/{{ info.max_tickets_per_user }}
-                            </div>
-                        </div>
-                        {% else %}
-                        <div class="progress mb-4" style="height: 1.5rem;">
-                            <div
-                            class="progress-bar progress-bar-striped progress-bar-animated bg-warning fw-bold"
-                            role="progressbar"
-                            style="width: 100%;"
-                            aria-valuenow="{{ info.user_ticket_count }}"
-                            aria-valuemin="0"
-                            aria-valuemax="{{ info.user_ticket_count }}"
-                            >
-                            {{ info.user_ticket_count }} / ♾️
-                            </div>
-                        </div>
-                        {% endif %}
-
-                    <!-- Ticket Quantity Selector -->
-                    <div class="mb-3">
-                        <label for="ticketQty{{ forloop.counter }}" class="form-label">{% trans "Select Tickets:" %}</label>
-                        <div class="input-group shadow-sm">
-                            <input type="number"
-                                    id="ticketQty{{ forloop.counter }}"
-                                    class="form-control ticket-qty-input"
-                                    value="1"
-                                    min="1"
-                                    {% if info.max_tickets_per_user %}
-                                    max="{{ info.max_tickets_per_user }}"
-                                    {% endif %}>
-                            <span class="input-group-text">{% trans "Ticket(s)" %}</span>
-                        </div>
+                {% if info.max_tickets_per_user %}
+                  <div class="progress mb-4" style="height:1.5rem;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated bg-warning fw-bold"
+                         role="progressbar"
+                         style="width:{{ info.tickets_percentage }}%;"
+                         aria-valuenow="{{ info.user_ticket_count }}"
+                         aria-valuemin="0"
+                         aria-valuemax="{{ info.max_tickets_per_user }}">
+                      {{ info.user_ticket_count }}/{{ info.max_tickets_per_user }}
                     </div>
-
-                    <!-- Display Total Amount -->
-                    <div class="mb-3 text-center">
-                        <span class="fw-bold">{% trans "Total Amount:" %}</span>
-                        <span class="total-amount badge bg-success ms-2 shadow-sm"></span>
-                        <small class="text-muted"> ISK</small>
+                  </div>
+                {% else %}
+                  <div class="progress mb-4" style="height:1.5rem;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated bg-warning fw-bold"
+                         role="progressbar"
+                         style="width:100%;"
+                         aria-valuenow="{{ info.user_ticket_count }}"
+                         aria-valuemin="0"
+                         aria-valuemax="{{ info.user_ticket_count }}">
+                      {{ info.user_ticket_count }} / ♾️
                     </div>
+                  </div>
+                {% endif %}
+
+                <!-- Ticket Quantity Selector -->
+                <div class="mb-3">
+                  <label for="ticketQty{{ forloop.counter }}" class="form-label">
+                    {% trans "Select Tickets:" %}
+                  </label>
+                  {% if info.remaining_tickets == 0 %}
+                    <div class="alert alert-warning py-2">
+                      <i class="fas fa-ban me-1"></i>{% trans "Maximum tickets reached" %}
+                    </div>
+                  {% else %}
+                    <div class="input-group shadow-sm">
+                      <input type="number"
+                             id="ticketQty{{ forloop.counter }}"
+                             class="form-control ticket-qty-input"
+                             value="1"
+                             min="1"
+                             max="{{ info.remaining_tickets }}">
+                      <span class="input-group-text">{% trans "Ticket(s)" %}</span>
+                    </div>
+                    <small class="text-muted">
+                      {% if info.remaining_tickets == 1 %}
+                        {% trans "Remaining 1 ticket available" %}
+                      {% else %}
+                        {% blocktrans with rem=info.remaining_tickets %}
+                          Remaining {{ rem }} tickets available
+                        {% endblocktrans %}
+                      {% endif %}
+                    </small>
+                  {% endif %}
                 </div>
-                <div class="card-footer bg-light d-flex justify-content-between shadow-sm">
-                    <button class="btn btn-outline-primary btn-sm copy-id-btn"
-                            data-copy="{{ info.lottery.lottery_reference }}"
-                            aria-label="{% trans 'Copy Lottery ID' %}">
-                        <i class="fas fa-copy me-1"></i>{% trans "Copy ID" %}
-                    </button>
-                    <button class="btn btn-outline-primary btn-sm copy-amount-btn"
-                            data-copy=""
-                            aria-label="{% trans 'Copy Total Amount' %}">
-                        <i class="fas fa-copy me-1"></i>{% trans "Copy Amount" %}
-                    </button>
+
+                <!-- Display Total Amount -->
+                <div class="mb-3 text-center">
+                  <span class="fw-bold">{% trans "Total Amount:" %}</span>
+                  <span class="total-amount badge bg-success ms-2 shadow-sm"></span>
+                  <small class="text-muted"> ISK</small>
                 </div>
+              </div>
+
+              <div class="card-footer bg-light d-flex justify-content-between shadow-sm">
+                <button class="btn btn-outline-primary btn-sm copy-id-btn"
+                        data-copy="{{ info.lottery.lottery_reference }}"
+                        aria-label="{% trans 'Copy Lottery ID' %}">
+                  <i class="fas fa-copy me-1"></i>{% trans "Copy ID" %}
+                </button>
+                <button class="btn btn-outline-primary btn-sm copy-amount-btn"
+                        data-copy=""
+                        aria-label="{% trans 'Copy Total Amount' %}">
+                  <i class="fas fa-copy me-1"></i>{% trans "Copy Amount" %}
+                </button>
+              </div>
             </div>
-        </div>
+          </div>
         {% endfor %}
-    </div>
+      </div>
     {% else %}
-    <div class="alert alert-warning text-center shadow-sm" style="border-radius: 0.5rem;">
-        <i class="fas fa-exclamation-circle me-2"></i>
-        {% trans "No active lotteries available." %}
-    </div>
+      <div class="alert alert-warning text-center shadow-sm" style="border-radius:0.5rem;">
+        <i class="fas fa-exclamation-circle me-2"></i>{% trans "No active lotteries available." %}
+      </div>
     {% endif %}
-</div>
+  </div>
 
-<!-- Toast Notification -->
-<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1050;">
-    <div id="copyToast" class="toast align-items-center text-white bg-success border-0 shadow-sm" role="alert" aria-live="assertive" aria-atomic="true">
-        <div class="d-flex">
-            <div class="toast-body">{% trans "Copied to clipboard!" %}</div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-        </div>
+  <!-- Toast Notification -->
+  <div class="position-fixed bottom-0 end-0 p-3" style="z-index:1050;">
+    <div id="copyToast" class="toast align-items-center text-white bg-success border-0 shadow-sm"
+         role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="d-flex">
+        <div class="toast-body">{% trans "Copied to clipboard!" %}</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                data-bs-dismiss="toast" aria-label="Close"></button>
+      </div>
     </div>
-</div>
+  </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function () {
+  {# ③ Scripts pour copie et total #}
+  <script>
+  document.addEventListener('DOMContentLoaded', function () {
     const copyToastEl = document.getElementById('copyToast');
     const copyToast = new bootstrap.Toast(copyToastEl);
 
-    function handleCopy(button, textToCopy, successMessage) {
-        navigator.clipboard.writeText(textToCopy).then(() => {
-            copyToastEl.querySelector('.toast-body').textContent = successMessage;
-            copyToast.show();
-            const originalIcon = button.querySelector('i').className;
-            button.querySelector('i').className = 'fas fa-check me-1';
-            button.disabled = true;
-            setTimeout(() => {
-                button.querySelector('i').className = originalIcon;
-                button.disabled = false;
-            }, 2000);
-        }).catch(err => {
-            console.error('Copy failed:', err);
-            copyToastEl.querySelector('.toast-body').textContent = '{% trans "Copy failed. Please try again." %}';
-            copyToastEl.classList.replace('bg-success', 'bg-danger');
-            copyToast.show();
-            setTimeout(() => {
-                copyToastEl.classList.replace('bg-danger', 'bg-success');
-            }, 2000);
+    function handleCopy(btn, text, msg) {
+      navigator.clipboard.writeText(text)
+        .then(() => {
+          copyToastEl.querySelector('.toast-body').textContent = msg;
+          copyToast.show();
+          const icon = btn.querySelector('i');
+          const orig = icon.className;
+          icon.className = 'fas fa-check me-1';
+          btn.disabled = true;
+          setTimeout(() => { icon.className = orig; btn.disabled = false; }, 2000);
         });
     }
 
-    function updateTotalAmount(card) {
-        const ticketPrice = parseFloat(card.getAttribute('data-ticket-price'));
-        const qtyInput = card.querySelector('.ticket-qty-input');
-        let quantity = parseInt(qtyInput.value, 10);
-        if (isNaN(quantity) || quantity < 1) {
-            quantity = 1;
-            qtyInput.value = 1;
-        }
-        const total = ticketPrice * quantity;
-        const displayTotal = total.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        const copyTotal = total.toFixed(2);
-        const totalAmountElem = card.querySelector('.total-amount');
-        totalAmountElem.textContent = displayTotal;
-        const copyAmountBtn = card.querySelector('.copy-amount-btn');
-        copyAmountBtn.setAttribute('data-copy', copyTotal);
+    function updateTotal(card) {
+      const price = parseFloat(card.dataset.ticketPrice);
+      const input = card.querySelector('.ticket-qty-input');
+      let q = parseInt(input.value,10);
+      if (isNaN(q)||q<1) { q=1; input.value=1; }
+      const total = price*q;
+      card.querySelector('.total-amount').textContent =
+        total.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2});
+      card.querySelector('.copy-amount-btn').dataset.copy = total.toFixed(2);
     }
 
-    document.querySelectorAll('.card').forEach(function(card) {
-        updateTotalAmount(card);
-    });
+    document.querySelectorAll('.lottery-card').forEach(c=>updateTotal(c));
+    document.querySelectorAll('.ticket-qty-input').forEach(i=>
+      i.addEventListener('input',e=>updateTotal(e.target.closest('.lottery-card')))
+    );
+    document.querySelectorAll('.copy-id-btn').forEach(b=>
+      b.addEventListener('click',()=>handleCopy(b,b.dataset.copy,'{% trans "Lottery ID copied!" %}'))
+    );
+    document.querySelectorAll('.copy-amount-btn').forEach(b=>
+      b.addEventListener('click',()=>handleCopy(b,b.dataset.copy,'{% trans "Total amount copied!" %}'))
+    );
+  });
+  </script>
 
-    document.querySelectorAll('.ticket-qty-input').forEach(function(input) {
-        input.addEventListener('input', function() {
-            const card = this.closest('.card');
-            updateTotalAmount(card);
-        });
-    });
-
-    document.querySelectorAll('.copy-id-btn').forEach(function(button) {
-        button.addEventListener('click', function() {
-            const textToCopy = this.getAttribute('data-copy');
-            const successMsg = '{% trans "Lottery ID copied!" %}';
-            handleCopy(this, textToCopy, successMsg);
-        });
-    });
-
-    document.querySelectorAll('.copy-amount-btn').forEach(function(button) {
-        button.addEventListener('click', function() {
-            const textToCopy = this.getAttribute('data-copy');
-            const successMsg = '{% trans "Total amount copied!" %}';
-            handleCopy(this, textToCopy, successMsg);
-        });
-    });
-});
-</script>
+  {# ④ Charge le JS de l’explosion & chute #}
+  <script src="{% static 'js/clover.js' %}"></script>
 {% endblock details %}

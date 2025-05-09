@@ -315,6 +315,12 @@ def lottery(request):
         pct = (
             (count / lot.max_tickets_per_user * 100) if lot.max_tickets_per_user else 0
         )
+        # Check if the user has already purchased tickets
+        if lot.max_tickets_per_user:
+            remaining = lot.max_tickets_per_user - count
+            remaining = remaining if remaining > 0 else 0
+        else:
+            remaining = '∞'  # no limit
         lotteries_info.append(
             {
                 "lottery": lot,
@@ -332,6 +338,7 @@ def lottery(request):
                 ),
                 "user_ticket_count": count,
                 "max_tickets_per_user": lot.max_tickets_per_user,
+                "remaining_tickets": remaining,
                 "tickets_percentage": min(pct, 100),
             }
         )
@@ -451,23 +458,40 @@ def anomalies_list(request):
 @login_required
 @can_admin_app
 def lottery_detail(request, lottery_id):
+    # Récupère le lottery
     lottery = get_object_or_404(Lottery, id=lottery_id)
+
+    # Pagine participants
     participants = Paginator(
-        lottery.ticket_purchases.select_related("user", "character"), 25
+        lottery.ticket_purchases.select_related("user", "character"),
+        25
     ).get_page(request.GET.get("participants_page"))
+
+    # Pagine anomalies
     anomalies = Paginator(
-        TicketAnomaly.objects.filter(lottery=lottery).select_related(
-            "user", "character"
-        ),
-        25,
+        TicketAnomaly.objects.filter(lottery=lottery)
+            .select_related("user", "character"),
+        25
     ).get_page(request.GET.get("anomalies_page"))
+
+    # Pagine winners
     winners = Paginator(
-        Winner.objects.filter(ticket__lottery=lottery).select_related(
-            "ticket__user", "character"
-        ),
-        25,
+        Winner.objects.filter(ticket__lottery=lottery)
+            .select_related("ticket__user", "character"),
+        25
     ).get_page(request.GET.get("winners_page"))
+
+    # Nombre de participants distincts
     participant_count = lottery.ticket_purchases.values("user").distinct().count()
+
+    # Nombre de tickets vendus (status="processed")
+    tickets_sold = TicketPurchase.objects.filter(
+        lottery=lottery,
+        status="processed"
+    ).aggregate(
+        total=Coalesce(Sum("quantity"), 0, output_field=IntegerField())
+    )["total"]
+
     return render(
         request,
         "fortunaisk/lottery_detail.html",
@@ -477,6 +501,7 @@ def lottery_detail(request, lottery_id):
             "anomalies": anomalies,
             "winners": winners,
             "participant_count": participant_count,
+            "tickets_sold": tickets_sold,
         },
     )
 
