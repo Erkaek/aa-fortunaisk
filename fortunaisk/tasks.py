@@ -405,7 +405,7 @@ def setup_periodic_tasks():
         PeriodicTask    = apps.get_model("django_celery_beat", "PeriodicTask")
 
         sched_30m, _ = IntervalSchedule.objects.get_or_create(
-            every=30, period=IntervalSchedule.minutes
+            every=30, period=IntervalSchedule.MINUTES
         )
         PeriodicTask.objects.update_or_create(
             name="check_purchased_tickets",
@@ -418,7 +418,7 @@ def setup_periodic_tasks():
         )
 
         sched_2m, _ = IntervalSchedule.objects.get_or_create(
-            every=2, period=IntervalSchedule.minutes
+            every=2, period=IntervalSchedule.MINUTES
         )
         PeriodicTask.objects.update_or_create(
             name="check_lottery_status",
