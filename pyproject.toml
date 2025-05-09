@@ -6,7 +6,7 @@ requires = [
 
 [project]
 name = "fortunaisk"
-version = "0.5.6"
+version = "0.5.7"
 description = "fortunaisk Plugin for Alliance Auth"
 readme = "README.md"
 keywords = [

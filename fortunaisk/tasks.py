@@ -1,249 +1,175 @@
 # fortunaisk/tasks.py
 
-# Standard Library
 import json
 import logging
 import math
-import time
 from datetime import timedelta
 
-# Third Party
 from celery import group, shared_task
-
-# Django
 from django.apps import apps
 from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Sum
 from django.utils import timezone
-from django_celery_beat.models import PeriodicTask
 
-# fortunaisk
-from fortunaisk.notifications import send_alliance_auth_notification
+from .notifications import (
+    send_ticket_purchase_confirmation_dm,
+    send_ticket_anomaly_dm,
+    send_winner_dm,
+    send_webhook_notification,
+    create_lottery_completed_with_winners_embed,
+    create_lottery_completed_no_winner_embed,
+)
 
 logger = logging.getLogger(__name__)
 
 
-def process_payment(payment_locked):
+def process_payment(entry):
     """
-    Process a single payment with multi-ticket logic:
-    1. Determine the maximum number of full tickets purchasable.
-    2. Enforce maximum tickets per user.
-    3. Compute the effective cost and any remainder.
-    4. Create or update a TicketPurchase record.
-    5. Record an anomaly if there's an overpayment.
-    6. (Total pot update is deferred to the finalization phase.)
-    7. Mark the payment as processed and send a confirmation.
-    8. Immediately recalculate and update the lottery pot.
+    Process a single payment entry:
+      1. Identify user & character
+      2. Load the active lottery
+      3. Validate date
+      4. Calculate tickets purchasable
+      5. Enforce per-user max
+      6. Create/update TicketPurchase
+      7. Record overpayment anomaly
+      8. Mark processed & send DM
+      9. Update lottery pot
     """
-    ProcessedPayment   = apps.get_model("fortunaisk", "ProcessedPayment")
-    TicketAnomaly      = apps.get_model("fortunaisk", "TicketAnomaly")
-    Lottery            = apps.get_model("fortunaisk", "Lottery")
-    EveCharacter       = apps.get_model("eveonline", "EveCharacter")
-    CharacterOwnership = apps.get_model("authentication", "CharacterOwnership")
-    UserProfile        = apps.get_model("authentication", "UserProfile")
-    TicketPurchase     = apps.get_model("fortunaisk", "TicketPurchase")
+    # Models
+    CorpJournal     = apps.get_model("corptools", "CorporationWalletJournalEntry")
+    ProcessedPay    = apps.get_model("fortunaisk", "ProcessedPayment")
+    TicketAnomaly   = apps.get_model("fortunaisk", "TicketAnomaly")
+    Lottery         = apps.get_model("fortunaisk", "Lottery")
+    EveCharacter    = apps.get_model("eveonline", "EveCharacter")
+    Ownership       = apps.get_model("authentication", "CharacterOwnership")
+    UserProfile     = apps.get_model("authentication", "UserProfile")
+    TicketPurchase  = apps.get_model("fortunaisk", "TicketPurchase")
 
-    payment_id     = payment_locked.entry_id
-    payment_date   = payment_locked.date
-    payment_amount = payment_locked.amount
-    lottery_ref    = payment_locked.reason.strip().lower()
+    pid    = entry.entry_id
+    date   = entry.date
+    amount = entry.amount
+    ref    = entry.reason.strip().lower()
 
-    # Skip if already processed.
-    if ProcessedPayment.objects.filter(payment_id=payment_id).exists():
-        logger.debug(f"Payment ID {payment_id} already processed. Skipping.")
+    # 1) Skip if already processed
+    if ProcessedPay.objects.filter(payment_id=pid).exists():
+        logger.debug(f"Payment {pid} already processed.")
         return
 
-    # Step 1: Retrieve user and character
+    # 2) Retrieve user & discord_id
     try:
-        eve_character       = EveCharacter.objects.get(
-            character_id=payment_locked.first_party_name_id
-        )
-        ownership           = CharacterOwnership.objects.get(
-            character__character_id=eve_character.character_id
-        )
-        user_profile        = UserProfile.objects.get(
-            user_id=ownership.user_id
-        )
-        user                = user_profile.user
-    except EveCharacter.DoesNotExist:
-        TicketAnomaly.objects.create(
-            lottery=None, user=None, character=None,
-            reason="EveCharacter does not exist",
-            payment_date=payment_date, amount=payment_amount,
-            payment_id=payment_id
-        )
-        ProcessedPayment.objects.create(
-            payment_id=payment_id,
-            processed_at=timezone.now()
-        )
-        return
-    except CharacterOwnership.DoesNotExist:
-        TicketAnomaly.objects.create(
-            lottery=None, user=None, character=eve_character,
-            reason="CharacterOwnership does not exist",
-            payment_date=payment_date, amount=payment_amount,
-            payment_id=payment_id
-        )
-        ProcessedPayment.objects.create(
-            payment_id=payment_id,
-            processed_at=timezone.now()
-        )
-        return
-    except UserProfile.DoesNotExist:
-        TicketAnomaly.objects.create(
-            lottery=None, user=None, character=eve_character,
-            reason="UserProfile does not exist",
-            payment_date=payment_date, amount=payment_amount,
-            payment_id=payment_id
-        )
-        ProcessedPayment.objects.create(
-            payment_id=payment_id,
-            processed_at=timezone.now()
-        )
+        char    = EveCharacter.objects.get(character_id=entry.first_party_name_id)
+        own     = Ownership.objects.get(character=char)
+        profile = UserProfile.objects.get(user_id=own.user_id)
+        user    = profile.user
+        discord_id = user.discord_id
+    except Exception as e:
+        # cannot DM if user lookup fails
+        logger.warning(f"Could not resolve user for payment {pid}: {e}")
+        ProcessedPay.objects.create(payment_id=pid, processed_at=timezone.now())
         return
 
-    # Step 2: Retrieve the active lottery
+    # 3) Load active lottery
     try:
         lottery = Lottery.objects.select_for_update().get(
-            lottery_reference=lottery_ref,
+            lottery_reference=ref,
             status__in=["active", "pending"]
         )
     except Lottery.DoesNotExist:
+        msg = f"No active lottery '{ref}'"
         TicketAnomaly.objects.create(
-            lottery=None, user=user, character=eve_character,
-            reason=f"No active lottery '{lottery_ref}'",
-            payment_date=payment_date, amount=payment_amount,
-            payment_id=payment_id
+            lottery=None, user=user, character=char,
+            reason=msg, payment_date=date,
+            amount=amount, payment_id=pid
         )
-        ProcessedPayment.objects.create(
-            payment_id=payment_id,
-            processed_at=timezone.now()
-        )
+        send_ticket_anomaly_dm(discord_id, ref, msg, amount)
+        ProcessedPay.objects.create(payment_id=pid, processed_at=timezone.now())
         return
 
-    # Step 3: Verify that the payment date is within the lottery period
-    if not (lottery.start_date <= payment_date <= lottery.end_date):
+    # 4) Date validation
+    if not (lottery.start_date <= date <= lottery.end_date):
+        msg = "Outside lottery period"
         TicketAnomaly.objects.create(
-            lottery=lottery, user=user, character=eve_character,
-            reason="Payment date outside lottery period",
-            payment_date=payment_date, amount=payment_amount,
-            payment_id=payment_id
+            lottery=lottery, user=user, character=char,
+            reason=msg, payment_date=date,
+            amount=amount, payment_id=pid
         )
-        ProcessedPayment.objects.create(
-            payment_id=payment_id,
-            processed_at=timezone.now()
-        )
+        send_ticket_anomaly_dm(discord_id, ref, msg, amount)
+        ProcessedPay.objects.create(payment_id=pid, processed_at=timezone.now())
         return
 
-    # Step 4: Calculate the maximum full tickets purchasable
-    ticket_price = lottery.ticket_price
-    num_tickets  = math.floor(payment_amount / ticket_price)
+    # 5) Calculate ticket count
+    price       = lottery.ticket_price
+    num_tickets = math.floor(amount / price)
     if num_tickets < 1:
+        msg = "Insufficient amount for one ticket"
         TicketAnomaly.objects.create(
-            lottery=lottery, user=user, character=eve_character,
-            reason="Insufficient amount for one ticket",
-            payment_date=payment_date, amount=payment_amount,
-            payment_id=payment_id
+            lottery=lottery, user=user, character=char,
+            reason=msg, payment_date=date,
+            amount=amount, payment_id=pid
         )
-        ProcessedPayment.objects.create(
-            payment_id=payment_id,
-            processed_at=timezone.now()
-        )
+        send_ticket_anomaly_dm(discord_id, ref, msg, amount)
+        ProcessedPay.objects.create(payment_id=pid, processed_at=timezone.now())
         return
 
-    # Step 5: Adjust for maximum tickets per user
-    current_tickets = (
-        TicketPurchase.objects.filter(
-            lottery=lottery,
-            user=user,
-            character__id=user_profile.main_character_id
-        ).aggregate(total=Sum("quantity"))["total"] or 0
-    )
-    allowed_tickets = (
-        lottery.max_tickets_per_user - current_tickets
-        if lottery.max_tickets_per_user else num_tickets
-    )
-    final_tickets = min(num_tickets, allowed_tickets)
-    if final_tickets < 1:
+    # 6) Enforce max tickets per user
+    current = TicketPurchase.objects.filter(
+        lottery=lottery, user=user, character=char
+    ).aggregate(total=Sum("quantity"))["total"] or 0
+    if lottery.max_tickets_per_user:
+        allowed = lottery.max_tickets_per_user - current
+    else:
+        allowed = num_tickets
+    final = min(num_tickets, allowed)
+    if final < 1:
+        msg = "User ticket limit reached"
         TicketAnomaly.objects.create(
-            lottery=lottery, user=user, character=eve_character,
-            reason="Max tickets per user exceeded",
-            payment_date=payment_date, amount=payment_amount,
-            payment_id=payment_id
+            lottery=lottery, user=user, character=char,
+            reason=msg, payment_date=date,
+            amount=amount, payment_id=pid
         )
-        ProcessedPayment.objects.create(
-            payment_id=payment_id,
-            processed_at=timezone.now()
-        )
-        send_alliance_auth_notification(
-            user=user,
-            title="⚠️ Ticket Limit Reached",
-            message=(
-                f"Hello {user.username},\n\n"
-                f"You have reached the maximum number of tickets "
-                f"({lottery.max_tickets_per_user}) for lottery "
-                f"'{lottery.lottery_reference}'."
-            ),
-            level="warning"
-        )
+        send_ticket_anomaly_dm(discord_id, ref, msg, amount)
+        ProcessedPay.objects.create(payment_id=pid, processed_at=timezone.now())
         return
 
-    # Step 6: Create or update the TicketPurchase record
-    cost = final_tickets * ticket_price
+    # 7) Create or update TicketPurchase
+    cost = final * price
     purchase, created = TicketPurchase.objects.get_or_create(
         lottery=lottery,
         user=user,
-        character=eve_character,
+        character=char,
         defaults={
             "amount": cost,
-            "quantity": final_tickets,
+            "quantity": final,
             "status": "processed",
-            "payment_id": payment_id,
+            "payment_id": pid,
         },
     )
     if not created:
-        purchase.quantity      += final_tickets
-        purchase.amount        += cost
-        purchase.payment_id     = payment_id
-        purchase.save(update_fields=["quantity", "amount", "payment_id"])
+        purchase.quantity += final
+        purchase.amount   += cost
+        purchase.save(update_fields=["quantity", "amount"])
 
-    # Step 7: Record an anomaly if there's an overpayment
-    remainder = payment_amount - cost
+    # 8) Handle overpayment
+    remainder = amount - cost
     if remainder > 0:
+        msg = f"Overpayment of {remainder} ISK"
         TicketAnomaly.objects.create(
-            lottery=lottery, user=user, character=eve_character,
-            reason=f"Overpayment of {remainder} ISK",
-            payment_date=payment_date, amount=remainder,
-            payment_id=payment_id
+            lottery=lottery, user=user, character=char,
+            reason=msg, payment_date=date,
+            amount=remainder, payment_id=pid
         )
+        send_ticket_anomaly_dm(discord_id, ref, msg, remainder)
 
-    # Step 8: Mark the payment as processed and send confirmation
-    ProcessedPayment.objects.create(
-        payment_id=payment_id,
-        processed_at=timezone.now()
-    )
-    message = (
-        f"Hello {user.username},\n\n"
-        f"Your payment of {payment_amount} ISK has been processed for lottery "
-        f"'{lottery.lottery_reference}'. You purchased {final_tickets} ticket(s)."
-    )
-    if remainder > 0:
-        message += f"\nAn overpayment of {remainder} ISK was recorded."
-    message += "\nGood luck!"
-    send_alliance_auth_notification(
-        user=user,
-        title="🍀 Ticket Purchase Confirmation",
-        message=message,
-        level="info"
-    )
+    # 9) Mark processed & send confirmation DM
+    ProcessedPay.objects.create(payment_id=pid, processed_at=timezone.now())
+    send_ticket_purchase_confirmation_dm(discord_id, ref, final, cost, remainder)
 
-    # Step 9: Immediately recalculate and update the pot
-    total_pot = (
-        TicketPurchase.objects
-        .filter(lottery=lottery)
-        .aggregate(sum=Sum("amount"))["sum"] or 0
-    )
+    # 10) Update lottery total pot
+    total_pot = TicketPurchase.objects.filter(lottery=lottery).aggregate(
+        sum=Sum("amount")
+    )["sum"] or 0
     lottery.total_pot = total_pot
     lottery.save(update_fields=["total_pot"])
 
@@ -251,7 +177,7 @@ def process_payment(payment_locked):
 @shared_task(bind=True)
 def process_payment_task(self, payment_entry_id):
     """
-    Asynchronously process a single payment identified by its entry_id.
+    Wrap process_payment in a DB transaction.
     """
     CorpJournal = apps.get_model("corptools", "CorporationWalletJournalEntry")
     try:
@@ -266,10 +192,10 @@ def process_payment_task(self, payment_entry_id):
 @shared_task(bind=True)
 def check_purchased_tickets(self):
     """
-    Dispatches processing tasks for all new lottery payments.
+    Every 30 minutes: find new payments and dispatch processing tasks.
     """
-    logger.info("Starting 'check_purchased_tickets' task.")
-    CorpJournal  = apps.get_model("corptools", "CorporationWalletJournalEntry")
+    logger.info("Starting 'check_purchased_tickets'.")
+    CorpJournal = apps.get_model("corptools", "CorporationWalletJournalEntry")
     ProcessedPay = apps.get_model("fortunaisk", "ProcessedPayment")
 
     processed_ids = set(ProcessedPay.objects.values_list("payment_id", flat=True))
@@ -286,81 +212,87 @@ def check_purchased_tickets(self):
 @shared_task(bind=True, max_retries=5)
 def check_lottery_status(self):
     """
-    Close lotteries only after 'Corporation Audit Update' has run + 5 min safety.
+    Every 2 minutes: finalize pending lotteries after Corporation Audit Update + 5min safety,
+    DM winners & post webhook embed.
     """
     lock_id = "check_lottery_status_lock"
     if not cache.add(lock_id, "1", timeout=300):
         return
 
     try:
-        try:
-            audit    = PeriodicTask.objects.get(name="Corporation Audit Update")
-            last_run = audit.last_run_at
-        except PeriodicTask.DoesNotExist:
-            logger.warning("Audit task 'Corporation Audit Update' not found. Delaying closure.")
-            return
+        PeriodicTask = apps.get_model("django_celery_beat", "PeriodicTask")
+        audit = PeriodicTask.objects.get(name="Corporation Audit Update")
+        last_run = audit.last_run_at
+    except PeriodicTask.DoesNotExist:
+        logger.warning("Audit task not found. Delaying lottery closure.")
+        return
 
-        if not last_run or timezone.now() < last_run + timedelta(minutes=5):
-            logger.info("Waiting safety interval after audit before closing lotteries.")
-            return
+    if not last_run or timezone.now() < last_run + timedelta(minutes=5):
+        logger.info("Waiting safety interval after audit before closing lotteries.")
+        return
 
-        Lottery      = apps.get_model("fortunaisk", "Lottery")
-        CorpJournal  = apps.get_model("corptools", "CorporationWalletJournalEntry")
-        ProcessedPay = apps.get_model("fortunaisk", "ProcessedPayment")
+    Lottery    = apps.get_model("fortunaisk", "Lottery")
+    CorpJournal= apps.get_model("corptools", "CorporationWalletJournalEntry")
+    ProcessedPay = apps.get_model("fortunaisk", "ProcessedPayment")
+    TicketPurchase = apps.get_model("fortunaisk", "TicketPurchase")
 
-        to_close = Lottery.objects.filter(
-            status__in=["active", "pending"],
-            end_date__lte=last_run
-        )
+    to_close = Lottery.objects.filter(
+        status__in=["active", "pending"],
+        end_date__lte=last_run
+    )
 
-        for lot in to_close:
-            if lot.status == "active":
-                lot.status = "pending"
-                lot.save(update_fields=["status"])
+    for lot in to_close:
+        if lot.status == "active":
+            lot.status = "pending"
+            lot.save(update_fields=["status"])
 
-            unpaid = CorpJournal.objects.filter(
-                reason__iexact=lot.lottery_reference.lower(),
-                amount__gt=0,
-                date__lte=last_run
-            ).exclude(
-                entry_id__in=ProcessedPay.objects.values_list("payment_id", flat=True)
-            )
+        unpaid = CorpJournal.objects.filter(
+            reason__iexact=lot.lottery_reference.lower(),
+            amount__gt=0,
+            date__lte=last_run
+        ).exclude(entry_id__in=ProcessedPay.objects.values_list("payment_id", flat=True))
 
-            if unpaid.exists():
-                logger.info(f"Unprocessed payments for '{lot.lottery_reference}'; retrying later.")
-                check_purchased_tickets.delay()
-                continue
+        if unpaid.exists():
+            logger.info(f"Found unprocessed payments for '{lot.lottery_reference}', retrying.")
+            check_purchased_tickets.delay()
+            continue
 
-            TicketPurchase = apps.get_model("fortunaisk", "TicketPurchase")
-            total = (
-                TicketPurchase.objects
-                .filter(lottery=lot)
-                .aggregate(sum=Sum("amount"))["sum"] or 0
-            )
-            lot.total_pot = total
-            lot.status    = "completed"
-            lot.save(update_fields=["total_pot", "status"])
+        # Finalize lottery
+        total = TicketPurchase.objects.filter(lottery=lot).aggregate(sum=Sum("amount"))["sum"] or 0
+        lot.total_pot = total
+        lot.status    = "completed"
+        lot.save(update_fields=["total_pot", "status"])
 
-            if total > 0:
-                winners = lot.select_winners()
-                logger.info(f"{len(winners)} winner(s) for '{lot.lottery_reference}'.")
-            else:
-                logger.error(f"No pot for '{lot.lottery_reference}', no winners.")
-    finally:
-        cache.delete(lock_id)
+        # Notify winners or no-winner
+        if total > 0:
+            winners = lot.select_winners()
+            for w in winners:
+                send_winner_dm(
+                    discord_user_id=w.ticket.user.discord_id,
+                    lottery_ref=lot.lottery_reference,
+                    prize_amount=w.prize_amount,
+                    ticket_id=w.ticket.id
+                )
+            embed = create_lottery_completed_with_winners_embed(lot, winners)
+        else:
+            embed = create_lottery_completed_no_winner_embed(lot)
+
+        send_webhook_notification(embed=embed)
+
+    cache.delete(lock_id)
 
 
 @shared_task(bind=True)
 def create_lottery_from_auto_lottery(self, auto_lottery_id: int):
     """
-    Creates a Lottery based on a specific AutoLottery.
+    Creates a Lottery based on an AutoLottery.
+    The post_save signal will emit the creation webhook.
     """
-    logger.info(f"Starting 'create_lottery_from_auto_lottery' for AutoLottery ID {auto_lottery_id}.")
     AutoLottery = apps.get_model("fortunaisk", "AutoLottery")
     try:
-        auto    = AutoLottery.objects.get(id=auto_lottery_id, is_active=True)
+        auto = AutoLottery.objects.get(id=auto_lottery_id, is_active=True)
         new_lot = auto.create_lottery()
-        logger.info(f"Created Lottery '{new_lot.lottery_reference}' (ID {new_lot.id}).")
+        logger.info(f"Created lottery '{new_lot.lottery_reference}' from AutoLottery #{auto_lottery_id}.")
         return new_lot.id
     except Exception as e:
         logger.error(f"Error in create_lottery_from_auto_lottery: {e}", exc_info=True)
@@ -370,21 +302,33 @@ def create_lottery_from_auto_lottery(self, auto_lottery_id: int):
 @shared_task(bind=True)
 def finalize_lottery(self, lottery_id: int):
     """
-    Finalizes a Lottery once it has ended: selects winners, updates status.
+    Finalizes a single Lottery: selects winners, DMs them, posts webhook embed.
     """
-    logger.info(f"Starting 'finalize_lottery' for Lottery ID {lottery_id}.")
+    logger.info(f"Finalizing Lottery ID {lottery_id}.")
     Lottery = apps.get_model("fortunaisk", "Lottery")
     try:
         lot = Lottery.objects.get(id=lottery_id)
         if lot.status not in ["active", "pending"]:
             return
+
         winners = lot.select_winners()
         lot.status = "completed"
         lot.save(update_fields=["status"])
+
         if winners:
-            logger.info(f"{len(winners)} winner(s) for '{lot.lottery_reference}'.")
+            for w in winners:
+                send_winner_dm(
+                    discord_user_id=w.ticket.user.discord_id,
+                    lottery_ref=lot.lottery_reference,
+                    prize_amount=w.prize_amount,
+                    ticket_id=w.ticket.id
+                )
+            embed = create_lottery_completed_with_winners_embed(lot, winners)
         else:
-            logger.warning(f"No winners for '{lot.lottery_reference}'.")
+            embed = create_lottery_completed_no_winner_embed(lot)
+
+        send_webhook_notification(embed=embed)
+
     except Exception as e:
         logger.error(f"Error in finalize_lottery: {e}", exc_info=True)
         try:
@@ -397,39 +341,36 @@ def setup_periodic_tasks():
     """
     Configures global periodic tasks:
       - check_purchased_tickets (every 30 minutes)
-      - check_lottery_status     (every  2 minutes)
+      - check_lottery_status     (every 2 minutes)
     """
     logger.info("Configuring global periodic tasks for FortunaIsk.")
-    try:
-        IntervalSchedule = apps.get_model("django_celery_beat", "IntervalSchedule")
-        PeriodicTask    = apps.get_model("django_celery_beat", "PeriodicTask")
+    IntervalSchedule = apps.get_model("django_celery_beat", "IntervalSchedule")
+    PeriodicTask     = apps.get_model("django_celery_beat", "PeriodicTask")
 
-        sched_30m, _ = IntervalSchedule.objects.get_or_create(
-            every=30, period=IntervalSchedule.MINUTES
-        )
-        PeriodicTask.objects.update_or_create(
-            name="check_purchased_tickets",
-            defaults={
-                "task": "fortunaisk.tasks.check_purchased_tickets",
-                "interval": sched_30m,
-                "args": json.dumps([]),
-                "enabled": True,
-            },
-        )
+    sched_30m, _ = IntervalSchedule.objects.get_or_create(
+        every=30, period=IntervalSchedule.MINUTES
+    )
+    PeriodicTask.objects.update_or_create(
+        name="check_purchased_tickets",
+        defaults={
+            "task": "fortunaisk.tasks.check_purchased_tickets",
+            "interval": sched_30m,
+            "args": json.dumps([]),
+            "enabled": True,
+        },
+    )
 
-        sched_2m, _ = IntervalSchedule.objects.get_or_create(
-            every=2, period=IntervalSchedule.MINUTES
-        )
-        PeriodicTask.objects.update_or_create(
-            name="check_lottery_status",
-            defaults={
-                "task": "fortunaisk.tasks.check_lottery_status",
-                "interval": sched_2m,
-                "args": json.dumps([]),
-                "enabled": True,
-            },
-        )
+    sched_2m, _ = IntervalSchedule.objects.get_or_create(
+        every=2, period=IntervalSchedule.MINUTES
+    )
+    PeriodicTask.objects.update_or_create(
+        name="check_lottery_status",
+        defaults={
+            "task": "fortunaisk.tasks.check_lottery_status",
+            "interval": sched_2m,
+            "args": json.dumps([]),
+            "enabled": True,
+        },
+    )
 
-        logger.info("Periodic tasks 'check_purchased_tickets' & 'check_lottery_status' configured.")
-    except Exception as e:
-        logger.critical(f"Error configuring periodic tasks: {e}", exc_info=True)
+    logger.info("Periodic tasks 'check_purchased_tickets' & 'check_lottery_status' configured.")
