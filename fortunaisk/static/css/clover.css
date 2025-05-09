@@ -1,30 +1,42 @@
-/* static/css/clover.css */
-
 /* --- Loader “roulette” overlay --- */
 #loader-overlay {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10000;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
 }
+
 #loader-overlay .spinner {
-  font-size: 3rem;
-  color: #2ecc71;
-  animation: spin 1s linear infinite;
+    font-size: 3rem;
+    color: #2ecc71;
+    animation: spin 1s linear infinite;
 }
+
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* --- Sparkle animation --- */
 @keyframes sparkle {
-  0%   { opacity: 1; transform: scale(0.5); }
-  100% { opacity: 0; transform: scale(2); }
+  0% {
+    opacity: 1;
+    transform: scale(0.5);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(2);
+  }
 }
+
 .sparkle {
   position: absolute;
   color: #f1c40f;
@@ -36,19 +48,31 @@
 }
 
 /* --- Simple explosion de trèfles --- */
+
 /* Conteneur plein écran */
 #clover-explosion-container {
   position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
   overflow: hidden;
   z-index: 9999;
 }
+
 @keyframes clover-burst {
-  0%   { transform: translate(0,0) scale(0.5) rotate(0); opacity:1; }
-  100% { transform: translate(var(--dx),var(--dy)) scale(2) rotate(360deg); opacity:0; }
+  0% {
+    transform: translate(0, 0) scale(0.5) rotate(0);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translate(var(--dx), var(--dy)) scale(2) rotate(360deg);
+    opacity: 0;
+  }
 }
+
 .clover-particle {
   position: absolute;
   font-size: 2rem;

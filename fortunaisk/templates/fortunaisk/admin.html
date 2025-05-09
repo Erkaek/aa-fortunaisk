@@ -57,11 +57,11 @@
         <div class="col-6 col-md-3">
             <a href="{% url 'fortunaisk:anomalies_list' %}" class="text-decoration-none h-100">
                 <div class="card text-white h-100"
-                     style="background: {% if stats.total_anomalies > 0 %}
-                         linear-gradient(135deg, #e74c3c, #c0392b)
-                     {% else %}
-                         linear-gradient(135deg, #27ae60, #1abc9c)
-                     {% endif %};">
+                    style="background: {% if stats.total_anomalies > 0 %}
+                        linear-gradient(135deg, #e74c3c, #c0392b)
+                    {% else %}
+                        linear-gradient(135deg, #27ae60, #1abc9c)
+                    {% endif %};">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <span><i class="fas fa-exclamation-triangle me-1"></i> {% trans "Total Anomalies" %}</span>
                         <span class="badge bg-light text-dark">
@@ -138,7 +138,7 @@
                         <td>{{ lottery.tickets_sold|intcomma }}</td>
                         <td>
                             <a href="{% url 'fortunaisk:lottery_detail' lottery.id %}"
-                               class="btn btn-sm btn-info">
+                              class="btn btn-sm btn-info">
                                 <i class="fas fa-chart-pie me-1"></i> {% trans "Dashboard" %}
                             </a>
                         </td>

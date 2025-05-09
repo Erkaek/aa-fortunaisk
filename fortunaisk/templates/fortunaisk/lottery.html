@@ -26,7 +26,7 @@
 
     <!-- Tip Section -->
     <div class="alert alert-info text-center mb-5 shadow-sm"
-         role="alert" style="border-radius:0.5rem; font-size:1rem;">
+        role="alert" style="border-radius:0.5rem; font-size:1rem;">
       <i class="fas fa-lightbulb me-2"></i>
       {% trans "Tip: Select the number of tickets you wish to purchase and watch the total amount update instantly. Then, copy the Lottery ID and Total Amount, and make your payment to the designated receiver." %}
     </div>
@@ -36,9 +36,9 @@
         {% for info in active_lotteries %}
           <div class="col">
             <div class="card h-100 shadow lottery-card"
-                 data-ticket-price="{{ info.lottery.ticket_price }}">
+                data-ticket-price="{{ info.lottery.ticket_price }}">
               <div class="card-header text-white shadow-sm"
-                   style="background: linear-gradient(135deg,#f1c40f,#27ae60);">
+                  style="background: linear-gradient(135deg,#f1c40f,#27ae60);">
                 <h5 class="card-title mb-0">
                   <i class="fas fa-barcode me-2"></i>
                   {{ info.lottery.lottery_reference }}
@@ -61,22 +61,22 @@
                 {% if info.max_tickets_per_user %}
                   <div class="progress mb-4" style="height:1.5rem;">
                     <div class="progress-bar progress-bar-striped progress-bar-animated bg-warning fw-bold"
-                         role="progressbar"
-                         style="width:{{ info.tickets_percentage }}%;"
-                         aria-valuenow="{{ info.user_ticket_count }}"
-                         aria-valuemin="0"
-                         aria-valuemax="{{ info.max_tickets_per_user }}">
+                        role="progressbar"
+                        style="width:{{ info.tickets_percentage }}%;"
+                        aria-valuenow="{{ info.user_ticket_count }}"
+                        aria-valuemin="0"
+                        aria-valuemax="{{ info.max_tickets_per_user }}">
                       {{ info.user_ticket_count }}/{{ info.max_tickets_per_user }}
                     </div>
                   </div>
                 {% else %}
                   <div class="progress mb-4" style="height:1.5rem;">
                     <div class="progress-bar progress-bar-striped progress-bar-animated bg-warning fw-bold"
-                         role="progressbar"
-                         style="width:100%;"
-                         aria-valuenow="{{ info.user_ticket_count }}"
-                         aria-valuemin="0"
-                         aria-valuemax="{{ info.user_ticket_count }}">
+                        role="progressbar"
+                        style="width:100%;"
+                        aria-valuenow="{{ info.user_ticket_count }}"
+                        aria-valuemin="0"
+                        aria-valuemax="{{ info.user_ticket_count }}">
                       {{ info.user_ticket_count }} / ♾️
                     </div>
                   </div>
@@ -94,11 +94,11 @@
                   {% else %}
                     <div class="input-group shadow-sm">
                       <input type="number"
-                             id="ticketQty{{ forloop.counter }}"
-                             class="form-control ticket-qty-input"
-                             value="1"
-                             min="1"
-                             max="{{ info.remaining_tickets }}">
+                            id="ticketQty{{ forloop.counter }}"
+                            class="form-control ticket-qty-input"
+                            value="1"
+                            min="1"
+                            max="{{ info.remaining_tickets }}">
                       <span class="input-group-text">{% trans "Ticket(s)" %}</span>
                     </div>
                     <small class="text-muted">
@@ -147,7 +147,7 @@
   <!-- Toast Notification -->
   <div class="position-fixed bottom-0 end-0 p-3" style="z-index:1050;">
     <div id="copyToast" class="toast align-items-center text-white bg-success border-0 shadow-sm"
-         role="alert" aria-live="assertive" aria-atomic="true">
+        role="alert" aria-live="assertive" aria-atomic="true">
       <div class="d-flex">
         <div class="toast-body">{% trans "Copied to clipboard!" %}</div>
         <button type="button" class="btn-close btn-close-white me-2 m-auto"
