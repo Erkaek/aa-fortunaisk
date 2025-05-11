@@ -163,38 +163,51 @@
     const copyToast = new bootstrap.Toast(copyToastEl);
 
     function handleCopy(btn, text, msg) {
-      navigator.clipboard.writeText(text)
-        .then(() => {
-          copyToastEl.querySelector('.toast-body').textContent = msg;
-          copyToast.show();
-          const icon = btn.querySelector('i');
-          const orig = icon.className;
-          icon.className = 'fas fa-check me-1';
-          btn.disabled = true;
-          setTimeout(() => { icon.className = orig; btn.disabled = false; }, 2000);
-        });
+      navigator.clipboard.writeText(text).then(() => {
+        copyToastEl.querySelector('.toast-body').textContent = msg;
+        copyToast.show();
+        const icon = btn.querySelector('i');
+        const orig = icon.className;
+        icon.className = 'fas fa-check me-1';
+        btn.disabled = true;
+        setTimeout(() => {
+          icon.className = orig;
+          btn.disabled = false;
+        }, 2000);
+      });
     }
 
     function updateTotal(card) {
       const price = parseFloat(card.dataset.ticketPrice);
       const input = card.querySelector('.ticket-qty-input');
-      let q = parseInt(input.value,10);
-      if (isNaN(q)||q<1) { q=1; input.value=1; }
-      const total = price*q;
+      let q = parseInt(input.value, 10);
+      if (isNaN(q) || q < 1) { q = 1; input.value = 1; }
+      const total = price * q;
       card.querySelector('.total-amount').textContent =
-        total.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2});
+        total.toLocaleString('de-DE', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        });
       card.querySelector('.copy-amount-btn').dataset.copy = total.toFixed(2);
     }
 
-    document.querySelectorAll('.lottery-card').forEach(c=>updateTotal(c));
-    document.querySelectorAll('.ticket-qty-input').forEach(i=>
-      i.addEventListener('input',e=>updateTotal(e.target.closest('.lottery-card')))
+    // ─── On initialise et bind uniquement les cartes avec input ───
+    document.querySelectorAll('.ticket-qty-input').forEach(input => {
+      const card = input.closest('.lottery-card');
+      updateTotal(card);
+      input.addEventListener('input', () => updateTotal(card));
+    });
+
+    // ─── Puis on bind les boutons Copy pour tous ───
+    document.querySelectorAll('.copy-id-btn').forEach(btn =>
+      btn.addEventListener('click', () =>
+        handleCopy(btn, btn.dataset.copy, '{% trans "Lottery ID copied!" %}')
+      )
     );
-    document.querySelectorAll('.copy-id-btn').forEach(b=>
-      b.addEventListener('click',()=>handleCopy(b,b.dataset.copy,'{% trans "Lottery ID copied!" %}'))
-    );
-    document.querySelectorAll('.copy-amount-btn').forEach(b=>
-      b.addEventListener('click',()=>handleCopy(b,b.dataset.copy,'{% trans "Total amount copied!" %}'))
+    document.querySelectorAll('.copy-amount-btn').forEach(btn =>
+      btn.addEventListener('click', () =>
+        handleCopy(btn, btn.dataset.copy, '{% trans "Total amount copied!" %}')
+      )
     );
   });
   </script>

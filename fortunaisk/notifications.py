@@ -1,149 +1,177 @@
 # fortunaisk/notifications.py
 
 import logging
-import requests
 from datetime import datetime
-from django.conf import settings
-from .models import WebhookConfiguration
+
+# Third Party
+import requests
+
+# Django
+from django.core.cache import cache
+from django.db.models import QuerySet
+
+# Alliance Auth
+from allianceauth.notifications import notify as alliance_notify
+
+# fortunaisk
+from fortunaisk.models import WebhookConfiguration
 
 logger = logging.getLogger(__name__)
 
-def get_webhook_url():
-    cfg = WebhookConfiguration.objects.first()
-    if cfg and cfg.webhook_url:
-        return cfg.webhook_url
-    logger.warning("Discord webhook is not configured.")
-    return None
+# Discord embed colors per level
+LEVEL_COLORS = {
+    "info": 0x3498DB,  # blue
+    "success": 0x2ECC71,  # green
+    "warning": 0xF1C40F,  # yellow
+    "error": 0xE74C3C,  # red
+}
 
-def send_webhook_notification(embed=None, message=None):
+
+def build_embed(
+    title: str, description: str = None, fields: list[dict] = None, level: str = "info"
+) -> dict:
+    """
+    Build a Discord embed payload with a timestamp, color, optional description and fields.
+    """
+    embed = {
+        "title": title,
+        "color": LEVEL_COLORS.get(level, LEVEL_COLORS["info"]),
+        "timestamp": datetime.utcnow().isoformat(),
+        "footer": {"text": "Good luck to all participants! 🍀"},
+    }
+    if description:
+        embed["description"] = description
+    if fields:
+        embed["fields"] = fields
+    return embed
+
+
+def get_webhook_url() -> str:
+    """
+    Retrieve and cache the Discord webhook URL for public announcements.
+    """
+    url = cache.get("discord_webhook_url")
+    if url is None:
+        cfg = WebhookConfiguration.objects.first()
+        url = cfg.webhook_url if cfg and cfg.webhook_url else ""
+        cache.set("discord_webhook_url", url or "", 300)
+    return url
+
+
+def send_webhook_notification(embed: dict = None, content: str = None) -> bool:
+    """
+    Send an embed or plain content via Discord webhook.
+    Returns True on HTTP 2xx, False otherwise.
+    """
     url = get_webhook_url()
     if not url:
-        return
-    payload = {}
+        logger.warning("Discord webhook not configured; skipping public announcement.")
+        return False
+
+    payload: dict = {}
     if embed:
         payload["embeds"] = [embed]
-    if message:
-        payload["content"] = message
+    if content:
+        payload["content"] = content
+
     try:
-        resp = requests.post(url, json=payload)
-        if resp.status_code not in (200, 204):
-            logger.error(f"Webhook error ({resp.status_code}): {resp.text}")
+        resp = requests.post(url, json=payload, timeout=5)
+        resp.raise_for_status()
+        logger.info("Discord webhook message sent successfully.")
+        return True
     except Exception as e:
-        logger.exception(f"Sending webhook failed: {e}")
+        logger.error(f"Failed to send Discord webhook message: {e}", exc_info=True)
+        return False
 
-def send_discord_dm(discord_user_id, embed=None, content=None):
+
+def notify_discord_or_fallback(
+    users,
+    *,
+    title: str = None,
+    message: str = None,
+    embed: dict = None,
+    level: str = "info",
+    private: bool = False,
+):
     """
-    Send a DM via your Discord bot; implement with discord.py or similar.
+    Notify one or more users.
+
+    - If private=True → skip public webhook entirely, send only per-user via AllianceAuth.
+    - Else:
+      1) Send a single public webhook announcement (embed or message).
+      2) If that fails (or if private=True), send per-user AllianceAuth notifications.
+
+    Parameters:
+    - users: User | QuerySet[User] | list[User]
+    - title: title for the embed or AllianceAuth fallback
+    - message: plain-text content
+    - embed: full Discord embed dict (if provided, overrides title/message)
+    - level: one of 'info','success','warning','error' (for embed color & AllianceAuth level)
+    - private: bool, if True do not attempt webhook at all
     """
-    # TODO: implement actual DM logic here
-    pass
+    # build minimal embed if none provided
+    if embed is None and title:
+        embed = build_embed(title=title, description=message, level=level)
+        message = None
 
-def send_ticket_purchase_confirmation_dm(discord_user_id, lottery_ref, quantity, cost, remainder):
-    embed = {
-        "title": "🎟️ Lottery – Purchase Confirmed!",
-        "description": (
-            f"You purchased **{quantity}** ticket(s) for **Lottery {lottery_ref}**.\n"
-            f"💸 Total cost: **{cost} ISK**" 
-            + (f"\n🔄 Overpayment refunded: **{remainder} ISK**" if remainder > 0 else "")
-        ),
-        "color": 0xFFD700,
-        "footer": {"text": f"Good luck with Lottery {lottery_ref}!"},
-        "timestamp": datetime.utcnow().isoformat(),
-    }
-    send_discord_dm(discord_user_id, embed=embed)
-
-def send_ticket_anomaly_dm(discord_user_id, lottery_ref, reason, amount):
-    embed = {
-        "title": "⚠️ Lottery – Purchase Issue",
-        "description": (
-            f"Your purchase for **Lottery {lottery_ref}** had an issue:\n"
-            f"• **Reason**: {reason}\n"
-            f"• **Amount**: {amount} ISK\n\n"
-            "❓ Contact an admin if needed."
-        ),
-        "color": 0xFF4500,
-        "footer": {"text": "Purchase not processed"},
-        "timestamp": datetime.utcnow().isoformat(),
-    }
-    send_discord_dm(discord_user_id, embed=embed)
-
-def send_winner_dm(discord_user_id, lottery_ref, prize_amount, ticket_id):
-    embed = {
-        "title": "🏆 Lottery – You Won!",
-        "description": (
-            f"Congratulations! You won **{prize_amount} ISK** in **Lottery {lottery_ref}**.\n"
-            f"🎫 Ticket #: **{ticket_id}**"
-        ),
-        "color": 0x32CD32,
-        "footer": {"text": "Thank you for playing!"},
-        "timestamp": datetime.utcnow().isoformat(),
-    }
-    send_discord_dm(discord_user_id, embed=embed)
-
-def create_lottery_created_embed(lottery):
-    # Build payout distribution
-    if lottery.winners_distribution and lottery.winner_count:
-        lines = []
-        for idx, pct in enumerate(lottery.winners_distribution, start=1):
-            if idx > lottery.winner_count:
-                break
-            lines.append(f"• **Winner {idx}**: {pct}% of the pot")
-        distribution = "\n".join(lines)
+    # normalize recipients to list
+    if isinstance(users, QuerySet):
+        recipients = list(users)
+    elif isinstance(users, (list, tuple)):
+        recipients = list(users)
     else:
-        distribution = "_Not defined_"
+        recipients = [users]
 
-    max_tix = str(lottery.max_tickets_per_user) if lottery.max_tickets_per_user else "Unlimited"
+    # 1) Public webhook
+    sent_webhook = False
+    if not private and (embed or message):
+        sent_webhook = send_webhook_notification(embed=embed, content=message)
 
-    return {
-        "title": f"✨ New Lottery **#{lottery.lottery_reference}** Launched!",
-        "description": (
-            f"📅 **Ends**: {lottery.end_date.strftime('%Y-%m-%d %H:%M')}\n"
-            f"💰 **Ticket Price**: {lottery.ticket_price} ISK\n"
-            f"🎟️ **Max Tickets/User**: {max_tix}\n\n"
-            f"📊 **Payout Distribution:**\n{distribution}"
-        ),
-        "color": 0x00BFFF,
-        "footer": {"text": "Participate now before it closes! 🍀"},
-        "timestamp": lottery.start_date.isoformat(),
-    }
+    # 2) Per-user fallback via AllianceAuth
+    #    If webhook succeeded and not private, skip individual notifications.
+    if sent_webhook and not private:
+        return
 
-def create_lottery_completed_with_winners_embed(lottery, winners):
-    lines = [
-        f"• <@{w.ticket.user.discord_id}> — **{w.prize_amount} ISK** (ticket #{w.ticket.id})"
-        for w in winners
-    ]
-    return {
-        "title": f"🏆 Lottery **#{lottery.lottery_reference}** Completed!",
-        "description": (
-            f"💰 **Total Pot**: {lottery.total_pot} ISK\n"
-            f"📅 **Ended**: {lottery.end_date.strftime('%Y-%m-%d %H:%M')}\n\n"
-            + "\n".join(lines)
-        ),
-        "color": 0xFFD700,
-        "footer": {"text": "Congratulations to the winners! 🎉"},
-        "timestamp": lottery.end_date.isoformat(),
-    }
+    # assemble fallback message from embed if needed
+    if message:
+        fallback_message = message
+    elif embed:
+        # prefer description
+        fallback_message = embed.get("description", "")
+        # if no description, flatten fields
+        if not fallback_message and embed.get("fields"):
+            lines = []
+            for f in embed["fields"]:
+                name = f.get("name", "")
+                val = f.get("value", "")
+                lines.append(f"{name}: {val}")
+            fallback_message = "\n".join(lines)
+    else:
+        fallback_message = ""
 
-def create_lottery_completed_no_winner_embed(lottery):
-    return {
-        "title": f"🏆 Lottery **#{lottery.lottery_reference}** Completed!",
-        "description": (
-            f"💰 **Total Pot**: {lottery.total_pot} ISK\n"
-            f"📅 **Ended**: {lottery.end_date.strftime('%Y-%m-%d %H:%M')}\n\n"
-            "_No winners were drawn._"
-        ),
-        "color": 0xFF4500,
-        "footer": {"text": "Better luck next time! 🍀"},
-        "timestamp": lottery.end_date.isoformat(),
-    }
+    for user in recipients:
+        try:
+            alliance_notify(
+                user=user,
+                title=title or (embed.get("title") if embed else "Notification"),
+                message=fallback_message,
+                level=level,
+            )
+            logger.info(f"AllianceAuth notification sent to {user.username}")
+        except Exception as e:
+            logger.error(
+                f"AllianceAuth notify failed for {user.username}: {e}", exc_info=True
+            )
 
-def create_lottery_cancelled_embed(lottery):
-    return {
-        "title": f"🚫 Lottery **#{lottery.lottery_reference}** Cancelled",
-        "description": (
-            f"This lottery was cancelled on {lottery.end_date.strftime('%Y-%m-%d %H:%M')}."
-        ),
-        "color": 0xA9A9A9,
-        "footer": {"text": "Contact an admin for details."},
-        "timestamp": datetime.utcnow().isoformat(),
-    }
+
+def notify_alliance(user, title: str, message: str, level: str = "info"):
+    """
+    Send a single notification via AllianceAuth's built-in system.
+    """
+    try:
+        alliance_notify(user=user, title=title, message=message, level=level)
+        logger.info(f"AllianceAuth '{title}' sent to {user.username}")
+    except Exception as e:
+        logger.error(
+            f"AllianceAuth notify failed for {user.username}: {e}", exc_info=True
+        )

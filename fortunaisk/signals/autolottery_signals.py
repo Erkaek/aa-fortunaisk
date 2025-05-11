@@ -6,29 +6,36 @@ from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django_celery_beat.models import IntervalSchedule, PeriodicTask
 from fortunaisk.models import AutoLottery
+from fortunaisk.notifications import build_embed, notify_discord_or_fallback
 
 logger = logging.getLogger(__name__)
 
 @receiver(post_save, sender=AutoLottery)
-def handle_autolottery_save(sender, instance, created, **kwargs):
+def create_or_update_auto_lottery_cron(sender, instance, created, **kwargs):
     """
-    Create or update a periodic task for the AutoLottery.
+    Create or update periodic task for AutoLottery.
+    If newly activated, immediately create first Lottery.
     """
-    task_name = f"create_lottery_from_auto_lottery_{instance.id}"
-    if instance.is_active:
-        if instance.frequency_unit == "minutes":
-            every, period = instance.frequency, IntervalSchedule.MINUTES
-        elif instance.frequency_unit == "hours":
-            every, period = instance.frequency, IntervalSchedule.HOURS
-        elif instance.frequency_unit == "days":
-            every, period = instance.frequency, IntervalSchedule.DAYS
-        else:
-            # approximate months as 30-day blocks
-            every, period = instance.frequency * 30, IntervalSchedule.DAYS
+    name = f"create_lottery_from_auto_lottery_{instance.id}"
+    # determine interval
+    unit = instance.frequency_unit
+    freq = instance.frequency or 1
+    if unit == "minutes":
+        every, period = freq, IntervalSchedule.MINUTES
+    elif unit == "hours":
+        every, period = freq, IntervalSchedule.HOURS
+    elif unit == "days":
+        every, period = freq, IntervalSchedule.DAYS
+    elif unit == "months":
+        every, period = freq * 30, IntervalSchedule.DAYS
+    else:
+        every, period = 1, IntervalSchedule.DAYS
 
-        schedule, _ = IntervalSchedule.objects.get_or_create(every=every, period=period)
+    schedule, _ = IntervalSchedule.objects.get_or_create(every=every, period=period)
+
+    if instance.is_active:
         PeriodicTask.objects.update_or_create(
-            name=task_name,
+            name=name,
             defaults={
                 "task": "fortunaisk.tasks.create_lottery_from_auto_lottery",
                 "interval": schedule,
@@ -36,24 +43,37 @@ def handle_autolottery_save(sender, instance, created, **kwargs):
                 "enabled": True,
             },
         )
-        logger.info(f"AutoLottery periodic task '{task_name}' set to every {every} {period}.")
+        logger.info(f"Scheduled cron '{name}' for AutoLottery '{instance.name}'")
         if created:
-            instance.create_lottery()
-            logger.info(f"Created first Lottery for AutoLottery '{instance.name}'.")
+            try:
+                lot = instance.create_lottery()
+                logger.info(f"Initial Lottery '{lot.lottery_reference}' created")
+                # private=False to announce new lottery publically
+                embed = build_embed(
+                    title="🎲 AutoLottery Activated",
+                    description=f"AutoLottery **{instance.name}** is now active.",
+                    level="info",
+                )
+                notify_discord_or_fallback(users=None, embed=embed)
+            except Exception as e:
+                logger.error(f"Failed to create initial lottery: {e}", exc_info=True)
     else:
+        # deactivate → delete cron
         try:
-            pt = PeriodicTask.objects.get(name=task_name)
-            pt.delete()
-            logger.info(f"Deleted periodic task '{task_name}' for deactivated AutoLottery.")
+            PeriodicTask.objects.get(name=name).delete()
+            logger.info(f"Deleted cron '{name}' (deactivated)")
         except PeriodicTask.DoesNotExist:
-            logger.warning(f"Periodic task '{task_name}' not found for deactivated AutoLottery.")
+            pass
+
 
 @receiver(post_delete, sender=AutoLottery)
-def handle_autolottery_delete(sender, instance, **kwargs):
-    task_name = f"create_lottery_from_auto_lottery_{instance.id}"
+def delete_auto_lottery_cron(sender, instance, **kwargs):
+    """
+    Delete periodic task when AutoLottery is deleted.
+    """
+    name = f"create_lottery_from_auto_lottery_{instance.id}"
     try:
-        pt = PeriodicTask.objects.get(name=task_name)
-        pt.delete()
-        logger.info(f"Deleted periodic task '{task_name}' on AutoLottery deletion.")
+        PeriodicTask.objects.get(name=name).delete()
+        logger.info(f"Deleted cron '{name}' on AutoLottery delete")
     except PeriodicTask.DoesNotExist:
-        logger.warning(f"Periodic task '{task_name}' not found on AutoLottery deletion.")
+        pass

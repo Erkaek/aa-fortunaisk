@@ -1,7 +1,8 @@
 # fortunaisk/apps.py
+
 # Standard Library
-import importlib
 import logging
+from importlib import import_module
 
 # Django
 from django.apps import AppConfig, apps
@@ -10,32 +11,23 @@ logger = logging.getLogger(__name__)
 
 
 class FortunaIskConfig(AppConfig):
-    default_auto_field = "django.db.models.BigAutoField"
     name = "fortunaisk"
+    default_auto_field = "django.db.models.BigAutoField"
 
-    def ready(self) -> None:
+    def ready(self):
         super().ready()
-
-        # 1) Charger vos signals
+        # Charge les signals
         try:
-            importlib.import_module("fortunaisk.signals")
+            # fortunaisk
+            import_module("fortunaisk.signals")
+
             logger.info("FortunaIsk signals loaded.")
         except Exception as e:
-            logger.exception(f"Failed to load FortunaIsk signals: {e}")
+            logger.exception(f"Error loading signals: {e}")
+        # Configure périodiques
+        from .tasks import setup_periodic_tasks
 
-        # 2) Vérifier corptools
+        setup_periodic_tasks()
+        logger.info("FortunaIsk periodic tasks configured.")
         if not apps.is_installed("corptools"):
-            logger.warning(
-                "The 'corptools' application is not installed. "
-                "Some ticket processing functionalities will be unavailable."
-            )
-
-        # 3) Configurer systématiquement les tâches périodiques
-        try:
-            # On importe la fonction qui crée/maj les cron
-            from .tasks import setup_periodic_tasks
-
-            setup_periodic_tasks()
-            logger.info("FortunaIsk periodic tasks configured.")
-        except Exception as e:
-            logger.exception(f"Failed to configure periodic tasks: {e}")
+            logger.warning("corptools not installed; some features disabled.")

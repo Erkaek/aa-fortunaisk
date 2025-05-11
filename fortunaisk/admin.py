@@ -18,7 +18,8 @@ from django.http import HttpResponse
 from allianceauth.services.hooks import get_extension_logger
 
 from .models import AutoLottery, Lottery, TicketAnomaly, WebhookConfiguration, Winner
-from .notifications import send_alliance_auth_notification, send_discord_notification
+from .notifications import notify_alliance as send_alliance_auth_notification
+from .notifications import notify_discord_or_fallback as send_discord_notification
 
 logger = get_extension_logger(__name__)
 
