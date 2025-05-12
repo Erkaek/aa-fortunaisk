@@ -177,7 +177,6 @@ def process_payment(entry):
         lottery=lot,
         user=user,
         character=char,
-        character=char,
         defaults={
             "quantity": final,
             "amount": cost,
