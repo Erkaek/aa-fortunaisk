@@ -22,7 +22,6 @@ logger = logging.getLogger(__name__)
 
 
 def process_payment(entry):
-def process_payment(entry):
     """
     Process a single wallet payment into lottery tickets:
       1. Identify user & character.
