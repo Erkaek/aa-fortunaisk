@@ -1,10 +1,12 @@
 # fortunaisk/tasks.py
 
+# Standard Library
 import json
 import logging
 import math
 from datetime import timedelta
 
+# Third Party
 from celery import group, shared_task
 from django_celery_beat.models import PeriodicTask
 
@@ -95,7 +97,6 @@ def process_payment(entry):
             lottery_reference=ref, status__in=["active", "pending"]
         )
     except Lottery.DoesNotExist:
-        msg = f"No active lottery '{ref}'"
         TicketAnomaly.objects.create(
             lottery=None,
             user=user,
@@ -194,7 +195,6 @@ def process_payment(entry):
     # 7) Handle overpayment
     remainder = amt - cost
     if remainder > 0:
-        msg = f"Overpayment of {remainder} ISK"
         TicketAnomaly.objects.create(
             lottery=lot,
             user=user,
