@@ -1,46 +1,90 @@
 # fortunaisk/signals/notifications_signals.py
+
 # Standard Library
 import logging
 
 # Django
+from django.contrib.auth import get_user_model
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 
 # fortunaisk
-from fortunaisk.models import Lottery, ProcessedPayment, TicketAnomaly, Winner
+from fortunaisk.models import Lottery, TicketAnomaly, TicketPurchase, Winner
 from fortunaisk.notifications import build_embed, notify_discord_or_fallback
 
 logger = logging.getLogger(__name__)
 
 
 def get_admin_users_queryset():
-    # Django
-    from django.contrib.auth import get_user_model
-
     User = get_user_model()
     return User.objects.filter(groups__permissions__codename="can_admin_app").distinct()
 
 
-@receiver(post_save, sender=ProcessedPayment)
-def on_payment_processed(sender, instance, created, **kwargs):
-    if not created:
-        return
-    # fortunaisk
-    from fortunaisk.models import TicketPurchase
+# ─── TicketPurchase: track diffs & notify ──────────────────────────────────────
 
-    for pur in TicketPurchase.objects.filter(
-        payment_id=instance.payment_id, status="processed"
-    ):
-        embed = build_embed(
-            title="🍀 Ticket Purchase Confirmed",
-            description=(
-                f"Hello {pur.user.username},\n\n"
-                f"Your payment of **{pur.amount:,} ISK** for lottery **{pur.lottery.lottery_reference}** "
-                f"has been processed. You now have **{pur.quantity}** ticket(s).\n\nGood luck! 🍀"
-            ),
-            level="success",
-        )
-        notify_discord_or_fallback(users=pur.user, embed=embed, private=True)
+
+@receiver(pre_save, sender=TicketPurchase)
+def _track_ticketpurchase_old_values(sender, instance, **kwargs):
+    """
+    Avant save, on mémorise l'ancienne quantité et le montant
+    pour calculer le delta en post_save.
+    """
+    if instance.pk:
+        try:
+            old = sender.objects.get(pk=instance.pk)
+            instance._old_quantity = old.quantity
+            instance._old_amount = old.amount
+        except sender.DoesNotExist:
+            instance._old_quantity = 0
+            instance._old_amount = 0
+    else:
+        instance._old_quantity = 0
+        instance._old_amount = 0
+
+
+@receiver(post_save, sender=TicketPurchase)
+def _notify_ticketpurchase_change(sender, instance, created, **kwargs):
+    """
+    Après save, on envoie la notif Only si on a ajouté des tickets.
+    Affiche le montant et la quantité **de cette transaction**.
+    """
+    old_q = getattr(instance, "_old_quantity", 0)
+    new_q = instance.quantity
+    added_q = new_q - old_q
+
+    old_a = getattr(instance, "_old_amount", 0)
+    new_a = instance.amount
+    added_a = new_a - old_a
+
+    # Debug log pour vérifier qu'on capte bien le delta
+    logger.debug(
+        f"[notify_ticketpurchase] lot={instance.lottery.lottery_reference} "
+        f"user={instance.user.username} old_qty={old_q} new_qty={new_q} added_qty={added_q} "
+        f"old_amt={old_a} new_amt={new_a} added_amt={added_a}"
+    )
+
+    # Si aucune valeur positive ajoutée, on ne notifie pas
+    if added_q <= 0 or added_a <= 0:
+        return
+
+    embed = build_embed(
+        title="🍀 Ticket Purchase Confirmed",
+        description=(
+            f"Hello {instance.user.username},\n\n"
+            f"Your payment of **{added_a:,} ISK** for lottery "
+            f"**{instance.lottery.lottery_reference}** has been processed. "
+            f"You now have **{new_q:,}** ticket(s).\n\nGood luck! 🍀"
+        ),
+        level="success",
+    )
+    notify_discord_or_fallback(
+        users=instance.user,
+        embed=embed,
+        private=True,
+    )
+
+
+# ─── TicketAnomaly: create & resolve ──────────────────────────────────────────
 
 
 @receiver(post_save, sender=TicketAnomaly)
@@ -56,7 +100,11 @@ def on_anomaly_created(sender, instance, created, **kwargs):
             ),
             level="error",
         )
-        notify_discord_or_fallback(users=instance.user, embed=embed, private=True)
+        notify_discord_or_fallback(
+            users=instance.user,
+            embed=embed,
+            private=True,
+        )
 
 
 @receiver(post_delete, sender=TicketAnomaly)
@@ -71,7 +119,14 @@ def on_anomaly_resolved(sender, instance, **kwargs):
             ),
             level="info",
         )
-        notify_discord_or_fallback(users=instance.user, embed=embed, private=True)
+        notify_discord_or_fallback(
+            users=instance.user,
+            embed=embed,
+            private=True,
+        )
+
+
+# ─── Winner: notify on creation & distribution ───────────────────────────────
 
 
 @receiver(post_save, sender=Winner)
@@ -87,7 +142,9 @@ def on_winner_created(sender, instance, created, **kwargs):
             level="success",
         )
         notify_discord_or_fallback(
-            users=instance.ticket.user, embed=embed, private=True
+            users=instance.ticket.user,
+            embed=embed,
+            private=True,
         )
 
 
@@ -95,7 +152,10 @@ def on_winner_created(sender, instance, created, **kwargs):
 def on_prize_distributed(sender, instance, **kwargs):
     if not instance.pk:
         return
-    old = Winner.objects.get(pk=instance.pk)
+    try:
+        old = sender.objects.get(pk=instance.pk)
+    except sender.DoesNotExist:
+        return
     if not old.distributed and instance.distributed:
         embed = build_embed(
             title="🎁 Prize Distributed",
@@ -107,16 +167,21 @@ def on_prize_distributed(sender, instance, **kwargs):
             level="info",
         )
         notify_discord_or_fallback(
-            users=instance.ticket.user, embed=embed, private=True
+            users=instance.ticket.user,
+            embed=embed,
+            private=True,
         )
+
+
+# ─── Lottery lifecycle: creation & status changes ────────────────────────────
 
 
 @receiver(pre_save, sender=Lottery)
 def lottery_pre_save(sender, instance, **kwargs):
     if instance.pk:
         try:
-            instance._old_status = Lottery.objects.get(pk=instance.pk).status
-        except Lottery.DoesNotExist:
+            instance._old_status = sender.objects.get(pk=instance.pk).status
+        except sender.DoesNotExist:
             instance._old_status = None
     else:
         instance._old_status = None
@@ -125,6 +190,7 @@ def lottery_pre_save(sender, instance, **kwargs):
 @receiver(post_save, sender=Lottery)
 def lottery_post_save(sender, instance, created, **kwargs):
     admins = get_admin_users_queryset()
+
     if created:
         fields = [
             {
@@ -173,10 +239,15 @@ def lottery_post_save(sender, instance, created, **kwargs):
             fields=fields,
             level="info",
         )
-        notify_discord_or_fallback(users=admins, embed=embed, private=False)
+        notify_discord_or_fallback(
+            users=admins,
+            embed=embed,
+            private=False,
+        )
         return
 
     old, new = instance._old_status, instance.status
+
     if old == "active" and new == "pending":
         embed = build_embed(
             title="🔒 Ticket Sales Closed",
@@ -184,6 +255,7 @@ def lottery_post_save(sender, instance, created, **kwargs):
             level="warning",
         )
         notify_discord_or_fallback(users=admins, embed=embed, private=False)
+
     elif new == "completed":
         winners = list(instance.winners.select_related("ticket__user"))
         desc = (
@@ -194,9 +266,12 @@ def lottery_post_save(sender, instance, created, **kwargs):
             or "No winners."
         )
         embed = build_embed(
-            title="🏆 Lottery Completed 🏆", description=desc, level="success"
+            title="🏆 Lottery Completed 🏆",
+            description=desc,
+            level="success",
         )
         notify_discord_or_fallback(users=admins, embed=embed, private=False)
+
     elif new == "cancelled":
         embed = build_embed(
             title="🚫 Lottery Cancelled 🚫",
