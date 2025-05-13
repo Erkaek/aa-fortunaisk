@@ -146,10 +146,18 @@ def process_payment(entry):
         ).aggregate(total=Sum("quantity"))["total"]
         or 0
     )
-    allowed = lot.max_tickets_per_user or count
-    allowed = max(0, allowed - existing)
-    final = min(count, allowed)
+    count = math.floor(amt / price)
+
+    if lot.unlimited:
+        # En mode illimité on valide l'intégralité de la demande
+        final = count
+    else:
+        # Sinon on respecte la limite max_tickets_per_user
+        remaining = max(0, lot.max_tickets_per_user - existing)
+        final = min(count, remaining)
+
     if final < 1:
+        # Cas où on a atteint la limite (ou count était 0)
         TicketAnomaly.objects.create(
             lottery=lot,
             user=user,
@@ -164,8 +172,8 @@ def process_payment(entry):
             user,
             title="⚠️ Ticket Limit Reached",
             message=(
-                f"You have reached the ticket limit ({lot.max_tickets_per_user}) "
-                f"for lottery {lot.lottery_reference}."
+                f"You have reached the ticket limit "
+                f"({lot.max_tickets_per_user}) for lottery {lot.lottery_reference}."
             ),
             level="warning",
         )
