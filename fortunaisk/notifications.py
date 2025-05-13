@@ -21,35 +21,24 @@ from fortunaisk.models import WebhookConfiguration
 logger = logging.getLogger(__name__)
 
 # -------------------------------------------------------------------
-# Try to import the Discord service under both possible names,
-# then log exactly what we got and whether it's enabled.
+# Import DiscordBotService from the correct submodule
 discord_service = None
-discord_class_name = None
-
 try:
-    mod = importlib.import_module("allianceauth.services.modules.discord")
-    for candidate in ("DiscordService", "DiscordBotService"):
-        cls = getattr(mod, candidate, None)
-        if cls:
-            discord_service = cls()
-            discord_class_name = candidate
-            break
-    if discord_service:
-        logger.info(
-            "[DiscordService] loaded class=%s enabled=%s",
-            discord_class_name,
-            getattr(discord_service, "enabled", "<no-enabled-attr>"),
-        )
-    else:
-        logger.warning(
-            "[DiscordService] module found but no DiscordService/DiscordBotService class"
-        )
-except ImportError:
-    logger.warning("[DiscordService] module not installed or not in INSTALLED_APPS")
+    svc_mod = importlib.import_module("allianceauth.services.modules.discord.service")
+    DiscordBotService = getattr(svc_mod, "DiscordBotService", None)
+    if DiscordBotService is None:
+        raise ImportError("DiscordBotService class not found in service module")
+    discord_service = DiscordBotService()
+    logger.info(
+        "[DiscordService] loaded DiscordBotService, enabled=%s",
+        getattr(discord_service, "enabled", False),
+    )
+except ImportError as e:
+    discord_service = None
+    logger.warning(f"[DiscordService] could not load DiscordBotService: {e}")
 
 # -------------------------------------------------------------------
 
-# Discord embed colors
 LEVEL_COLORS = {
     "info": 0x3498DB,
     "success": 0x2ECC71,
@@ -71,15 +60,7 @@ def build_embed(
         embed["description"] = description
     if fields:
         embed["fields"] = fields
-
-    logger.debug(
-        "[build_embed] title=%r description=%r fields=%r level=%r → %r",
-        title,
-        description,
-        fields,
-        level,
-        embed,
-    )
+    logger.debug("[build_embed] %r", embed)
     return embed
 
 
@@ -89,7 +70,7 @@ def get_webhook_url() -> str:
         cfg = WebhookConfiguration.objects.first()
         url = cfg.webhook_url if cfg and cfg.webhook_url else ""
         cache.set("discord_webhook_url", url or "", 300)
-        logger.debug("[get_webhook_url] fetched from DB: %r", url)
+        logger.debug("[get_webhook_url] from DB: %r", url)
     else:
         logger.debug("[get_webhook_url] from cache: %r", url)
     return url
@@ -107,19 +88,19 @@ def send_webhook_notification(embed: dict = None, content: str = None) -> bool:
     if content:
         payload["content"] = content
 
-    logger.debug("[send_webhook] POST %s payload=%r", url, payload)
+    logger.debug("[send_webhook] POST %s %r", url, payload)
     try:
         resp = requests.post(url, json=payload, timeout=5)
         resp.raise_for_status()
-        logger.info("[send_webhook] status=%s OK", resp.status_code)
+        logger.info("[send_webhook] success status=%s", resp.status_code)
         return True
-    except Exception as e:
-        status = getattr(e, "response", None) and e.response.status_code
-        body = getattr(e, "response", None) and e.response.text
+    except Exception as exc:
+        status = getattr(exc, "response", None) and exc.response.status_code
+        body = getattr(exc, "response", None) and exc.response.text
         logger.error(
-            "[send_webhook] failed status=%s error=%s body=%r",
+            "[send_webhook] failed status=%s exc=%s body=%r",
             status,
-            e,
+            exc,
             body,
             exc_info=True,
         )
@@ -128,29 +109,23 @@ def send_webhook_notification(embed: dict = None, content: str = None) -> bool:
 
 def send_discord_dm(user, embed: dict = None, content: str = None) -> bool:
     if discord_service is None:
-        logger.warning("[send_dm] Discord service is None; cannot DM %s", user.username)
+        logger.warning("[send_dm] discord_service is None; cannot DM %s", user.username)
         return False
     if not getattr(discord_service, "enabled", False):
         logger.warning(
-            "[send_dm] Discord service '%s' disabled; cannot DM %s",
-            discord_class_name,
-            user.username,
+            "[send_dm] DiscordBotService disabled; cannot DM %s", user.username
         )
         return False
 
-    logger.debug(
-        "[send_dm] sending via %s to %s embed=%r content=%r",
-        discord_class_name,
-        user.username,
-        embed,
-        content,
-    )
+    logger.debug("[send_dm] to %s embed=%r content=%r", user.username, embed, content)
     try:
         discord_service.send_message(user=user, embed=embed, message=content or "")
         logger.info("[send_dm] queued DM to %s", user.username)
         return True
-    except Exception as e:
-        logger.error("[send_dm] exception for %s: %s", user.username, e, exc_info=True)
+    except Exception as exc:
+        logger.error(
+            "[send_dm] exception for %s: %s", user.username, exc, exc_info=True
+        )
         return False
 
 
@@ -175,12 +150,11 @@ def notify_discord_or_fallback(
         recipients = [users]
 
     logger.debug(
-        "[notify] private=%s recipients=%s title=%r message=%r embed=%r",
+        "[notify] private=%s users=%s title=%r message=%r",
         private,
         [u.username for u in recipients],
         title,
         message,
-        embed,
     )
 
     def flatten(e: dict) -> str:
@@ -193,46 +167,43 @@ def notify_discord_or_fallback(
         for user in recipients:
             ok = send_discord_dm(user=user, embed=embed, content=message)
             if not ok:
-                fallback = message or (embed and flatten(embed)) or ""
+                fb = message or (embed and flatten(embed)) or ""
                 logger.info(
-                    "[notify][fallback] DM failed for %s, AllianceAuth → %r",
+                    "[notify][fallback] DM failed for %s; AllianceAuth → %r",
                     user.username,
-                    fallback,
+                    fb,
                 )
                 alliance_notify(
                     user=user,
                     title=title or (embed.get("title") if embed else "Notification"),
-                    message=fallback,
+                    message=fb,
                     level=level,
                 )
         return
 
-    # public
+    # Public path
     if embed or message:
         if send_webhook_notification(embed=embed, content=message):
-            logger.debug("[notify] public webhook succeeded")
             return
-        logger.warning("[notify] public webhook failed, fallback per-user")
+        logger.warning("[notify] public webhook failed; falling back per-user")
 
-    fallback = message or ""
+    fb = message or ""
     if embed and not message:
-        fallback = flatten(embed)
+        fb = flatten(embed)
 
     for user in recipients:
-        logger.debug(
-            "[notify][fallback] AllianceAuth → %s : %r", user.username, fallback
-        )
+        logger.debug("[notify][fallback] AllianceAuth to %s → %r", user.username, fb)
         try:
             alliance_notify(
                 user=user,
                 title=title or (embed.get("title") if embed else "Notification"),
-                message=fallback,
+                message=fb,
                 level=level,
             )
             logger.info("[notify][fallback] sent to %s", user.username)
-        except Exception as e:
+        except Exception as exc:
             logger.error(
-                "[notify][fallback] error for %s: %s", user.username, e, exc_info=True
+                "[notify][fallback] error for %s: %s", user.username, exc, exc_info=True
             )
 
 
@@ -243,7 +214,7 @@ def notify_alliance(user, title: str, message: str, level: str = "info"):
     try:
         alliance_notify(user=user, title=title, message=message, level=level)
         logger.info("[notify_alliance] sent to %s", user.username)
-    except Exception as e:
+    except Exception as exc:
         logger.error(
-            "[notify_alliance] error for %s: %s", user.username, e, exc_info=True
+            "[notify_alliance] error for %s: %s", user.username, exc, exc_info=True
         )
