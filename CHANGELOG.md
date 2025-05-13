@@ -2,6 +2,21 @@
 
 All notable changes to **FortunaISK** are documented in this file.
 
+## [0.6.6] – 2025-05-13
+
+### Added
+- Integration of **aa-discordnotify** via `DiscordProxyClient` for private Discord DM notifications  
+
+### Changed
+- Bump version to **0.6.6** in `fortunaisk/__init__.py` and `pyproject.toml`  
+- Refactor `fortuna­isk/notifications.py` to replace manual `DiscordBotService` loading with `DiscordProxyClient`, enhance logging, and simplify code  
+- Update `requirements.txt` to include the `aa-discordnotify` dependency  
+- Streamline `CHANGELOG.md` to a Keep a Changelog–compliant format  
+- Update `README.md` to document the use of the Discord notify module for private messages  
+
+:contentReference[oaicite:0]{index=0}  
+::contentReference[oaicite:1]{index=1}
+
 ## [0.2.36] – 2025-01-02
 ### Changed
 - Bumped package version to **0.2.36** :contentReference[oaicite:0]{index=0}
