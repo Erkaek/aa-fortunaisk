@@ -12,14 +12,25 @@ from django.core.cache import cache
 from django.db.models import QuerySet
 
 # Alliance Auth
+# AllianceAuth notifications
 from allianceauth.notifications import notify as alliance_notify
 
+# AllianceAuth Discord service (for DMs)
+try:
+    # Alliance Auth
+    from allianceauth.services.modules.discord import DiscordBotService
+
+    discord_service = DiscordBotService()
+except ImportError:
+    discord_service = None
+
 # fortunaisk
+# fortunaisk models
 from fortunaisk.models import WebhookConfiguration
 
 logger = logging.getLogger(__name__)
 
-# Discord embed colors per level
+# Discord embed colors by level
 LEVEL_COLORS = {
     "info": 0x3498DB,  # blue
     "success": 0x2ECC71,  # green
@@ -29,10 +40,13 @@ LEVEL_COLORS = {
 
 
 def build_embed(
-    title: str, description: str = None, fields: list[dict] = None, level: str = "info"
+    title: str,
+    description: str = None,
+    fields: list[dict] = None,
+    level: str = "info",
 ) -> dict:
     """
-    Build a Discord embed payload with a timestamp, color, optional description and fields.
+    Build a Discord embed payload with timestamp, color, optional description and fields.
     """
     embed = {
         "title": title,
@@ -61,15 +75,15 @@ def get_webhook_url() -> str:
 
 def send_webhook_notification(embed: dict = None, content: str = None) -> bool:
     """
-    Send an embed or plain content via Discord webhook.
+    Send an embed or plain content via the public Discord webhook.
     Returns True on HTTP 2xx, False otherwise.
     """
     url = get_webhook_url()
     if not url:
-        logger.warning("Discord webhook not configured; skipping public announcement.")
+        logger.warning("Discord webhook not configured; skipping public notification.")
         return False
 
-    payload: dict = {}
+    payload = {}
     if embed:
         payload["embeds"] = [embed]
     if content:
@@ -78,10 +92,33 @@ def send_webhook_notification(embed: dict = None, content: str = None) -> bool:
     try:
         resp = requests.post(url, json=payload, timeout=5)
         resp.raise_for_status()
-        logger.info("Discord webhook message sent successfully.")
+        logger.info("Public Discord webhook message sent successfully.")
         return True
     except Exception as e:
-        logger.error(f"Failed to send Discord webhook message: {e}", exc_info=True)
+        logger.error(
+            f"Failed to send public Discord webhook message: {e}", exc_info=True
+        )
+        return False
+
+
+def send_discord_dm(user, embed: dict = None, message: str = None) -> bool:
+    """
+    Attempt to send a private Discord DM via the AllianceAuth Discord bot service.
+    Returns True if the message was queued, False otherwise.
+    """
+    if discord_service is None:
+        logger.warning("Discord service not available; cannot send DM.")
+        return False
+
+    try:
+        # The service takes user, embed, and/or message
+        discord_service.send_message(user=user, embed=embed, message=message or "")
+        logger.info(f"[Discord DM] Queued DM to {user.username}")
+        return True
+    except Exception as e:
+        logger.error(
+            f"[Discord DM] Failed to send DM to {user.username}: {e}", exc_info=True
+        )
         return False
 
 
@@ -97,25 +134,19 @@ def notify_discord_or_fallback(
     """
     Notify one or more users.
 
-    - If private=True → skip public webhook entirely, send only per-user via AllianceAuth.
+    - If private=True:
+        1) Attempt a Discord DM via the AllianceAuth Discord bot.
+        2) If that fails, fallback to AllianceAuth internal notifications.
     - Else:
-      1) Send a single public webhook announcement (embed or message).
-      2) If that fails (or if private=True), send per-user AllianceAuth notifications.
-
-    Parameters:
-    - users: User | QuerySet[User] | list[User]
-    - title: title for the embed or AllianceAuth fallback
-    - message: plain-text content
-    - embed: full Discord embed dict (if provided, overrides title/message)
-    - level: one of 'info','success','warning','error' (for embed color & AllianceAuth level)
-    - private: bool, if True do not attempt webhook at all
+        1) Send a public webhook announcement (embed or message).
+        2) If that fails, fallback per-user to AllianceAuth notifications.
     """
-    # build minimal embed if none provided
+    # Build a minimal embed if only title/message provided
     if embed is None and title:
         embed = build_embed(title=title, description=message, level=level)
         message = None
 
-    # normalize recipients to list
+    # Normalize recipients to a list
     if isinstance(users, QuerySet):
         recipients = list(users)
     elif isinstance(users, (list, tuple)):
@@ -123,39 +154,50 @@ def notify_discord_or_fallback(
     else:
         recipients = [users]
 
-    # 1) Public webhook
-    sent_webhook = False
-    if not private and (embed or message):
-        sent_webhook = send_webhook_notification(embed=embed, content=message)
+    def extract_text_from_embed(e: dict) -> str:
+        """
+        Flatten embed description and fields into plain text.
+        """
+        text = e.get("description", "") or ""
+        if not text and e.get("fields"):
+            text = "\n".join(f"{f['name']}: {f['value']}" for f in e["fields"])
+        return text
 
-    # 2) Per-user fallback via AllianceAuth
-    #    If webhook succeeded and not private, skip individual notifications.
-    if sent_webhook and not private:
+    # Private notifications: Discord DM then fallback
+    if private:
+        for user in recipients:
+            success = send_discord_dm(user=user, embed=embed, message=message)
+            if not success:
+                fallback_msg = message or extract_text_from_embed(embed or {})
+                alliance_notify(
+                    user=user,
+                    title=title or (embed.get("title") if embed else "Notification"),
+                    message=fallback_msg,
+                    level=level,
+                )
+                logger.info(
+                    f"[Fallback] AllianceAuth notification sent to {user.username}"
+                )
         return
 
-    # assemble fallback message from embed if needed
-    if message:
-        fallback_message = message
-    elif embed:
-        # prefer description
-        fallback_message = embed.get("description", "")
-        # if no description, flatten fields
-        if not fallback_message and embed.get("fields"):
-            lines = []
-            for f in embed["fields"]:
-                name = f.get("name", "")
-                val = f.get("value", "")
-                lines.append(f"{name}: {val}")
-            fallback_message = "\n".join(lines)
-    else:
-        fallback_message = ""
+    # Public notification via webhook
+    sent = False
+    if embed or message:
+        sent = send_webhook_notification(embed=embed, content=message)
 
+    if sent:
+        return
+
+    # Fallback to AllianceAuth for public announcements
+    fallback_msg = message or ""
+    if embed and not message:
+        fallback_msg = extract_text_from_embed(embed)
     for user in recipients:
         try:
             alliance_notify(
                 user=user,
                 title=title or (embed.get("title") if embed else "Notification"),
-                message=fallback_message,
+                message=fallback_msg,
                 level=level,
             )
             logger.info(f"AllianceAuth notification sent to {user.username}")
@@ -167,7 +209,7 @@ def notify_discord_or_fallback(
 
 def notify_alliance(user, title: str, message: str, level: str = "info"):
     """
-    Send a single notification via AllianceAuth's built-in system.
+    Send a single notification via AllianceAuth's internal system.
     """
     try:
         alliance_notify(user=user, title=title, message=message, level=level)
