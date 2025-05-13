@@ -146,18 +146,25 @@ def process_payment(entry):
         ).aggregate(total=Sum("quantity"))["total"]
         or 0
     )
-    count = math.floor(amt / price)
+    count = math.floor(amt / lot.ticket_price)
 
-    if lot.unlimited:
-        # En mode illimité on valide l'intégralité de la demande
+    # LOG : on vérifie qu’on détecte bien l’absence ou la présence de limite
+    logger.debug(
+        f"[process_payment] lottery={lot.lottery_reference} "
+        f"max_per_user={lot.max_tickets_per_user!r} "
+        f"existing={existing} count={count}"
+    )
+
+    # Si max_tickets_per_user est None ou 0 → on est en mode illimité
+    if not lot.max_tickets_per_user:
         final = count
     else:
-        # Sinon on respecte la limite max_tickets_per_user
+        # sinon on calcule le reste autorisé
         remaining = max(0, lot.max_tickets_per_user - existing)
         final = min(count, remaining)
 
+    # Si on ne peut pas valider au moins 1 ticket, on déclenche l’anomalie
     if final < 1:
-        # Cas où on a atteint la limite (ou count était 0)
         TicketAnomaly.objects.create(
             lottery=lot,
             user=user,

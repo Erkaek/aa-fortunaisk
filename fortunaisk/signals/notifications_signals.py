@@ -1,23 +1,36 @@
 # fortunaisk/signals/notifications_signals.py
+# Standard Library
 import logging
-from django.db.models.signals import pre_save, post_delete, post_save
+
+# Django
+from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
+
+# fortunaisk
 from fortunaisk.models import Lottery, ProcessedPayment, TicketAnomaly, Winner
 from fortunaisk.notifications import build_embed, notify_discord_or_fallback
 
 logger = logging.getLogger(__name__)
 
+
 def get_admin_users_queryset():
+    # Django
     from django.contrib.auth import get_user_model
+
     User = get_user_model()
     return User.objects.filter(groups__permissions__codename="can_admin_app").distinct()
+
 
 @receiver(post_save, sender=ProcessedPayment)
 def on_payment_processed(sender, instance, created, **kwargs):
     if not created:
         return
+    # fortunaisk
     from fortunaisk.models import TicketPurchase
-    for pur in TicketPurchase.objects.filter(payment_id=instance.payment_id, status="processed"):
+
+    for pur in TicketPurchase.objects.filter(
+        payment_id=instance.payment_id, status="processed"
+    ):
         embed = build_embed(
             title="🍀 Ticket Purchase Confirmed",
             description=(
@@ -28,6 +41,7 @@ def on_payment_processed(sender, instance, created, **kwargs):
             level="success",
         )
         notify_discord_or_fallback(users=pur.user, embed=embed, private=True)
+
 
 @receiver(post_save, sender=TicketAnomaly)
 def on_anomaly_created(sender, instance, created, **kwargs):
@@ -44,6 +58,7 @@ def on_anomaly_created(sender, instance, created, **kwargs):
         )
         notify_discord_or_fallback(users=instance.user, embed=embed, private=True)
 
+
 @receiver(post_delete, sender=TicketAnomaly)
 def on_anomaly_resolved(sender, instance, **kwargs):
     if instance.user:
@@ -58,6 +73,7 @@ def on_anomaly_resolved(sender, instance, **kwargs):
         )
         notify_discord_or_fallback(users=instance.user, embed=embed, private=True)
 
+
 @receiver(post_save, sender=Winner)
 def on_winner_created(sender, instance, created, **kwargs):
     if created:
@@ -70,7 +86,10 @@ def on_winner_created(sender, instance, created, **kwargs):
             ),
             level="success",
         )
-        notify_discord_or_fallback(users=instance.ticket.user, embed=embed, private=True)
+        notify_discord_or_fallback(
+            users=instance.ticket.user, embed=embed, private=True
+        )
+
 
 @receiver(pre_save, sender=Winner)
 def on_prize_distributed(sender, instance, **kwargs):
@@ -87,7 +106,10 @@ def on_prize_distributed(sender, instance, **kwargs):
             ),
             level="info",
         )
-        notify_discord_or_fallback(users=instance.ticket.user, embed=embed, private=True)
+        notify_discord_or_fallback(
+            users=instance.ticket.user, embed=embed, private=True
+        )
+
 
 @receiver(pre_save, sender=Lottery)
 def lottery_pre_save(sender, instance, **kwargs):
@@ -99,20 +121,51 @@ def lottery_pre_save(sender, instance, **kwargs):
     else:
         instance._old_status = None
 
+
 @receiver(post_save, sender=Lottery)
 def lottery_post_save(sender, instance, created, **kwargs):
     admins = get_admin_users_queryset()
     if created:
         fields = [
-            {"name": "📌 Reference", "value": instance.lottery_reference, "inline": False},
-            {"name": "📅 End Date", "value": instance.end_date.strftime("%Y-%m-%d %H:%M:%S"), "inline": False},
-            {"name": "💰 Ticket Price", "value": f"{instance.ticket_price:,} ISK", "inline": False},
-            {"name": "🎟️ Max Tickets / User", "value": str(instance.max_tickets_per_user or "Unlimited"), "inline": False},
-            {"name": "🔑 Payment Receiver", "value": str(instance.payment_receiver), "inline": False},
-            {"name": "🏆 # of Winners", "value": str(instance.winner_count), "inline": False},
-            {"name": "📊 Prize Distribution", "value": "\n".join(
-                f"• Winner {i+1}: {p}%" for i, p in enumerate(instance.winners_distribution or [])
-            ) or "None", "inline": False},
+            {
+                "name": "📌 Reference",
+                "value": instance.lottery_reference,
+                "inline": False,
+            },
+            {
+                "name": "📅 End Date",
+                "value": instance.end_date.strftime("%Y-%m-%d %H:%M:%S"),
+                "inline": False,
+            },
+            {
+                "name": "💰 Ticket Price",
+                "value": f"{instance.ticket_price:,} ISK",
+                "inline": False,
+            },
+            {
+                "name": "🎟️ Max Tickets / User",
+                "value": str(instance.max_tickets_per_user or "Unlimited"),
+                "inline": False,
+            },
+            {
+                "name": "🔑 Payment Receiver",
+                "value": str(instance.payment_receiver),
+                "inline": False,
+            },
+            {
+                "name": "🏆 # of Winners",
+                "value": str(instance.winner_count),
+                "inline": False,
+            },
+            {
+                "name": "📊 Prize Distribution",
+                "value": "\n".join(
+                    f"• Winner {i+1}: {p}%"
+                    for i, p in enumerate(instance.winners_distribution or [])
+                )
+                or "None",
+                "inline": False,
+            },
         ]
         embed = build_embed(
             title="✨ New Lottery Created! ✨",
@@ -133,8 +186,16 @@ def lottery_post_save(sender, instance, created, **kwargs):
         notify_discord_or_fallback(users=admins, embed=embed, private=False)
     elif new == "completed":
         winners = list(instance.winners.select_related("ticket__user"))
-        desc = "\n".join(f"• {w.ticket.user.username}: **{w.prize_amount:,} ISK**" for w in winners) or "No winners."
-        embed = build_embed(title="🏆 Lottery Completed 🏆", description=desc, level="success")
+        desc = (
+            "\n".join(
+                f"• {w.ticket.user.username}: **{w.prize_amount:,} ISK**"
+                for w in winners
+            )
+            or "No winners."
+        )
+        embed = build_embed(
+            title="🏆 Lottery Completed 🏆", description=desc, level="success"
+        )
         notify_discord_or_fallback(users=admins, embed=embed, private=False)
     elif new == "cancelled":
         embed = build_embed(

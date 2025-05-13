@@ -1,28 +1,36 @@
 # fortunaisk/notifications.py
 
+# Standard Library
 import logging
-import requests
 from datetime import datetime
 
+# Third Party
+import requests
+
+# Django
 from django.core.cache import cache
 from django.db.models import QuerySet
 
+# Alliance Auth
 from allianceauth.notifications import notify as alliance_notify
 
+# fortunaisk
 from fortunaisk.models import WebhookConfiguration
 
 logger = logging.getLogger(__name__)
 
 # Couleurs Discord embed par niveau
 LEVEL_COLORS = {
-    "info":    0x3498DB,  # bleu
+    "info": 0x3498DB,  # bleu
     "success": 0x2ECC71,  # vert
     "warning": 0xF1C40F,  # jaune
-    "error":   0xE74C3C,  # rouge
+    "error": 0xE74C3C,  # rouge
 }
 
 
-def build_embed(title: str, description: str = None, fields: list[dict] = None, level: str = "info") -> dict:
+def build_embed(
+    title: str, description: str = None, fields: list[dict] = None, level: str = "info"
+) -> dict:
     """
     Construit un payload Discord embed (public webhook ou DM).
     """
@@ -78,8 +86,14 @@ def send_webhook_notification(embed: dict = None, content: str = None) -> bool:
         return True
     except Exception as exc:
         status = getattr(exc, "response", None) and exc.response.status_code
-        body   = getattr(exc, "response", None) and exc.response.text
-        logger.error("[send_webhook] failed status=%s body=%r exc=%s", status, body, exc, exc_info=True)
+        body = getattr(exc, "response", None) and exc.response.text
+        logger.error(
+            "[send_webhook] failed status=%s body=%r exc=%s",
+            status,
+            body,
+            exc,
+            exc_info=True,
+        )
         return False
 
 
@@ -127,7 +141,11 @@ def notify_discord_or_fallback(
                 message=fb,
                 level=level,
             )
-            logger.info("[notify][private] queued AA notification for %s: %r", u.username, title or fb)
+            logger.info(
+                "[notify][private] queued AA notification for %s: %r",
+                u.username,
+                title or fb,
+            )
         return
 
     # 4) Public path → webhook
@@ -148,7 +166,9 @@ def notify_discord_or_fallback(
             )
             logger.info("[notify][fallback] sent AA notif to %s: %r", u.username, fb)
         except Exception as exc:
-            logger.error("[notify][fallback] error for %s: %s", u.username, exc, exc_info=True)
+            logger.error(
+                "[notify][fallback] error for %s: %s", u.username, exc, exc_info=True
+            )
 
 
 def notify_alliance(user, title: str, message: str, level: str = "info"):
@@ -159,4 +179,6 @@ def notify_alliance(user, title: str, message: str, level: str = "info"):
         alliance_notify(user=user, title=title, message=message, level=level)
         logger.info("[notify_alliance] sent to %s", user.username)
     except Exception as exc:
-        logger.error("[notify_alliance] failed for %s: %s", user.username, exc, exc_info=True)
+        logger.error(
+            "[notify_alliance] failed for %s: %s", user.username, exc, exc_info=True
+        )

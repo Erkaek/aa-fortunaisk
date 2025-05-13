@@ -1,16 +1,22 @@
 # fortunaisk/signals/autolottery_signals.py
 
+# Standard Library
 import json
 import logging
 
+# Third Party
 from django_celery_beat.models import IntervalSchedule, PeriodicTask
+
+# Django
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
+# fortunaisk
 from fortunaisk.models import AutoLottery
 from fortunaisk.notifications import build_embed, notify_discord_or_fallback
 
 logger = logging.getLogger(__name__)
+
 
 @receiver(post_save, sender=AutoLottery)
 def create_or_update_auto_lottery_cron(sender, instance, created, **kwargs):
@@ -58,6 +64,7 @@ def create_or_update_auto_lottery_cron(sender, instance, created, **kwargs):
             logger.info(f"Deleted cron '{name}' (deactivated)")
         except PeriodicTask.DoesNotExist:
             pass
+
 
 @receiver(post_delete, sender=AutoLottery)
 def delete_auto_lottery_cron(sender, instance, **kwargs):
