@@ -6,7 +6,7 @@ requires = [
 
 [project]
 name = "fortunaisk"
-version = "0.6.5"
+version = "0.6.6"
 description = "fortunaisk Plugin for Alliance Auth"
 readme = "README.md"
 keywords = [
@@ -43,6 +43,7 @@ classifiers = [
 dependencies = [
     "allianceauth>=4,<5",
     "allianceauth-corptools>=2.5.5",
+    "aa-discordnotify>=2.0.0",
 ]
 urls.Home = "https://github.com/Erkaek/aa-fortunaisk"
 urls.Source = "https://github.com/Erkaek/aa-fortunaisk"

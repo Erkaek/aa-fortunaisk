@@ -1,2 +1,4 @@
 # fortunaisk/requirements.txt
--e git+https://cd8b1324f4072cb67f7929514ac181b3faf4054c@github.com/pvyParts/allianceauth-corp-tools.git#egg=corptools
++-e git+https://cd8b1324f4072cb67f7929514ac181b3faf4054c@github.com/pvyParts/allianceauth-corp-tools.git#egg=corptools
++aa-discordnotify>=2.0.0 
++requests>=2.28

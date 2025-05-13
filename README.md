@@ -41,6 +41,7 @@ ______________________________________________________________________
 
 - [Alliance Auth](https://allianceauth.readthedocs.io/en/v4.5.0/) >=V4
 - [Alliance Auth Corp Tools](https://github.com/pvyParts/allianceauth-corp-tools)
+- [Discord notify](https://apps.allianceauth.org/apps/detail/aa-discordnotify) for Discord MP
 - Django Celery and Django Celery Beat for task scheduling.
 
 ______________________________________________________________________
