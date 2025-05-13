@@ -306,6 +306,7 @@ def lottery(request):
                 "remaining_tickets": remaining,
                 "tickets_percentage": min(pct, 100),
                 "instructions": instructions,
+                "corporation_name": getattr(lot.payment_receiver, "corporation_name", "Unknown"),
             }
         )
 
