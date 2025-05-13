@@ -26,16 +26,13 @@ discord_service = None
 try:
     svc_mod = importlib.import_module("allianceauth.services.modules.discord.service")
     DiscordBotService = getattr(svc_mod, "DiscordBotService", None)
-    if DiscordBotService is None:
-        raise ImportError("DiscordBotService class not found in service module")
+    if not DiscordBotService:
+        raise ImportError("DiscordBotService class missing")
     discord_service = DiscordBotService()
-    logger.info(
-        "[DiscordService] loaded DiscordBotService, enabled=%s",
-        getattr(discord_service, "enabled", False),
-    )
+    logger.info("[DiscordService] loaded, enabled=%s", discord_service.enabled)
 except ImportError as e:
     discord_service = None
-    logger.warning(f"[DiscordService] could not load DiscordBotService: {e}")
+    logger.warning("[DiscordService] could not load: %s", e)
 
 # -------------------------------------------------------------------
 
@@ -108,8 +105,13 @@ def send_webhook_notification(embed: dict = None, content: str = None) -> bool:
 
 
 def send_discord_dm(user, embed: dict = None, content: str = None) -> bool:
-    if discord_service is None:
-        logger.warning("[send_dm] discord_service is None; cannot DM %s", user.username)
+    if not discord_service or not getattr(discord_service, "enabled", False):
+        logger.warning(
+            "[send_dm] DiscordBotService not ready (instance=%r enabled=%s); cannot DM %s",
+            discord_service,
+            getattr(discord_service, "enabled", None),
+            user.username,
+        )
         return False
     if not getattr(discord_service, "enabled", False):
         logger.warning(
