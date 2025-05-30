@@ -2,10 +2,12 @@
 
 # Standard Library
 import logging
+import sys
 from importlib import import_module
 
 # Django
 from django.apps import AppConfig, apps
+from django.db import connection
 
 logger = logging.getLogger(__name__)
 
@@ -34,20 +36,39 @@ class FortunaIskConfig(AppConfig):
             Logs exceptions if signal loading fails but doesn't halt startup
         """
         super().ready()
+        
         # Load signals
         try:
             # fortunaisk
             import_module("fortunaisk.signals")
-
             logger.info("FortunaIsk signals loaded.")
         except Exception as e:
             logger.exception(f"Error loading signals: {e}")
 
-        # Configure periodic tasks
-        from .tasks import setup_periodic_tasks
+        # Do not configure tasks during tests or migrations
+        if 'test' in sys.argv or 'runtests.py' in sys.argv[0]:
+            logger.info("Skipping periodic tasks setup during tests.")
+            return
+            
+        if 'migrate' in sys.argv or 'makemigrations' in sys.argv:
+            logger.info("Skipping periodic tasks setup during migrations.")
+            return
 
-        setup_periodic_tasks()
-        logger.info("FortunaIsk periodic tasks configured.")
+        # Check that Celery Beat tables exist
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT 1 FROM django_celery_beat_crontabschedule LIMIT 1")
+        except Exception as e:
+            logger.warning(f"Celery Beat tables not available, skipping periodic tasks setup: {e}")
+            return
+
+        # Configure periodic tasks
+        try:
+            from .tasks import setup_periodic_tasks
+            setup_periodic_tasks()
+            logger.info("FortunaIsk periodic tasks configured.")
+        except Exception as e:
+            logger.exception(f"Error setting up periodic tasks: {e}")
 
         # Check dependencies
         if not apps.is_installed("corptools"):
