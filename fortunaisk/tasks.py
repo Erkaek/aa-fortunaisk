@@ -226,13 +226,15 @@ def process_payment(entry):
             payed_at=date,
         )
         notify_discord_or_fallback(
-            user,
+            user=[user],
+            event="ticket_limit_reached",
             title="⚠️ Ticket Limit Reached",
             message=(
                 f"You have reached the ticket limit "
                 f"({lot.max_tickets_per_user}) for lottery {lot.lottery_reference}."
             ),
             level="warning",
+            private=True,
         )
         return
 

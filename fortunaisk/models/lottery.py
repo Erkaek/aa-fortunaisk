@@ -27,6 +27,7 @@ class Lottery(models.Model):
     ]
     STATUS_CHOICES = [
         ("active", "Active"),
+        ("pending", "Pending"),
         ("completed", "Completed"),
         ("cancelled", "Cancelled"),
     ]
