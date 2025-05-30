@@ -11,24 +11,28 @@ ______________________________________________________________________
 ## ✨ Features
 
 ### 🎲 **Easy Lottery Participation**
+
 - **Simple ISK Transfer System** - Just send money with the lottery reference in the reason
 - **Real-time Ticket Tracking** - Monitor your purchases and remaining allowances
 - **Personal Dashboard** - Complete history of tickets, winnings, and payments
 - **Automatic Notifications** - Get notified instantly when you win
 
 ### 🏆 **Flexible Prize Distribution**
+
 - **Multi-winner Support** - Configure multiple winners per lottery
 - **Custom Prize Percentages** - Set exact prize distribution for each winner
 - **Automated Calculations** - System handles all prize calculations automatically
 - **Transparent Results** - Public winner announcements with full details
 
 ### ⚡ **Automated Management**
+
 - **Recurring Lotteries** - Set up lotteries that run automatically on schedule
 - **Smart Payment Processing** - Automated validation and anomaly detection
 - **Lifecycle Management** - Automatic transitions from active to completed
 - **24-hour Reminders** - Automated closure notifications
 
 ### 📊 **Administrative Excellence**
+
 - **Rich Admin Dashboard** - Real-time statistics and system monitoring
 - **Anomaly Resolution** - Advanced tools to handle payment discrepancies
 - **Prize Distribution Tracking** - Monitor and confirm prize deliveries
@@ -36,6 +40,7 @@ ______________________________________________________________________
 - **CSV Export** - Export participant and winner data
 
 ### 🔔 **Discord Integration**
+
 - **Rich Notifications** - Beautiful embeds for all lottery events
 - **Winner Announcements** - Automatic celebration of lottery results
 - **Admin Alerts** - Immediate notification of anomalies or issues
@@ -48,7 +53,6 @@ ______________________________________________________________________
 - **Alliance Auth** v4.0+
 - **[Alliance Auth Corp Tools](https://github.com/pvyParts/allianceauth-corp-tools)** - For wallet integration
 - **[AA Discord Notify](https://apps.allianceauth.org/apps/detail/aa-discordnotify)** (Optional) - For Discord notifications
-- **Redis** (Recommended) - For optimal performance with multiple users
 
 ______________________________________________________________________
 
@@ -67,15 +71,15 @@ Add the following to your Alliance Auth's `local.py`:
 ```python
 # Add to INSTALLED_APPS
 INSTALLED_APPS += [
-    'fortunaisk',
+    "fortunaisk",
 ]
 ```
 
 ### Step 3 - Finalize Installation
 
 ```bash
-python manage.py collectstatic
 python manage.py migrate
+python manage.py collectstatic
 ```
 
 Restart your Alliance Auth instance:
@@ -88,10 +92,10 @@ supervisorctl restart all
 
 Visit your admin interface and assign permissions to appropriate groups:
 
-| Permission | Purpose |
-|------------|---------|
+| Permission                            | Purpose                     |
+| ------------------------------------- | --------------------------- |
 | `fortunaisk \| Can access FortunaISK` | Basic lottery participation |
-| `fortunaisk \| Can admin FortunaISK` | Full administrative access |
+| `fortunaisk \| Can admin FortunaISK`  | Full administrative access  |
 
 ### Step 5 - Configure Discord (Optional)
 
@@ -104,29 +108,68 @@ ______________________________________________________________________
 ### For Players
 
 1. **🔍 Find Active Lotteries** - Check the lottery page to see what's currently running
-2. **🎫 Buy Tickets** - Send ISK to the specified corporation with the lottery reference in the reason
-3. **📊 Track Progress** - Monitor your tickets and see real-time lottery statistics
-4. **🏆 Check Results** - Winners are announced automatically via Discord and notifications
+1. **🎫 Buy Tickets** - Send ISK to the specified corporation with the lottery reference in the reason
+1. **📊 Track Progress** - Monitor your tickets and see real-time lottery statistics
+1. **🏆 Check Results** - Winners are announced automatically via Discord and notifications
 
 ### For Administrators
 
 1. **➕ Create Lotteries** - Set ticket prices, duration, winners, and prize distribution
-2. **🔄 Setup Recurring Lotteries** - Configure automated lotteries that repeat on schedule
-3. **📈 Monitor Activity** - Watch real-time participant counts and revenue tracking
-4. **🔧 Resolve Issues** - Use advanced tools to handle payment anomalies
-5. **💰 Distribute Prizes** - Track and confirm prize distributions to winners
+1. **🔄 Setup Recurring Lotteries** - Configure automated lotteries that repeat on schedule
+1. **📈 Monitor Activity** - Watch real-time participant counts and revenue tracking
+1. **🔧 Resolve Issues** - Use advanced tools to handle payment anomalies
+1. **💰 Distribute Prizes** - Track and confirm prize distributions to winners
 
 ______________________________________________________________________
 
 ## 📸 Screenshots
 
-*Coming soon - Screenshots of the main interface, admin dashboard, and user features*
+### 🎲 User Experience
+
+**FortunaISK in Action**
+![FortunaISK Overview](docs/screenshots/fortunaisk_home_page.gif)
+*Complete lottery system overview - from participation to winner announcement*
+
+**Personal Dashboard**
+![User Dashboard](docs/screenshots/fortunaisk_user_dashboard_page.png)
+*Track your ticket purchases, winnings, and payment history*
+
+**Lottery History**
+![Lottery History](docs/screenshots/fortunaisk_lottery_history_page.png)
+*Browse past lotteries with detailed results and statistics*
+
+### 🛠️ Admin Interface
+
+**Admin Dashboard**
+![Admin Dashboard](docs/screenshots/fortunaisk_admin_dashboard_page.png)
+*Comprehensive admin control center with real-time statistics and monitoring*
+
+**Lottery Details**
+![Lottery Details](docs/screenshots/fortunaisk_lottery_details_page.png)
+*Detailed lottery management with participant tracking and anomaly resolution*
+
+### 🏆 Results & Winners
+
+**Winner Announcements**
+![Winner Results](docs/screenshots/fortunaisk_winner_page.png)
+*Transparent winner displays with complete prize distribution details*
+
+### 🔔 Discord Integration
+
+**New Lottery Notifications**
+![New Lottery Discord](docs/screenshots/fortunaisk_new_lottery_discord_embed.png)
+*Rich Discord embeds announcing new lotteries to your community*
+
+**Closure Reminders**
+![24h Reminder Discord](docs/screenshots/fortunaisk_24h_remind_closure_discord.png)
+*Automated 24-hour closure reminders to boost participation*
 
 ______________________________________________________________________
 
 ## 🆕 Latest Updates
 
 ### Version 1.0.0 - Stable Release! 🎉
+
 - ✅ Multi-winner lottery support with custom prize distribution
 - ✅ Automated recurring lotteries with flexible scheduling
 - ✅ Enhanced admin dashboard with real-time statistics
@@ -136,10 +179,8 @@ ______________________________________________________________________
 - ✅ Complete audit trails and security improvements
 
 ### What's Coming Next
-- 🔄 Enhanced Memberaudit compatibility
+
 - 🎁 Physical prize lottery support
-- 📱 Mobile interface improvements
-- 📊 Advanced analytics dashboard
 
 ______________________________________________________________________
 
@@ -168,10 +209,10 @@ ______________________________________________________________________
 We welcome contributions! Whether it's bug fixes, new features, or documentation improvements:
 
 1. **🍴 Fork** the repository
-2. **🌿 Create** your feature branch: `git checkout -b feature/amazing-feature`
-3. **📝 Commit** your changes: `git commit -m 'Add amazing feature'`
-4. **🚀 Push** to the branch: `git push origin feature/amazing-feature`
-5. **📬 Submit** a pull request
+1. **🌿 Create** your feature branch: `git checkout -b feature/amazing-feature`
+1. **📝 Commit** your changes: `git commit -m 'Add amazing feature'`
+1. **🚀 Push** to the branch: `git push origin feature/amazing-feature`
+1. **📬 Submit** a pull request
 
 For major changes, please open an issue first to discuss your ideas.
 

@@ -58,7 +58,7 @@ All notable changes to **FortunaISK** are documented in this file.
 - **Caching implementation** for improved response times
 - **Background task optimization** for better scalability
 
----
+______________________________________________________________________
 
 ## [0.6.6] – 2025-05-13
 
