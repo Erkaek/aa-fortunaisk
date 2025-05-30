@@ -1,6 +1,10 @@
 # Standard Library
 from decimal import Decimal
 
+# Third Party
+# Corp Tools
+from corptools.models import CorporationWalletJournalEntry
+
 # Django
 from django import forms
 from django.core.exceptions import ValidationError
@@ -8,9 +12,6 @@ from django.utils.translation import gettext as _
 
 # Alliance Auth
 from allianceauth.eveonline.models import EveCorporationInfo
-
-# Corp Tools
-from corptools.models import CorporationWalletJournalEntry
 
 # fortunaisk
 from fortunaisk.models import AutoLottery
@@ -26,27 +27,29 @@ class AutoLotteryForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        
+
         # Récupérer les corporations avec accès wallet
         available_corps = EveCorporationInfo.objects.filter(
             corporation_id__in=CorporationWalletJournalEntry.objects.filter(
                 second_party_name_id__isnull=False
-            ).values_list('second_party_name_id', flat=True).distinct()
+            )
+            .values_list("second_party_name_id", flat=True)
+            .distinct()
         )
-        
+
         if available_corps.exists():
-            self.fields['payment_receiver'].queryset = available_corps
-            self.fields['payment_receiver'].help_text = _(
+            self.fields["payment_receiver"].queryset = available_corps
+            self.fields["payment_receiver"].help_text = _(
                 "Choose the corporation that will receive payments (only corporations with wallet access)."
             )
         else:
             # Aucune corporation disponible
-            self.fields['payment_receiver'].queryset = EveCorporationInfo.objects.none()
-            self.fields['payment_receiver'].help_text = _(
+            self.fields["payment_receiver"].queryset = EveCorporationInfo.objects.none()
+            self.fields["payment_receiver"].help_text = _(
                 "No corporations available. Please add your corporation token on CorpTools first."
             )
-            self.fields['payment_receiver'].widget.attrs['disabled'] = True
-        
+            self.fields["payment_receiver"].widget.attrs["disabled"] = True
+
         # If editing, initialize hidden field with existing list
         if self.instance and self.instance.winners_distribution:
             self.initial["winners_distribution"] = self.instance.winners_distribution
@@ -176,23 +179,29 @@ class AutoLotteryForm(forms.ModelForm):
         return None if max_tix in (None, 0) else max_tix
 
     def clean_payment_receiver(self):
-        payment_receiver = self.cleaned_data.get('payment_receiver')
-        
+        payment_receiver = self.cleaned_data.get("payment_receiver")
+
         # Vérifier qu'une corporation est sélectionnée
         if not payment_receiver:
             available_corps = EveCorporationInfo.objects.filter(
                 corporation_id__in=CorporationWalletJournalEntry.objects.filter(
                     second_party_name_id__isnull=False
-                ).values_list('second_party_name_id', flat=True).distinct()
+                )
+                .values_list("second_party_name_id", flat=True)
+                .distinct()
             )
-            
+
             if not available_corps.exists():
                 raise ValidationError(
-                    _("No corporations available. Please add your corporation token on CorpTools first.")
+                    _(
+                        "No corporations available. Please add your corporation token on CorpTools first."
+                    )
                 )
             else:
-                raise ValidationError(_("Please select a corporation to receive payments."))
-        
+                raise ValidationError(
+                    _("Please select a corporation to receive payments.")
+                )
+
         return payment_receiver
 
     def clean(self):
