@@ -21,8 +21,9 @@ class WinnerDistribution(models.Model):
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated At")
 
     class Meta:
-        db_table = "fortunaisk_winner_distribution"
+        db_table = "fortunaisk_winnerdistribution"  # Changé pour correspondre au nom Django standard
         ordering = ["lottery_reference", "winner_rank"]
+        default_permissions = ()
 
     def __str__(self):
         return f"{self.lottery_reference} – Rank {self.winner_rank}: {self.winner_prize_distribution}%"
