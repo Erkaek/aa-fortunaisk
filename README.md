@@ -1,174 +1,197 @@
-# FortunaISK (Beta)
+# FortunaISK
 
-A lottery module for [Alliance Auth](https://allianceauth.org/) to organize, manage, and track community lotteries effortlessly. This module integrates seamlessly with Alliance Auth and its ecosystem, automating lottery creation, management, and winner selection.
+A comprehensive lottery system for [Alliance Auth](https://allianceauth.org/) that brings excitement and community engagement to your corporation or alliance. Run fair, transparent lotteries with automated management and real-time tracking.
 
-______________________________________________________________________
-
-## Feedback Welcome
-
-**This module is currently in beta testing.** Your feedback, ideas for improvements, and suggestions are highly valued. Feel free to reach out with any insights or recommendations!
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Django 4.0+](https://img.shields.io/badge/django-4.0+-blue.svg)](https://www.djangoproject.com/)
 
 ______________________________________________________________________
 
-## Features
+## ✨ Features
 
-- **Ticket Handling**: Accepts and validates ticket purchases.
-- **Payment Processing**: Automates payment verification and tracks anomalies.
-- **Winner Selection**: Randomly selects winners using pre-defined criteria.
-- **Lottery History**: Provides a detailed history of past lotteries and winners.
-- **Recurring Lotteries**: Supports automated creation of recurring lotteries.
-- **Administrative Tools**:
-  - Anomaly resolution for mismatched transactions.
-  - Prize distribution tracking.
-  - Comprehensive admin dashboard for statistics and management.
-- **Notifications**:
-  - Discord notifications for major events like lottery completion or anomalies.
-  - Alliance Auth notifications for users about ticket status and winnings.
+### 🎲 **Easy Lottery Participation**
+- **Simple ISK Transfer System** - Just send money with the lottery reference in the reason
+- **Real-time Ticket Tracking** - Monitor your purchases and remaining allowances
+- **Personal Dashboard** - Complete history of tickets, winnings, and payments
+- **Automatic Notifications** - Get notified instantly when you win
+
+### 🏆 **Flexible Prize Distribution**
+- **Multi-winner Support** - Configure multiple winners per lottery
+- **Custom Prize Percentages** - Set exact prize distribution for each winner
+- **Automated Calculations** - System handles all prize calculations automatically
+- **Transparent Results** - Public winner announcements with full details
+
+### ⚡ **Automated Management**
+- **Recurring Lotteries** - Set up lotteries that run automatically on schedule
+- **Smart Payment Processing** - Automated validation and anomaly detection
+- **Lifecycle Management** - Automatic transitions from active to completed
+- **24-hour Reminders** - Automated closure notifications
+
+### 📊 **Administrative Excellence**
+- **Rich Admin Dashboard** - Real-time statistics and system monitoring
+- **Anomaly Resolution** - Advanced tools to handle payment discrepancies
+- **Prize Distribution Tracking** - Monitor and confirm prize deliveries
+- **Comprehensive Audit Trails** - Complete logging of all actions
+- **CSV Export** - Export participant and winner data
+
+### 🔔 **Discord Integration**
+- **Rich Notifications** - Beautiful embeds for all lottery events
+- **Winner Announcements** - Automatic celebration of lottery results
+- **Admin Alerts** - Immediate notification of anomalies or issues
+- **Customizable Webhooks** - Configure notifications for your community
 
 ______________________________________________________________________
 
-## Future Developments
+## 📋 Requirements
 
-- **Compatibility with Memberaudit and CorpTools**: Provide support for both Memberaudit and CorpTools, allowing users to integrate **FortunaISK** with either member management tool based on their preference.
-
-- **Bulk Ticket Purchases**: Enable users to purchase multiple tickets in a single transaction, streamlining the purchasing process and improving user experience.
-
-- **Prized Lotteries**: Enhance the current lottery system by allowing administrators to offer tangible prizes instead of solely distributing the total ticket revenue. This will provide more diverse reward options and increase participant engagement.
-
-______________________________________________________________________
-
-## Prerequisites
-
-- [Alliance Auth](https://allianceauth.readthedocs.io/en/v4.5.0/) >=V4
-- [Alliance Auth Corp Tools](https://github.com/pvyParts/allianceauth-corp-tools)
-- [Discord notify](https://apps.allianceauth.org/apps/detail/aa-discordnotify) for Discord MP
-- Django Celery and Django Celery Beat for task scheduling.
+- **Alliance Auth** v4.0+
+- **[Alliance Auth Corp Tools](https://github.com/pvyParts/allianceauth-corp-tools)** - For wallet integration
+- **[AA Discord Notify](https://apps.allianceauth.org/apps/detail/aa-discordnotify)** (Optional) - For Discord notifications
+- **Redis** (Recommended) - For optimal performance with multiple users
 
 ______________________________________________________________________
 
-## Installation
+## 🚀 Installation
 
-### Step 1 - Install app
+### Step 1 - Install the Package
 
 ```bash
-pip install fortunaisk
+pip install aa-fortunaisk
 ```
 
-### Step 2 - Configure Auth settings
+### Step 2 - Configure Settings
 
-Add `'fortunaisk'` to your `INSTALLED_APPS` in `local.py`:
+Add the following to your Alliance Auth's `local.py`:
 
 ```python
-INSTALLED_APPS = [
-    # ...
-    "fortunaisk",
+# Add to INSTALLED_APPS
+INSTALLED_APPS += [
+    'fortunaisk',
 ]
 ```
 
-### Step 3 - Maintain Alliance Auth
-
-- Run migrations:
-
-  ```bash
-  python manage.py makemigrations
-  python manage.py migrate
-  ```
-
-- Restart Auth:
-
-  ```bash
-  supervisorctl restart all
-  ```
-
-### Step 4 - Configure tasks
-
-Run the following management command to set up periodic tasks:
+### Step 3 - Finalize Installation
 
 ```bash
-python manage.py setup_fortuna_tasks
+python manage.py collectstatic
+python manage.py migrate
 ```
 
-### Step 5 - Configure Webhooks
-
-Visit the following URL to configure Discord webhooks:
-
-```
-AUTH_ADDRESS/admin/fortunaisk/webhookconfiguration/
-```
-
-______________________________________________________________________
-
-## Permissions
-
-| **Permission**              | **Description**                                                                |
-| --------------------------- | ------------------------------------------------------------------------------ |
-| `fortunaisk.can_access_app` | Allows access to the user's personal dashboard and viewing their winnings.     |
-| `fortunaisk.can_admin_app`  | Grants full administrative rights to manage lotteries, resolve anomalies, etc. |
-
-______________________________________________________________________
-
-## Usage
-
-### User Features
-
-- **Active Lotteries**: Users can view and participate in ongoing lotteries.
-- **Personal Dashboard**: View purchased tickets and winnings.
-- **Lottery History**: Access records of past lotteries and their outcomes.
-
-### Admin Features
-
-- **Create Lotteries**: Set ticket prices, duration, winner count, and prize distribution.
-- **Manage Recurring Lotteries**: Activate or deactivate automated lotteries.
-- **Monitor Participants**: View ticket purchases and participant details.
-- **Resolve Anomalies**: Identify and correct mismatches in ticket purchases or payments.
-
-______________________________________________________________________
-
-## Contributing
-
-Contributions are welcome! To report an issue or propose a feature:
-
-1. Fork this repository.
-
-1. Create a branch for your feature or fix:
-
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
-
-1. Submit a pull request.
-
-______________________________________________________________________
-
-## Update
-
-### Step 1 - Update app
+Restart your Alliance Auth instance:
 
 ```bash
-pip install -U fortunaisk
+supervisorctl restart all
 ```
 
-### Step 2 - Maintain Alliance Auth
+### Step 4 - Setup Permissions
 
-- Run migrations:
+Visit your admin interface and assign permissions to appropriate groups:
 
-  ```bash
-  python manage.py makemigrations
-  python manage.py migrate
-  ```
+| Permission | Purpose |
+|------------|---------|
+| `fortunaisk \| Can access FortunaISK` | Basic lottery participation |
+| `fortunaisk \| Can admin FortunaISK` | Full administrative access |
 
-- Restart Auth:
+### Step 5 - Configure Discord (Optional)
 
-  ```bash
-  supervisorctl restart all
-  ```
+Visit `/admin/fortunaisk/webhookconfiguration/` to set up Discord notifications.
 
 ______________________________________________________________________
 
-## License
+## 🎮 How to Use
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+### For Players
+
+1. **🔍 Find Active Lotteries** - Check the lottery page to see what's currently running
+2. **🎫 Buy Tickets** - Send ISK to the specified corporation with the lottery reference in the reason
+3. **📊 Track Progress** - Monitor your tickets and see real-time lottery statistics
+4. **🏆 Check Results** - Winners are announced automatically via Discord and notifications
+
+### For Administrators
+
+1. **➕ Create Lotteries** - Set ticket prices, duration, winners, and prize distribution
+2. **🔄 Setup Recurring Lotteries** - Configure automated lotteries that repeat on schedule
+3. **📈 Monitor Activity** - Watch real-time participant counts and revenue tracking
+4. **🔧 Resolve Issues** - Use advanced tools to handle payment anomalies
+5. **💰 Distribute Prizes** - Track and confirm prize distributions to winners
 
 ______________________________________________________________________
 
-Thank you for using **FortunaISK**! For questions or feedback, feel free to open an issue or contact the maintainer.
+## 📸 Screenshots
+
+*Coming soon - Screenshots of the main interface, admin dashboard, and user features*
+
+______________________________________________________________________
+
+## 🆕 Latest Updates
+
+### Version 1.0.0 - Stable Release! 🎉
+- ✅ Multi-winner lottery support with custom prize distribution
+- ✅ Automated recurring lotteries with flexible scheduling
+- ✅ Enhanced admin dashboard with real-time statistics
+- ✅ Advanced anomaly detection and resolution
+- ✅ Comprehensive Discord integration
+- ✅ CSV export functionality
+- ✅ Complete audit trails and security improvements
+
+### What's Coming Next
+- 🔄 Enhanced Memberaudit compatibility
+- 🎁 Physical prize lottery support
+- 📱 Mobile interface improvements
+- 📊 Advanced analytics dashboard
+
+______________________________________________________________________
+
+## 🔄 Updating
+
+### Step 1 - Update Package
+
+```bash
+pip install -U aa-fortunaisk
+```
+
+### Step 2 - Apply Changes
+
+```bash
+python manage.py migrate
+python manage.py collectstatic
+supervisorctl restart all
+```
+
+**⚠️ Important for v0.6.6+ users:** Discord webhook configuration has changed. Please reconfigure your webhooks at `/admin/fortunaisk/webhookconfiguration/` after updating.
+
+______________________________________________________________________
+
+## 🤝 Contributing
+
+We welcome contributions! Whether it's bug fixes, new features, or documentation improvements:
+
+1. **🍴 Fork** the repository
+2. **🌿 Create** your feature branch: `git checkout -b feature/amazing-feature`
+3. **📝 Commit** your changes: `git commit -m 'Add amazing feature'`
+4. **🚀 Push** to the branch: `git push origin feature/amazing-feature`
+5. **📬 Submit** a pull request
+
+For major changes, please open an issue first to discuss your ideas.
+
+______________________________________________________________________
+
+## 🆘 Support
+
+- **📚 Documentation**: [View the full documentation](https://github.com/your-repo/wiki)
+- **🐛 Bug Reports**: [Report issues](https://github.com/your-repo/issues)
+- **💬 Community**: Join the Alliance Auth Discord for support
+- **✉️ Contact**: Reach out to the maintainer for direct support
+
+______________________________________________________________________
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+______________________________________________________________________
+
+**FortunaISK** - Bringing fair and exciting lotteries to your Alliance Auth community! 🎲✨
+
+*Made with ❤️ for the EVE Online community*
