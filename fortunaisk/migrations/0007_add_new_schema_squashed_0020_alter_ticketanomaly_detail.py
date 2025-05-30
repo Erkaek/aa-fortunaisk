@@ -28,9 +28,14 @@ def forwards_func(apps, schema_editor):
             continue
 
         try:
-            distributions = lottery.winners_distribution.split(",")
+            # Check if winners_distribution is already a list
+            if isinstance(lottery.winners_distribution, list):
+                distributions = [str(d) for d in lottery.winners_distribution]
+            else:
+                distributions = lottery.winners_distribution.split(",")
+
             for idx, dist in enumerate(distributions, 1):
-                dist = dist.strip()
+                dist = str(dist).strip()
                 if not dist:
                     continue
 
@@ -48,12 +53,17 @@ def forwards_func(apps, schema_editor):
             continue
 
         try:
-            # Convertir en liste JSON
-            distributions = auto.winners_distribution.split(",")
-            auto.winners_distribution = [
-                float(d.strip("%")) for d in distributions if d.strip()
-            ]
-            auto.save()
+            # Check if winners_distribution is already a list
+            if isinstance(auto.winners_distribution, list):
+                # Already in the correct format, skip
+                continue
+            else:
+                # Convertir en liste JSON
+                distributions = auto.winners_distribution.split(",")
+                auto.winners_distribution = [
+                    float(d.strip("%")) for d in distributions if d.strip()
+                ]
+                auto.save()
         except Exception as e:
             print(f"Erreur migration autolottery {auto.pk}: {e}")
 
@@ -67,13 +77,17 @@ def fill_processedpayment_fields(apps, schema_editor):
 
     # Mettre à jour les paiements traités avec les utilisateurs et personnages correspondants
     for payment in ProcessedPayment.objects.all():
-        tickets = TicketPurchase.objects.filter(payment_ref=payment.payment_ref)
+        tickets = TicketPurchase.objects.filter(payment_id=payment.payment_id)
         if tickets.exists():
             ticket = tickets.first()
             payment.user = ticket.user
             payment.character = ticket.character
-            payment.payed_at = ticket.created_at
-            payment.amount = ticket.price * ticket.quantity
+            payment.payed_at = getattr(ticket, "created_at", None) or getattr(
+                ticket, "purchase_date", None
+            )
+            payment.amount = getattr(ticket, "amount", None) or (
+                ticket.price * ticket.quantity
+            )
             payment.save()
 
 
