@@ -150,7 +150,7 @@ ______________________________________________________________________
 | *Transparent prize distribution*                               | *Rich embeds for community engagement*                                            |
 
 | **24-Hour Closure Reminders**
-|\---|---|
+| -------------------------------------------------------------- |
 | ![24h Reminder Discord](docs/screenshots/fortunaisk_24h_remind_closure_discord.png) |
 | *Automated reminders to boost participation before lottery closure* |
 

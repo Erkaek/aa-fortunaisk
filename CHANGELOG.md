@@ -2,7 +2,7 @@
 
 All notable changes to **FortunaISK** are documented in this file.
 
-## [1.0.0] – 2025-01-XX
+## [1.0.0] – 2025-05-30
 
 ### 🎉 **First Stable Release**
 
