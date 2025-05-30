@@ -12,6 +12,49 @@ from django.conf import settings
 from django.db import migrations, models
 
 
+def check_table_exists(cursor, table_name):
+    """Vérifie si une table existe"""
+    cursor.execute(f"SHOW TABLES LIKE '{table_name}'")
+    return cursor.fetchone() is not None
+
+
+def check_column_exists(cursor, table_name, column_name):
+    """Vérifie si une colonne existe dans une table"""
+    cursor.execute(f"SHOW COLUMNS FROM {table_name} LIKE '{column_name}'")
+    return cursor.fetchone() is not None
+
+
+def safe_create_table_winnerdistribution(apps, schema_editor):
+    """Crée la table WinnerDistribution seulement si elle n'existe pas"""
+    with schema_editor.connection.cursor() as cursor:
+        if not check_table_exists(cursor, 'fortunaisk_winnerdistribution'):
+            WinnerDistribution = apps.get_model("fortunaisk", "WinnerDistribution")
+            schema_editor.create_model(WinnerDistribution)
+
+
+def safe_add_field(apps, schema_editor, model_name, field_name, field):
+    """Ajoute un champ seulement s'il n'existe pas déjà"""
+    model = apps.get_model("fortunaisk", model_name)
+    table_name = model._meta.db_table
+    
+    with schema_editor.connection.cursor() as cursor:
+        if not check_column_exists(cursor, table_name, field_name):
+            schema_editor.add_field(model, field)
+
+
+def safe_remove_field(apps, schema_editor, model_name, field_name):
+    """Supprime un champ seulement s'il existe"""
+    model = apps.get_model("fortunaisk", model_name)
+    table_name = model._meta.db_table
+    
+    with schema_editor.connection.cursor() as cursor:
+        if check_column_exists(cursor, table_name, field_name):
+            # Créer un field factice pour la suppression
+            field = models.CharField(max_length=100)
+            field.set_attributes_from_name(field_name)
+            schema_editor.remove_field(model, field)
+
+
 # Fonctions migrées des migrations d'origine
 def forwards_func(apps, schema_editor):
     """
@@ -179,192 +222,123 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.CreateModel(
-            name="WinnerDistribution",
-            fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                (
-                    "lottery_reference",
-                    models.CharField(
-                        db_index=True, max_length=20, verbose_name="Lottery Reference"
-                    ),
-                ),
-                (
-                    "winner_rank",
-                    models.PositiveIntegerField(verbose_name="Winner Rank"),
-                ),
-                (
-                    "winner_prize_distribution",
-                    models.DecimalField(
-                        decimal_places=2,
-                        max_digits=5,
-                        verbose_name="Prize Distribution (%)",
-                    ),
-                ),
-                (
-                    "created_at",
-                    models.DateTimeField(auto_now_add=True, verbose_name="Created At"),
-                ),
-                (
-                    "updated_at",
-                    models.DateTimeField(auto_now=True, verbose_name="Updated At"),
-                ),
-            ],
-            options={
-                "db_table": "fortunaisk_winner_distribution",
-                "ordering": ["lottery_reference", "winner_rank"],
-            },
+        # Création conditionnelle de la table WinnerDistribution
+        migrations.RunSQL(
+            """
+            CREATE TABLE IF NOT EXISTS fortunaisk_winnerdistribution (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                lottery_reference VARCHAR(20) NOT NULL,
+                winner_rank INT UNSIGNED NOT NULL,
+                winner_prize_distribution DECIMAL(5,2) NOT NULL,
+                created_at DATETIME(6) NOT NULL,
+                updated_at DATETIME(6) NOT NULL,
+                INDEX fortunaisk_winnerdistribution_lottery_reference_idx (lottery_reference)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+            """,
+            reverse_sql="DROP TABLE IF EXISTS fortunaisk_winnerdistribution;"
         ),
-        migrations.AddField(
-            model_name="processedpayment",
-            name="character",
-            field=models.ForeignKey(
-                blank=True,
-                help_text="EVE character (if identified).",
-                null=True,
-                on_delete=django.db.models.deletion.SET_NULL,
-                to="eveonline.evecharacter",
-                verbose_name="Eve Character",
-            ),
+        
+        # Ajout conditionnel des champs ProcessedPayment
+        migrations.RunSQL(
+            "ALTER TABLE fortunaisk_processedpayment ADD COLUMN IF NOT EXISTS character_id BIGINT NULL;",
+            reverse_sql="ALTER TABLE fortunaisk_processedpayment DROP COLUMN IF EXISTS character_id;"
         ),
-        migrations.AddField(
-            model_name="processedpayment",
-            name="user",
-            field=models.ForeignKey(
-                blank=True,
-                help_text="Django user (if identified).",
-                null=True,
-                on_delete=django.db.models.deletion.SET_NULL,
-                to=settings.AUTH_USER_MODEL,
-                verbose_name="Django User",
-            ),
+        migrations.RunSQL(
+            "ALTER TABLE fortunaisk_processedpayment ADD COLUMN IF NOT EXISTS user_id INT NULL;",
+            reverse_sql="ALTER TABLE fortunaisk_processedpayment DROP COLUMN IF EXISTS user_id;"
         ),
-        migrations.AddField(
-            model_name="processedpayment",
-            name="amount",
-            field=models.DecimalField(
-                decimal_places=2,
-                default=Decimal("0.00"),
-                help_text="Total amount paid in ISK.",
-                max_digits=25,
-                verbose_name="Total Paid Amount",
-            ),
+        migrations.RunSQL(
+            "ALTER TABLE fortunaisk_processedpayment ADD COLUMN IF NOT EXISTS amount DECIMAL(25,2) NOT NULL DEFAULT '0.00';",
+            reverse_sql="ALTER TABLE fortunaisk_processedpayment DROP COLUMN IF EXISTS amount;"
         ),
-        migrations.AddField(
-            model_name="processedpayment",
-            name="payed_at",
-            field=models.DateTimeField(
-                blank=True,
-                help_text="Payment date & time.",
-                null=True,
-                verbose_name="Paid At",
-            ),
+        migrations.RunSQL(
+            "ALTER TABLE fortunaisk_processedpayment ADD COLUMN IF NOT EXISTS payed_at DATETIME(6) NULL;",
+            reverse_sql="ALTER TABLE fortunaisk_processedpayment DROP COLUMN IF EXISTS payed_at;"
         ),
-        migrations.AddField(
-            model_name="ticketanomaly",
-            name="solved",
-            field=models.BooleanField(
-                default=False,
-                help_text="Anomaly marked as solved.",
-                verbose_name="Solved",
-            ),
+        
+        # Ajout conditionnel des champs TicketAnomaly
+        migrations.RunSQL(
+            "ALTER TABLE fortunaisk_ticketanomaly ADD COLUMN IF NOT EXISTS solved TINYINT(1) NOT NULL DEFAULT 0;",
+            reverse_sql="ALTER TABLE fortunaisk_ticketanomaly DROP COLUMN IF EXISTS solved;"
         ),
-        migrations.AddField(
-            model_name="ticketanomaly",
-            name="solved_at",
-            field=models.DateTimeField(
-                blank=True,
-                help_text="Resolution date & time.",
-                null=True,
-                verbose_name="Solved At",
-            ),
+        migrations.RunSQL(
+            "ALTER TABLE fortunaisk_ticketanomaly ADD COLUMN IF NOT EXISTS solved_at DATETIME(6) NULL;",
+            reverse_sql="ALTER TABLE fortunaisk_ticketanomaly DROP COLUMN IF EXISTS solved_at;"
         ),
-        migrations.AddField(
-            model_name="ticketanomaly",
-            name="solved_by",
-            field=models.ForeignKey(
-                blank=True,
-                help_text="User who resolved the anomaly.",
-                null=True,
-                on_delete=django.db.models.deletion.SET_NULL,
-                related_name="resolved_anomalies",
-                to=settings.AUTH_USER_MODEL,
-                verbose_name="Solved By",
-            ),
+        migrations.RunSQL(
+            "ALTER TABLE fortunaisk_ticketanomaly ADD COLUMN IF NOT EXISTS solved_by_id INT NULL;",
+            reverse_sql="ALTER TABLE fortunaisk_ticketanomaly DROP COLUMN IF EXISTS solved_by_id;"
         ),
-        migrations.AddField(
-            model_name="ticketanomaly",
-            name="detail",
-            field=models.TextField(
-                blank=True,
-                help_text="Resolution details.",
-                null=True,
-                verbose_name="Resolution Detail",
-            ),
+        migrations.RunSQL(
+            "ALTER TABLE fortunaisk_ticketanomaly ADD COLUMN IF NOT EXISTS detail LONGTEXT NULL;",
+            reverse_sql="ALTER TABLE fortunaisk_ticketanomaly DROP COLUMN IF EXISTS detail;"
         ),
-        migrations.AddField(
-            model_name="winner",
-            name="distributed_at",
-            field=models.DateTimeField(
-                blank=True,
-                help_text="Prize distribution date & time.",
-                null=True,
-                verbose_name="Distributed At",
-            ),
+        
+        # Ajout conditionnel des champs Winner
+        migrations.RunSQL(
+            "ALTER TABLE fortunaisk_winner ADD COLUMN IF NOT EXISTS distributed_at DATETIME(6) NULL;",
+            reverse_sql="ALTER TABLE fortunaisk_winner DROP COLUMN IF EXISTS distributed_at;"
         ),
-        migrations.AddField(
-            model_name="winner",
-            name="distributed_by",
-            field=models.ForeignKey(
-                blank=True,
-                help_text="User who distributed the prize.",
-                null=True,
-                on_delete=django.db.models.deletion.SET_NULL,
-                related_name="distributed_winnings",
-                to=settings.AUTH_USER_MODEL,
-                verbose_name="Distributed By",
-            ),
+        migrations.RunSQL(
+            "ALTER TABLE fortunaisk_winner ADD COLUMN IF NOT EXISTS distributed_by_id INT NULL;",
+            reverse_sql="ALTER TABLE fortunaisk_winner DROP COLUMN IF EXISTS distributed_by_id;"
         ),
-        migrations.AddField(
-            model_name="webhookconfiguration",
-            name="notification_config",
-            field=models.JSONField(
-                blank=True,
-                default=dict,
-                help_text="Notification settings (channels, types, etc).",
-                verbose_name="Notification Config",
-            ),
+        
+        # Ajout conditionnel des champs WebhookConfiguration
+        migrations.RunSQL(
+            "ALTER TABLE fortunaisk_webhookconfiguration ADD COLUMN IF NOT EXISTS notification_config JSON NULL;",
+            reverse_sql="ALTER TABLE fortunaisk_webhookconfiguration DROP COLUMN IF EXISTS notification_config;"
         ),
-        migrations.AddField(
-            model_name="webhookconfiguration",
-            name="created_at",
-            field=models.DateTimeField(
-                auto_now_add=True,
-                default=django.utils.timezone.now,
-                verbose_name="Created At",
-            ),
-            preserve_default=False,
+        migrations.RunSQL(
+            "ALTER TABLE fortunaisk_webhookconfiguration ADD COLUMN IF NOT EXISTS created_at DATETIME(6) NOT NULL DEFAULT NOW(6);",
+            reverse_sql="ALTER TABLE fortunaisk_webhookconfiguration DROP COLUMN IF EXISTS created_at;"
         ),
-        migrations.AddField(
-            model_name="webhookconfiguration",
-            name="created_by",
-            field=models.ForeignKey(
-                blank=True,
-                null=True,
-                on_delete=django.db.models.deletion.SET_NULL,
-                related_name="webhook_configurations",
-                to=settings.AUTH_USER_MODEL,
-                verbose_name="Created By",
-            ),
+        migrations.RunSQL(
+            "ALTER TABLE fortunaisk_webhookconfiguration ADD COLUMN IF NOT EXISTS created_by_id INT NULL;",
+            reverse_sql="ALTER TABLE fortunaisk_webhookconfiguration DROP COLUMN IF EXISTS created_by_id;"
         ),
+        migrations.RunSQL(
+            "ALTER TABLE fortunaisk_webhookconfiguration ADD COLUMN IF NOT EXISTS name VARCHAR(100) NOT NULL DEFAULT '';",
+            reverse_sql="ALTER TABLE fortunaisk_webhookconfiguration DROP COLUMN IF EXISTS name;"
+        ),
+        migrations.RunSQL(
+            "ALTER TABLE fortunaisk_webhookconfiguration ADD COLUMN IF NOT EXISTS ping_roles JSON NULL;",
+            reverse_sql="ALTER TABLE fortunaisk_webhookconfiguration DROP COLUMN IF EXISTS ping_roles;"
+        ),
+        
+        # Ajout conditionnel des champs AutoLottery et Lottery
+        migrations.RunSQL(
+            "ALTER TABLE fortunaisk_autolottery ADD COLUMN IF NOT EXISTS tax DECIMAL(5,2) NOT NULL DEFAULT '0.00';",
+            reverse_sql="ALTER TABLE fortunaisk_autolottery DROP COLUMN IF EXISTS tax;"
+        ),
+        migrations.RunSQL(
+            "ALTER TABLE fortunaisk_autolottery ADD COLUMN IF NOT EXISTS tax_amount DECIMAL(25,2) NOT NULL DEFAULT '0.00';",
+            reverse_sql="ALTER TABLE fortunaisk_autolottery DROP COLUMN IF EXISTS tax_amount;"
+        ),
+        migrations.RunSQL(
+            "ALTER TABLE fortunaisk_lottery ADD COLUMN IF NOT EXISTS tax DECIMAL(5,2) NOT NULL DEFAULT '0.00';",
+            reverse_sql="ALTER TABLE fortunaisk_lottery DROP COLUMN IF EXISTS tax;"
+        ),
+        migrations.RunSQL(
+            "ALTER TABLE fortunaisk_lottery ADD COLUMN IF NOT EXISTS tax_amount DECIMAL(25,2) NOT NULL DEFAULT '0.00';",
+            reverse_sql="ALTER TABLE fortunaisk_lottery DROP COLUMN IF EXISTS tax_amount;"
+        ),
+        
+        # Ajout des contraintes de clés étrangères si elles n'existent pas
+        migrations.RunSQL(
+            """
+            SET @constraint_name = (SELECT CONSTRAINT_NAME FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS 
+                                  WHERE TABLE_NAME = 'fortunaisk_processedpayment' AND COLUMN_NAME = 'character_id');
+            SET @sql = IF(@constraint_name IS NULL, 
+                         'ALTER TABLE fortunaisk_processedpayment ADD CONSTRAINT fortunaisk_processedpayment_character_id_fk FOREIGN KEY (character_id) REFERENCES eveonline_evecharacter(character_id)',
+                         'SELECT "Constraint already exists"');
+            PREPARE stmt FROM @sql;
+            EXECUTE stmt;
+            DEALLOCATE PREPARE stmt;
+            """,
+            reverse_sql=migrations.RunSQL.noop
+        ),
+        
         migrations.RunPython(
             code=forwards_func,
             reverse_code=django.db.migrations.operations.special.RunPython.noop,
@@ -372,185 +346,6 @@ class Migration(migrations.Migration):
         migrations.RunPython(
             code=fill_processedpayment_fields,
             reverse_code=django.db.migrations.operations.special.RunPython.noop,
-        ),
-        migrations.AddField(
-            model_name="autolottery",
-            name="tax",
-            field=models.DecimalField(
-                decimal_places=2,
-                default=Decimal("0.00"),
-                help_text="Percentage of tax applied to the total pot before distribution.",
-                max_digits=5,
-                verbose_name="Tax (%)",
-            ),
-        ),
-        migrations.AddField(
-            model_name="autolottery",
-            name="tax_amount",
-            field=models.DecimalField(
-                decimal_places=2,
-                default=Decimal("0.00"),
-                help_text="Amount of tax (in ISK) computed from the gross pot.",
-                max_digits=25,
-                verbose_name="Tax Amount (ISK)",
-            ),
-        ),
-        migrations.AddField(
-            model_name="lottery",
-            name="tax_amount",
-            field=models.DecimalField(
-                decimal_places=2,
-                default=Decimal("0.00"),
-                help_text="Amount of tax (in ISK) computed from the gross pot.",
-                max_digits=25,
-                verbose_name="Tax Amount (ISK)",
-            ),
-        ),
-        migrations.AlterField(
-            model_name="autolottery",
-            name="winners_distribution",
-            field=models.JSONField(
-                blank=True,
-                default=list,
-                help_text="List of percentage distributions for winners (sum must be 100).",
-                verbose_name="Winners Distribution",
-            ),
-        ),
-        migrations.AddField(
-            model_name="lottery",
-            name="tax",
-            field=models.DecimalField(
-                decimal_places=2,
-                default=Decimal("0.00"),
-                help_text="Percentage of tax applied to the gross pot before distribution.",
-                max_digits=5,
-                verbose_name="Tax (%)",
-            ),
-        ),
-        migrations.AlterField(
-            model_name="lottery",
-            name="total_pot",
-            field=models.DecimalField(
-                decimal_places=2,
-                default=Decimal("0.00"),
-                help_text="Total ISK pot from ticket purchases after tax.",
-                max_digits=25,
-                verbose_name="Total Pot (ISK)",
-            ),
-        ),
-        migrations.RemoveField(
-            model_name="lottery",
-            name="winners_distribution",
-        ),
-        migrations.AlterModelOptions(
-            name="webhookconfiguration",
-            options={
-                "default_permissions": (),
-                "verbose_name": "Webhook Configuration",
-            },
-        ),
-        migrations.AlterField(
-            model_name="lottery",
-            name="payment_receiver",
-            field=models.ForeignKey(
-                blank=True,
-                null=True,
-                on_delete=django.db.models.deletion.SET_NULL,
-                related_name="lotteries",
-                to="eveonline.evecorporationinfo",
-                verbose_name="Payment Receiver",
-            ),
-        ),
-        migrations.AlterField(
-            model_name="webhookconfiguration",
-            name="created_by",
-            field=models.ForeignKey(
-                blank=True,
-                help_text="User who created this configuration.",
-                null=True,
-                on_delete=django.db.models.deletion.SET_NULL,
-                related_name="webhook_configurations",
-                to=settings.AUTH_USER_MODEL,
-                verbose_name="Created By",
-            ),
-        ),
-        migrations.AlterField(
-            model_name="webhookconfiguration",
-            name="notification_config",
-            field=models.JSONField(
-                blank=True,
-                default=dict,
-                help_text='JSON object with two keys:\n  • "events": list of event names to send publicly\n  • "ping_roles": list of Discord role IDs to mention on each notification\nExample:\n{\n  "events": [\n    "lottery_created",\n    "lottery_sales_closed",\n    "anomaly_detected"\n  ],\n  "ping_roles": ["123456789012345678", "987654321098765432"]\n}',
-                verbose_name="Notification Configuration",
-            ),
-        ),
-        migrations.AlterField(
-            model_name="webhookconfiguration",
-            name="webhook_url",
-            field=models.URLField(
-                blank=True,
-                help_text="URL of the Discord webhook to send public notifications. Leave blank to disable.",
-                null=True,
-                verbose_name="Discord Webhook URL",
-            ),
-        ),
-        migrations.AlterModelOptions(
-            name="webhookconfiguration",
-            options={"default_permissions": ()},
-        ),
-        migrations.AddField(
-            model_name="webhookconfiguration",
-            name="name",
-            field=models.CharField(
-                blank=True,
-                default="",
-                help_text="A unique name for this webhook configuration.",
-                max_length=100,
-                unique=True,
-                verbose_name="Configuration Name",
-            ),
-        ),
-        migrations.AddField(
-            model_name="webhookconfiguration",
-            name="ping_roles",
-            field=models.JSONField(
-                blank=True,
-                default=list,
-                help_text="List of Discord role IDs to mention when sending.",
-                verbose_name="Ping Roles",
-            ),
-        ),
-        migrations.AlterField(
-            model_name="webhookconfiguration",
-            name="created_by",
-            field=models.ForeignKey(
-                blank=True,
-                null=True,
-                on_delete=django.db.models.deletion.SET_NULL,
-                related_name="webhook_configurations",
-                to=settings.AUTH_USER_MODEL,
-                verbose_name="Created By",
-            ),
-        ),
-        migrations.AlterField(
-            model_name="webhookconfiguration",
-            name="notification_config",
-            field=models.JSONField(
-                blank=True,
-                default=list,
-                help_text="Which events (by key) should be sent to this webhook.",
-                verbose_name="Events to Notify",
-            ),
-        ),
-        migrations.AlterField(
-            model_name="webhookconfiguration",
-            name="webhook_url",
-            field=models.URLField(
-                blank=True,
-                help_text="The URL to post embeds and messages to.",
-                null=True,
-                verbose_name="Discord Webhook URL",
-            ),
         ),
         migrations.RunPython(
             code=convert_notification_config,
@@ -567,16 +362,5 @@ class Migration(migrations.Migration):
         migrations.RunPython(
             code=fix_ping_roles,
             reverse_code=django.db.migrations.operations.special.RunPython.noop,
-        ),
-        migrations.AlterField(
-            model_name="ticketanomaly",
-            name="detail",
-            field=models.TextField(
-                blank=True,
-                default="",
-                help_text="Resolution details.",
-                null=True,
-                verbose_name="Resolution Detail",
-            ),
         ),
     ]
