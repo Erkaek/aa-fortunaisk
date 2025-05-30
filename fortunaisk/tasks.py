@@ -477,12 +477,16 @@ def send_lottery_closure_reminders(self):
     Send reminders for lotteries closing soon.
 
     This task runs at the top of each hour and sends reminders for any
-    lotteries that will be closing in the next 24 hours.
+    lotteries that will be closing in the next 24-25 hours (one reminder per lottery).
     """
     now = timezone.now()
     Lottery = apps.get_model("fortunaisk", "Lottery")
+    
+    # Lotteries qui se terminent entre 24h et 25h à partir de maintenant
     upcoming = Lottery.objects.filter(
-        status="active", end_date__gte=now, end_date__lt=now + timedelta(hours=25)
+        status="active", 
+        end_date__gte=now + timedelta(hours=24),
+        end_date__lt=now + timedelta(hours=25)
     ).order_by("end_date")
 
     if not upcoming.exists():

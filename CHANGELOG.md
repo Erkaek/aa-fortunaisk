@@ -2,6 +2,19 @@
 
 All notable changes to **FortunaISK** are documented in this file.
 
+## [1.0.1] – 2025-05-30
+
+### Fixed
+
+- **24-hour lottery reminders** - Fixed duplicate reminder notifications by changing the reminder window from "next 25 hours" to "between 24-25 hours before closure"
+- **Notification spam prevention** - Each lottery now receives exactly one 24-hour reminder instead of multiple reminders every hour
+
+### Technical Details
+
+- Modified `send_lottery_closure_reminders` task to only trigger for lotteries ending between 24h and 25h from now
+- Eliminated the need for additional tracking fields or cache mechanisms
+- Improved task efficiency by reducing unnecessary notification processing
+
 ## [1.0.0] – 2025-05-30
 
 ### 🎉 **First Stable Release**
