@@ -7,6 +7,7 @@ from importlib import import_module
 
 # Django
 from django.apps import AppConfig, apps
+from django.conf import settings
 from django.db import connection
 
 logger = logging.getLogger(__name__)
@@ -45,11 +46,17 @@ class FortunaIskConfig(AppConfig):
         except Exception as e:
             logger.exception(f"Error loading signals: {e}")
 
-        # Do not configure tasks during tests or migrations
-        if "test" in sys.argv or "runtests.py" in sys.argv[0]:
+        # Skip tasks configuration during tests
+        if (
+            "test" in sys.argv
+            or "runtests.py" in sys.argv[0]
+            or hasattr(settings, "TESTING")
+            or "pytest" in sys.modules
+        ):
             logger.info("Skipping periodic tasks setup during tests.")
             return
 
+        # Skip during migrations
         if "migrate" in sys.argv or "makemigrations" in sys.argv:
             logger.info("Skipping periodic tasks setup during migrations.")
             return
