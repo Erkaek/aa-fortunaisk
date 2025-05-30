@@ -1,4 +1,5 @@
-/* --- Loader “roulette” overlay --- */
+/* fortunaisk/static/css/clover.css */
+/* --- Loader "Spin" overlay --- */
 #loader-overlay {
     position: fixed;
     top: 0;
@@ -24,32 +25,10 @@
   }
 }
 
-/* --- Sparkle animation --- */
-@keyframes sparkle {
-  0% {
-    opacity: 1;
-    transform: scale(0.5);
-  }
 
-  100% {
-    opacity: 0;
-    transform: scale(2);
-  }
-}
+/* --- Simple clover explosion --- */
 
-.sparkle {
-  position: absolute;
-  color: #f1c40f;
-  text-shadow: 0 0 8px #f1c40f;
-  pointer-events: none;
-  animation: sparkle 0.8s ease-out forwards;
-  will-change: transform, opacity;
-  z-index: 10001;
-}
-
-/* --- Simple explosion de trèfles --- */
-
-/* Conteneur plein écran */
+/* Full screen container */
 #clover-explosion-container {
   position: fixed;
   top: 0;

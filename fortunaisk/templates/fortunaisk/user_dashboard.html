@@ -62,6 +62,79 @@
         </div>
     {% endif %}
 
+
+    <!-- My Payments Section -->
+    <h3 class="mb-4" style="color: #e67e22;">
+        <i class="fas fa-credit-card me-2"></i> {% trans "My Payments" %}
+    </h3>
+    {% if payments_page %}
+      <div class="table-responsive mb-3">
+        <table class="table table-striped table-hover align-middle">
+          <thead class="table-dark">
+            <tr>
+              <th>{% trans "Payment ID" %}</th>
+              <th>{% trans "Character ID" %}</th>
+              <th>{% trans "Amount (ISK)" %}</th>
+              <th>{% trans "Paid At" %}</th>
+              <th>{% trans "Processed At" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in payments_page %}
+            <tr>
+              <td>{{ p.payment_id }}</td>
+              <td>{{ p.character.character_id|default:"—" }}</td>
+              <td>{{ p.amount|floatformat:2|intcomma }}</td>
+              <td>{{ p.payed_at|date:"Y-m-d H:i" }}</td>
+              <td>{{ p.processed_at|date:"Y-m-d H:i" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {# Pagination controls #}
+      <nav aria-label="Payments pagination">
+        <ul class="pagination justify-content-center">
+          {% if payments_page.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?payments_page={{ payments_page.previous_page_number }}">
+                &laquo; {% trans "Previous" %}
+              </a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link">&laquo; {% trans "Previous" %}</span>
+            </li>
+          {% endif %}
+
+          <li class="page-item disabled">
+            <span class="page-link">
+              {% trans "Page" %} {{ payments_page.number }} {% trans "of" %} {{ payments_page.paginator.num_pages }}
+            </span>
+          </li>
+
+          {% if payments_page.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?payments_page={{ payments_page.next_page_number }}">
+                {% trans "Next" %} &raquo;
+              </a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link">{% trans "Next" %} &raquo;</span>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
+    {% else %}
+      <div class="alert alert-info text-center mb-5">
+        <i class="fas fa-info-circle me-2"></i>
+        {% trans "You have no raw payment entries yet." %}
+      </div>
+    {% endif %}
+
+
     <!-- Winnings Section -->
     <h3 class="mb-4" style="color: #2ecc71;">
         <i class="fas fa-trophy me-2"></i> {% trans "My Winnings" %}

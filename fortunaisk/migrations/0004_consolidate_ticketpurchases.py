@@ -7,7 +7,7 @@ from django.db.models import Count, Sum
 def consolidate_ticketpurchases(apps, schema_editor):
     TP = apps.get_model("fortunaisk", "TicketPurchase")
 
-    # 1) Regrouper par lottery/user/character
+    # 1) Group by lottery/user/character
     groups = TP.objects.values("lottery_id", "user_id", "character_id").annotate(
         total_qty=Count("pk"),
         total_amt=Sum("amount"),
@@ -23,12 +23,12 @@ def consolidate_ticketpurchases(apps, schema_editor):
         if not first:
             continue
 
-        # 2) Mettre à jour la première ligne du groupe
+        # 2) Update the first row of the group
         first.quantity = g["total_qty"]
         first.amount = g["total_amt"]
         first.save(update_fields=["quantity", "amount"])
 
-        # 3) Supprimer les doublons (toutes les autres lignes)
+        # 3) Delete duplicates (all other rows)
         qs.exclude(pk=first.pk).delete()
 
 
@@ -45,7 +45,7 @@ class Migration(migrations.Migration):
         migrations.RunPython(
             consolidate_ticketpurchases, reverse_code=migrations.RunPython.noop
         ),
-        # Si tu veux explicitement ajouter une contrainte unique après consolidation :
+        # Add unique constraint after consolidation
         migrations.AddConstraint(
             model_name="ticketpurchase",
             constraint=models.UniqueConstraint(

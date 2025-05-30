@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
     operations = [
         migrations.RunSQL(
             sql="""
-                -- passe toutes les périodes en minuscules pour éviter le TypeError
+                -- Convert all period values to lowercase to avoid TypeError
                 UPDATE django_celery_beat_intervalschedule
                 SET period = LOWER(period)
                 WHERE period <> LOWER(period);

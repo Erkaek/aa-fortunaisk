@@ -1,13 +1,10 @@
 # fortunaisk/models/ticket.py
 
-# Standard Library
 from decimal import Decimal
 
-# Django
 from django.contrib.auth import get_user_model
 from django.db import models
 
-# Alliance Auth
 from allianceauth.eveonline.models import EveCharacter
 
 User = get_user_model()
@@ -41,7 +38,7 @@ class TicketPurchase(models.Model):
         verbose_name="Eve Character",
         help_text="Eve character that made the payment (if identifiable).",
     )
-    # amount représente le coût total pour l'achat (ticket_price * quantity)
+    # amount represents the total cost for the purchase (ticket_price * quantity)
     amount = models.DecimalField(
         max_digits=25,
         decimal_places=2,
@@ -57,7 +54,7 @@ class TicketPurchase(models.Model):
     purchase_date = models.DateTimeField(
         auto_now_add=True, verbose_name="Purchase Date"
     )
-    # Vous pouvez conserver payment_id si besoin, mais sans unique=True car plusieurs paiements peuvent être regroupés
+    # You can keep payment_id if needed, but without unique=True as multiple payments can be grouped
     payment_id = models.CharField(
         max_length=255, null=True, blank=True, verbose_name="Payment ID"
     )
@@ -106,6 +103,21 @@ class Winner(models.Model):
         verbose_name="Prize Distributed",
         help_text="Indicates whether the prize has been distributed to the winner.",
     )
+    distributed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Distributed At",
+        help_text="Prize distribution date & time.",
+    )
+    distributed_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="distributed_winnings",
+        verbose_name="Distributed By",
+        help_text="User who distributed the prize.",
+    )
 
     class Meta:
         default_permissions = ()
@@ -148,6 +160,33 @@ class TicketAnomaly(models.Model):
     )
     payment_id = models.CharField(max_length=255, verbose_name="Payment ID")
     recorded_at = models.DateTimeField(auto_now_add=True, verbose_name="Recorded At")
+    solved = models.BooleanField(
+        default=False,
+        verbose_name="Solved",
+        help_text="Anomaly marked as solved.",
+    )
+    solved_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Solved At",
+        help_text="Resolution date & time.",
+    )
+    solved_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="resolved_anomalies",
+        verbose_name="Solved By",
+        help_text="User who resolved the anomaly.",
+    )
+    detail = models.TextField(
+        null=True,
+        blank=True,
+        default="",
+        verbose_name="Resolution Detail",
+        help_text="Resolution details.",
+    )
 
     class Meta:
         default_permissions = ()

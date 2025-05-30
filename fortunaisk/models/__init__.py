@@ -6,6 +6,7 @@ from .lottery import Lottery
 from .payment import ProcessedPayment
 from .ticket import TicketAnomaly, TicketPurchase, Winner
 from .webhook import WebhookConfiguration
+from .winner_distribution import WinnerDistribution
 
 __all__ = [
     "Lottery",
@@ -16,4 +17,5 @@ __all__ = [
     "WebhookConfiguration",
     "ProcessedPayment",
     "General",
+    "WinnerDistribution",
 ]

@@ -1,180 +1,188 @@
 # fortunaisk/tasks.py
 
-# Standard Library
 import json
 import logging
 import math
 from datetime import timedelta
+from decimal import Decimal
 
-# Third Party
 from celery import group, shared_task
-from django_celery_beat.models import PeriodicTask
-
-# Django
 from django.apps import apps
 from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Sum
 from django.utils import timezone
+from django_celery_beat.models import CrontabSchedule, PeriodicTask
 
-# fortunaisk
-from fortunaisk.notifications import notify_discord_or_fallback
+from fortunaisk.notifications import notify_discord_or_fallback, build_embed
 
 logger = logging.getLogger(__name__)
 
 
 def process_payment(entry):
     """
-    Process a single wallet payment into lottery tickets:
-      1. Identify user & character.
-      2. Find the active or pending lottery.
-      3. Validate date within period.
-      4. Compute full tickets purchasable.
-      5. Enforce per-user ticket limit.
-      6. Create/update TicketPurchase.
-      7. Record anomalies (overpayment, invalid).
-      8. Mark payment processed & notify user.
-      9. Recalculate lottery total pot.
+    Process a single wallet payment into lottery tickets.
+    
+    This function handles the core business logic for ticket purchases:
+    - Validates the payment record against existing lotteries
+    - Handles character and user identification
+    - Enforces ticket limits and lottery status rules
+    - Creates ticket purchases and records anomalies when needed
+    - Updates the lottery's total pot
+    
+    Args:
+        entry: CorporationWalletJournalEntry object representing the payment
     """
-    # Dynamically get models
-    ProcessedPayment = apps.get_model("fortunaisk", "ProcessedPayment")
-    TicketAnomaly = apps.get_model("fortunaisk", "TicketAnomaly")
-    Lottery = apps.get_model("fortunaisk", "Lottery")
-    EveCharacter = apps.get_model("eveonline", "EveCharacter")
+    ProcessedPayment   = apps.get_model("fortunaisk", "ProcessedPayment")
+    TicketAnomaly      = apps.get_model("fortunaisk", "TicketAnomaly")
+    LotteryModel       = apps.get_model("fortunaisk", "Lottery")
+    EveCharacter       = apps.get_model("eveonline", "EveCharacter")
     CharacterOwnership = apps.get_model("authentication", "CharacterOwnership")
-    UserProfile = apps.get_model("authentication", "UserProfile")
-    TicketPurchase = apps.get_model("fortunaisk", "TicketPurchase")
+    UserProfile        = apps.get_model("authentication", "UserProfile")
+    TicketPurchase     = apps.get_model("fortunaisk", "TicketPurchase")
 
     pid = entry.entry_id
     date = entry.date
-    amt = entry.amount
-    ref = entry.reason.strip().lower()
+    amt  = entry.amount
+    ref  = entry.reason.strip()
 
-    # Already processed?
+    # 0) Skip if already processed
     if ProcessedPayment.objects.filter(payment_id=pid).exists():
         logger.debug(f"Payment {pid} already processed, skipping.")
         return
 
-    # 1) Get user/character
+    # 1) Identify user & character
     try:
-        char = EveCharacter.objects.get(character_id=entry.first_party_name_id)
-        ownership = CharacterOwnership.objects.get(
-            character__character_id=char.character_id
-        )
-        profile = UserProfile.objects.get(user_id=ownership.user_id)
-        user = profile.user
+        char      = EveCharacter.objects.get(character_id=entry.first_party_name_id)
+        ownership = CharacterOwnership.objects.get(character__character_id=char.character_id)
+        profile   = UserProfile.objects.get(user_id=ownership.user_id)
+        user      = profile.user
     except Exception as e:
-        reason = " | ".join(
-            [
-                (
-                    "EveCharacter missing"
-                    if isinstance(e, EveCharacter.DoesNotExist)
-                    else ""
-                ),
-                (
-                    "Ownership missing"
-                    if isinstance(e, CharacterOwnership.DoesNotExist)
-                    else ""
-                ),
-                "Profile missing" if isinstance(e, UserProfile.DoesNotExist) else "",
-            ]
-        ).strip(" |")
+        reason = " | ".join(filter(None, [
+            "EveCharacter missing" if isinstance(e, EveCharacter.DoesNotExist) else "",
+            "Ownership missing"   if isinstance(e, CharacterOwnership.DoesNotExist) else "",
+            "Profile missing"     if isinstance(e, UserProfile.DoesNotExist) else "",
+        ])) or str(e)
         TicketAnomaly.objects.create(
-            lottery=None,
-            user=None,
-            character=None,
-            reason=reason or str(e),
+            lottery=None, user=None, character=None,
+            reason=reason,
             payment_date=date,
             amount=amt,
             payment_id=pid,
         )
-        ProcessedPayment.objects.create(payment_id=pid, processed_at=timezone.now())
+        ProcessedPayment.objects.create(
+            payment_id=pid,
+            character=locals().get("char"),
+            user=locals().get("user"),
+            amount=amt,
+            payed_at=date,
+        )
         return
 
-    # 2) Get lottery (active or pending)
+    # 2) Retrieve lottery (any status)
     try:
-        lot = Lottery.objects.select_for_update().get(
-            lottery_reference=ref, status__in=["active", "pending"]
+        lot = LotteryModel.objects.select_for_update().get(
+            lottery_reference__iexact=ref
         )
-    except Lottery.DoesNotExist:
+    except LotteryModel.DoesNotExist:
         TicketAnomaly.objects.create(
-            lottery=None,
-            user=user,
-            character=char,
-            reason=f"No active/pending lottery '{ref}'",
+            lottery=None, user=user, character=char,
+            reason=f"No lottery found with reference '{ref}'",
             payment_date=date,
             amount=amt,
             payment_id=pid,
         )
-        ProcessedPayment.objects.create(payment_id=pid, processed_at=timezone.now())
+        ProcessedPayment.objects.create(
+            payment_id=pid,
+            character=char,
+            user=user,
+            amount=amt,
+            payed_at=date,
+        )
         return
 
-    # 3) Check date range
+    # 3) Anomaly if completed/cancelled
+    if lot.status in ("completed", "cancelled"):
+        reason = "Lottery already completed" if lot.status == "completed" else "Lottery has been cancelled"
+        TicketAnomaly.objects.create(
+            lottery=lot, user=user, character=char,
+            reason=reason,
+            payment_date=date,
+            amount=amt,
+            payment_id=pid,
+        )
+        ProcessedPayment.objects.create(
+            payment_id=pid,
+            character=char,
+            user=user,
+            amount=amt,
+            payed_at=date,
+        )
+        return
+
+    # 4) Out-of-window payment
     if not (lot.start_date <= date <= lot.end_date):
         TicketAnomaly.objects.create(
-            lottery=lot,
-            user=user,
-            character=char,
+            lottery=lot, user=user, character=char,
             reason="Payment outside lottery period",
             payment_date=date,
             amount=amt,
             payment_id=pid,
         )
-        ProcessedPayment.objects.create(payment_id=pid, processed_at=timezone.now())
+        ProcessedPayment.objects.create(
+            payment_id=pid,
+            character=char,
+            user=user,
+            amount=amt,
+            payed_at=date,
+        )
         return
 
-    # 4) Compute ticket count
+    # 5) Compute ticket count
     price = lot.ticket_price
     count = math.floor(amt / price)
     if count < 1:
         TicketAnomaly.objects.create(
-            lottery=lot,
-            user=user,
-            character=char,
+            lottery=lot, user=user, character=char,
             reason="Insufficient funds for one ticket",
             payment_date=date,
             amount=amt,
             payment_id=pid,
         )
-        ProcessedPayment.objects.create(payment_id=pid, processed_at=timezone.now())
+        ProcessedPayment.objects.create(
+            payment_id=pid,
+            character=char,
+            user=user,
+            amount=amt,
+            payed_at=date,
+        )
         return
 
-    # 5) Enforce per-user limit
+    # 6) Enforce per-user limit
     existing = (
         TicketPurchase.objects.filter(
-            lottery=lot, user=user, character__id=profile.main_character_id
+            lottery=lot,
+            user=user,
+            character__id=profile.main_character_id
         ).aggregate(total=Sum("quantity"))["total"]
         or 0
     )
-    count = math.floor(amt / lot.ticket_price)
-
-    # LOG : on vérifie qu’on détecte bien l’absence ou la présence de limite
-    logger.debug(
-        f"[process_payment] lottery={lot.lottery_reference} "
-        f"max_per_user={lot.max_tickets_per_user!r} "
-        f"existing={existing} count={count}"
-    )
-
-    # Si max_tickets_per_user est None ou 0 → on est en mode illimité
-    if not lot.max_tickets_per_user:
-        final = count
-    else:
-        # sinon on calcule le reste autorisé
-        remaining = max(0, lot.max_tickets_per_user - existing)
-        final = min(count, remaining)
-
-    # Si on ne peut pas valider au moins 1 ticket, on déclenche l’anomalie
+    final = count if lot.max_tickets_per_user is None else min(count, max(0, lot.max_tickets_per_user - existing))
     if final < 1:
         TicketAnomaly.objects.create(
-            lottery=lot,
-            user=user,
-            character=char,
+            lottery=lot, user=user, character=char,
             reason="Ticket limit exceeded",
             payment_date=date,
             amount=amt,
             payment_id=pid,
         )
-        ProcessedPayment.objects.create(payment_id=pid, processed_at=timezone.now())
+        ProcessedPayment.objects.create(
+            payment_id=pid,
+            character=char,
+            user=user,
+            amount=amt,
+            payed_at=date,
+        )
         notify_discord_or_fallback(
             user,
             title="⚠️ Ticket Limit Reached",
@@ -186,57 +194,60 @@ def process_payment(entry):
         )
         return
 
-    # 6) Create or update purchase
-    cost = final * price
+    # 7) Create or update TicketPurchase
+    gross_cost = price * final
     purchase, created = TicketPurchase.objects.get_or_create(
         lottery=lot,
         user=user,
         character=char,
         defaults={
             "quantity": final,
-            "amount": cost,
+            "amount": gross_cost,
             "status": "processed",
-            "payment_id": pid,
             "payment_id": pid,
         },
     )
     if not created:
-        purchase.quantity += final
-        purchase.amount += cost
+        purchase.quantity   += final
+        purchase.amount     += gross_cost
         purchase.payment_id = pid
         purchase.save(update_fields=["quantity", "amount", "payment_id"])
 
-    # 7) Handle overpayment
-    remainder = amt - cost
+    # 8) Overpayment anomaly
+    remainder = amt - (price * final)
     if remainder > 0:
         TicketAnomaly.objects.create(
-            lottery=lot,
-            user=user,
-            character=char,
+            lottery=lot, user=user, character=char,
             reason=f"Overpayment of {remainder} ISK",
             payment_date=date,
             amount=remainder,
             payment_id=pid,
         )
 
-    # 8) Mark processed & notify
-    apps.get_model("fortunaisk", "ProcessedPayment").objects.create(
-        payment_id=pid, processed_at=timezone.now()
+    # 9) Mark payment processed
+    ProcessedPayment.objects.create(
+        payment_id=pid,
+        character=char,
+        user=user,
+        amount=amt,
+        payed_at=date,
     )
 
-    # 9) Update total pot
-    total = (
-        TicketPurchase.objects.filter(lottery=lot).aggregate(sum=Sum("amount"))["sum"]
-        or 0
-    )
-    lot.total_pot = total
-    lot.save(update_fields=["total_pot"])
+    # 10) Recompute net pot
+    lot.update_total_pot()
 
 
 @shared_task(bind=True)
 def process_payment_task(self, entry_id):
     """
-    Async wrapper to process a single payment entry.
+    Asynchronous wrapper for process_payment.
+    
+    This task loads a wallet entry and processes it within a database transaction
+    to ensure data consistency.
+    
+    Args:
+        self: Task instance (Celery standard)
+        entry_id: ID of the CorporationWalletJournalEntry to process
     """
     Journal = apps.get_model("corptools", "CorporationWalletJournalEntry")
     with transaction.atomic():
@@ -247,15 +258,20 @@ def process_payment_task(self, entry_id):
 @shared_task(bind=True)
 def check_purchased_tickets(self):
     """
-    Periodic scan for new lottery payments and dispatch processing tasks.
+    Periodically scan for unprocessed payments.
+    
+    This task searches for any wallet entries containing the word 'lottery'
+    that haven't been processed yet, then creates a group of tasks to process
+    each payment individually.
     """
     logger.info("Running check_purchased_tickets")
-    Journal = apps.get_model("corptools", "CorporationWalletJournalEntry")
+    Journal   = apps.get_model("corptools", "CorporationWalletJournalEntry")
     Processed = apps.get_model("fortunaisk", "ProcessedPayment")
     processed_ids = set(Processed.objects.values_list("payment_id", flat=True))
-    pending = Journal.objects.filter(reason__icontains="lottery", amount__gt=0).exclude(
-        entry_id__in=processed_ids
-    )
+    pending = Journal.objects.filter(
+        reason__icontains="lottery",
+        amount__gt=0
+    ).exclude(entry_id__in=processed_ids)
     if pending:
         group(*(process_payment_task.s(p.entry_id) for p in pending)).apply_async()
 
@@ -263,84 +279,92 @@ def check_purchased_tickets(self):
 @shared_task(bind=True, max_retries=5)
 def check_lottery_status(self):
     """
-    Close lotteries only after 'Corporation Audit Update' + 5-minute safety:
-      1) ACTIVE→PENDING when expired
-      2) wait for audit run after end_date
-      3) wait 5-min grace, logging remaining time
-      4) PENDING→COMPLETED, select winners
+    Manage lottery status transitions.
+    
+    This task:
+    1) Transitions ACTIVE→PENDING when end_date ≤ now
+    2) Waits 5 minutes after the audit task has run
+    3) Transitions PENDING→COMPLETED: draws winners, distributes prizes, creates Winner records
+    
+    Uses a cache lock to prevent concurrent execution.
     """
     lock = "check_lottery_status_lock"
     if not cache.add(lock, "1", timeout=300):
         return
     try:
         now = timezone.now()
-        Lottery = apps.get_model("fortunaisk", "Lottery")
+        LotteryModel = apps.get_model("fortunaisk", "Lottery")
+        Journal      = apps.get_model("corptools", "CorporationWalletJournalEntry")
+        Processed    = apps.get_model("fortunaisk", "ProcessedPayment")
+        Purchase     = apps.get_model("fortunaisk", "TicketPurchase")
+        Winner       = apps.get_model("fortunaisk", "Winner")
+        from fortunaisk.models.winner_distribution import WinnerDistribution
 
         # 1) ACTIVE→PENDING
-        for lot in Lottery.objects.filter(status="active", end_date__lte=now):
+        for lot in LotteryModel.objects.filter(status="active", end_date__lte=now):
             lot.status = "pending"
             lot.save(update_fields=["status"])
             logger.info(f"{lot.lottery_reference} → pending")
 
-        # 2) audit timestamp
+        # 2) Wait for audit + 5'
         try:
             audit = PeriodicTask.objects.get(name="Corporation Audit Update")
             last_run = audit.last_run_at
         except PeriodicTask.DoesNotExist:
             logger.warning("Audit task not found, delaying closure.")
             return
-        if not last_run:
-            logger.info("Awaiting first audit run before closing lotteries.")
+        if not last_run or now < last_run + timedelta(minutes=5):
             return
 
-        # check earliest pending lottery end_date
-        pending = Lottery.objects.filter(status="pending")
-        if not pending.exists():
-            return
-        end0 = pending.order_by("end_date").first().end_date
-
-        # 3A) audit too early
-        if last_run < end0:
-            logger.info(f"Audit at {last_run} before end_date {end0}, delaying.")
-            return
-        # 3B) 5-min grace
-        grace_end = last_run + timedelta(minutes=5)
-        if now < grace_end:
-            rem = str(grace_end - now).split(".")[0]
-            logger.info(f"In grace until {grace_end} (remaining {rem}).")
-            return
-
-        # 4) COMPLETE
-        Journal = apps.get_model("corptools", "CorporationWalletJournalEntry")
-        Processed = apps.get_model("fortunaisk", "ProcessedPayment")
-        Purchase = apps.get_model("fortunaisk", "TicketPurchase")
-
-        for lot in pending.filter(end_date__lte=last_run):
+        # 3) PENDING→COMPLETED
+        pendings = LotteryModel.objects.filter(status="pending", end_date__lte=last_run)
+        for lot in pendings:
             unpaid = Journal.objects.filter(
                 reason__iexact=lot.lottery_reference.lower(),
                 amount__gt=0,
-                date__lte=last_run,
-            ).exclude(
-                entry_id__in=Processed.objects.values_list("payment_id", flat=True)
-            )
+                date__lte=last_run
+            ).exclude(entry_id__in=Processed.objects.values_list("payment_id", flat=True))
             if unpaid.exists():
-                logger.info(
-                    f"Unprocessed payments for {lot.lottery_reference}, retry later."
-                )
-                check_purchased_tickets.delay()
+                logger.info(f"Unprocessed payments for {lot.lottery_reference}, retry later.")
                 continue
 
-            total = (
-                Purchase.objects.filter(lottery=lot).aggregate(sum=Sum("amount"))["sum"]
-                or 0
-            )
-            winners = lot.select_winners() if total > 0 else []
-            logger.info(f"{lot.lottery_reference}: {len(winners)} winner(s).")
-            lot.total_pot = total
-            lot.status = "completed"
-            lot.save(update_fields=["total_pot", "status"])
-            logger.info(f"{lot.lottery_reference} → completed")
+            raw_winners = lot.select_winners() if Purchase.objects.filter(lottery=lot).exists() else []
+            lot.update_total_pot()
+            pot_net = lot.total_pot
 
+            # build percentages
+            dist_qs = WinnerDistribution.objects.filter(
+                lottery_reference=lot.lottery_reference
+            ).order_by("winner_rank")
+            percentages = [wd.winner_prize_distribution for wd in dist_qs]
+            n_winners = len(raw_winners)
+            if len(percentages) != n_winners and n_winners > 0:
+                base = (Decimal("100") / n_winners).quantize(Decimal("0.01"))
+                percentages = [base]*n_winners
+                percentages[-1] = Decimal("100") - base*(n_winners-1)
+
+            # compute allocations
+            allocations, cumu = [], Decimal("0")
+            for idx, pct in enumerate(percentages):
+                share = (pot_net * pct / Decimal("100")).quantize(Decimal("0.01"))
+                if idx == n_winners-1:
+                    share = pot_net - cumu
+                else:
+                    cumu += share
+                allocations.append(share)
+
+            # create winners
+            ts = timezone.now()
+            for purchase, prize in zip(raw_winners, allocations):
+                Winner.objects.create(
+                    ticket=purchase,
+                    character=getattr(purchase, "character", None),
+                    prize_amount=prize,
+                    won_at=ts,
+                )
+            lot.status = "completed"
+            lot.save(update_fields=["status"])
+            logger.info(f"{lot.lottery_reference} → completed")
     finally:
         cache.delete(lock)
 
@@ -348,7 +372,17 @@ def check_lottery_status(self):
 @shared_task(bind=True)
 def create_lottery_from_auto_lottery(self, auto_id: int):
     """
-    Generate a Lottery from an AutoLottery definition.
+    Create a new lottery from an AutoLottery configuration.
+    
+    This task loads an AutoLottery by ID and uses it to create a new
+    standard lottery if the AutoLottery is active.
+    
+    Args:
+        self: Task instance (Celery standard)
+        auto_id: ID of the AutoLottery configuration to use
+        
+    Returns:
+        int: ID of the created lottery, or None if creation failed
     """
     Auto = apps.get_model("fortunaisk", "AutoLottery")
     try:
@@ -364,10 +398,17 @@ def create_lottery_from_auto_lottery(self, auto_id: int):
 @shared_task(bind=True)
 def finalize_lottery(self, lot_id: int):
     """
-    Finalize a lottery (select winners) when invoked manually.
+    Manually finalize a lottery.
+    
+    This task directly completes a lottery by selecting winners and marking
+    the lottery as completed, bypassing the normal workflow.
+    
+    Args:
+        self: Task instance (Celery standard)
+        lot_id: ID of the lottery to finalize
     """
-    Lottery = apps.get_model("fortunaisk", "Lottery")
-    lot = Lottery.objects.filter(id=lot_id).first()
+    LotteryModel = apps.get_model("fortunaisk", "Lottery")
+    lot = LotteryModel.objects.filter(id=lot_id).first()
     if not lot or lot.status not in ("active", "pending"):
         return
     winners = lot.select_winners()
@@ -376,36 +417,116 @@ def finalize_lottery(self, lot_id: int):
     logger.info(f"Finalized {lot.lottery_reference}, {len(winners)} winners.")
 
 
+@shared_task(bind=True)
+def send_lottery_closure_reminders(self):
+    """
+    Send reminders for lotteries closing soon.
+    
+    This task runs at the top of each hour and sends reminders for any
+    lotteries that will be closing in the next 24 hours.
+    """
+    now    = timezone.now()
+    target = now + timedelta(hours=24)
+    Lottery = apps.get_model("fortunaisk", "Lottery")
+    upcoming = Lottery.objects.filter(
+        status="active",
+        end_date__gte=now,
+        end_date__lt=now + timedelta(hours=25)
+    ).order_by('end_date')
+    
+    if not upcoming.exists():
+        return
+        
+    admins = apps.get_model("auth", "User").objects.filter(
+        groups__permissions__codename="can_admin_app"
+    ).distinct()
+    
+    for lot in upcoming:
+        # Get current pot for promotion
+        current_pot = lot.total_pot or 0
+        ticket_price = lot.ticket_price
+        tickets_sold = lot.ticket_purchases.aggregate(total=Sum('quantity'))['total'] or 0
+        
+        # Create more engaging embed
+        embed = build_embed(
+            title="🚨 LAST CHANCE: Lottery Ending in 24 Hours! 🚨",
+            description=(
+                f"**{lot.lottery_reference}** is closing in just 24 hours! ⏳\n\n"
+                f"🏆 **Current Pot: {current_pot:,.2f} ISK**\n"
+                f"💰 Ticket Price: {ticket_price:,.2f} ISK\n"
+                f"⏰ Closes: {lot.end_date.strftime('%Y-%m-%d %H:%M')}\n\n"
+                f"**💥 FINAL COUNTDOWN - DON'T MISS OUT! 💥**\n"
+                f"This is your LAST CHANCE to grab tickets and win big!\n\n"
+                f"💸 **How to participate:**\n"
+                f"Send ISK to **{lot.payment_receiver}** with `{lot.lottery_reference}` in the payment reason."
+            ),
+            level="warning",
+        )
+        
+        notify_discord_or_fallback(
+            users=admins,
+            event="reminder_24h_before_closure",
+            embed=embed,
+            private=False,
+        )
+        logger.info("Sent 24h reminder for %s", lot.lottery_reference)
+
+
 def setup_periodic_tasks():
     """
-    Register global Celery Beat tasks:
-      - check_purchased_tickets: every 30m
-      - check_lottery_status: every 2m
+    Create/update periodic tasks in cron mode:
+    
+    This function configures the following scheduled tasks:
+    - check_purchased_tickets: runs every 30 minutes
+    - check_lottery_status: runs every 2 minutes 
+    - send_lottery_closure_reminders: runs at the top of every hour
     """
-    logger.info("Configuring periodic tasks for FortunaIsk.")
-    Interval = apps.get_model("django_celery_beat", "IntervalSchedule")
-    Periodic = apps.get_model("django_celery_beat", "PeriodicTask")
-
-    sched30, _ = Interval.objects.get_or_create(every=30, period=Interval.MINUTES)
-    Periodic.objects.update_or_create(
+    # 1) every 30 min
+    sched30, _ = CrontabSchedule.objects.get_or_create(
+        minute="*/30", hour="*", day_of_month="*",
+        month_of_year="*", day_of_week="*"
+    )
+    PeriodicTask.objects.update_or_create(
         name="check_purchased_tickets",
         defaults={
-            "task": "fortunaisk.tasks.check_purchased_tickets",
-            "interval": sched30,
-            "args": json.dumps([]),
+            "task":   "fortunaisk.tasks.check_purchased_tickets",
+            "crontab": sched30,
+            "interval": None,
+            "args":   json.dumps([]),
             "enabled": True,
         },
     )
 
-    sched2, _ = Interval.objects.get_or_create(every=2, period=Interval.MINUTES)
-    Periodic.objects.update_or_create(
+    # 2) every 2 min
+    sched2, _ = CrontabSchedule.objects.get_or_create(
+        minute="*/2", hour="*", day_of_month="*",
+        month_of_year="*", day_of_week="*"
+    )
+    PeriodicTask.objects.update_or_create(
         name="check_lottery_status",
         defaults={
-            "task": "fortunaisk.tasks.check_lottery_status",
-            "interval": sched2,
-            "args": json.dumps([]),
+            "task":   "fortunaisk.tasks.check_lottery_status",
+            "crontab": sched2,
+            "interval": None,
+            "args":   json.dumps([]),
             "enabled": True,
         },
     )
 
-    logger.info("Periodic tasks registered.")
+    # 3) every hour on the hour
+    sched1h, _ = CrontabSchedule.objects.get_or_create(
+        minute="0", hour="*", day_of_month="*",
+        month_of_year="*", day_of_week="*"
+    )
+    PeriodicTask.objects.update_or_create(
+        name="send_lottery_closure_reminders",
+        defaults={
+            "task":   "fortunaisk.tasks.send_lottery_closure_reminders",
+            "crontab": sched1h,
+            "interval": None,
+            "args":   json.dumps([]),
+            "enabled": True,
+        },
+    )
+
+    logger.info("FortunaIsk cron tasks registered.")

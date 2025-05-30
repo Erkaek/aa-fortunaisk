@@ -2,6 +2,7 @@
 from .views import (
     admin_dashboard,
     anomalies_list,
+    resolved_anomalies_list,
     create_auto_lottery,
     create_lottery,
     delete_auto_lottery,
@@ -16,11 +17,13 @@ from .views import (
     terminate_lottery,
     user_dashboard,
     winner_list,
+    auto_lottery_toggle,
 )
 
 __all__ = [
     "admin_dashboard",
     "resolve_anomaly",
+    "resolved_anomalies_list",
     "distribute_prize",
     "create_auto_lottery",
     "edit_auto_lottery",
@@ -35,4 +38,5 @@ __all__ = [
     "user_dashboard",
     "anomalies_list",
     "export_winners_csv",
+    "auto_lottery_toggle",
 ]

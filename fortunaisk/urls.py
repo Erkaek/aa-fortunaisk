@@ -17,9 +17,11 @@ from .views import (
     lottery_history,
     lottery_participants,
     resolve_anomaly,
+    resolved_anomalies_list,
     terminate_lottery,
     user_dashboard,
     winner_list,
+    auto_lottery_toggle,
 )
 
 app_name = "fortunaisk"
@@ -74,9 +76,15 @@ urlpatterns = [
         name="distribute_prize",
     ),
     path("anomalies/", anomalies_list, name="anomalies_list"),
+    path("anomalies/resolved/", resolved_anomalies_list, name="resolved_anomalies_list"),
     path(
         "lottery/<int:lottery_id>/export_csv/",
         export_winners_csv,
         name="export_winners_csv",
+    ),
+    path(
+        "auto_lotteries/<int:autolottery_id>/toggle/",
+        auto_lottery_toggle,
+        name="auto_lottery_toggle"
     ),
 ]

@@ -2,7 +2,7 @@
   Global
   ============================ */
 body {
-    background-color: #fdf6e3;  /* light background pour FortunaIsk */
+    background-color: #fdf6e3;  /* light background for FortunaIsk */
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
@@ -138,4 +138,69 @@ nav.navbar .navbar-nav .nav-item.active > .nav-link {
 .fortunaisk-app ul#sidebar-menu,
 .fortunaisk-app ul#sidebar-menu.pt-2 {
     padding-top: 0 !important;
+}
+
+/* ============================
+  Sparkle Animation
+  ============================ */
+.lottery-title {
+    position: relative;
+    display: inline-block;
+}
+
+.sparkle {
+    position: absolute;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background-color: #f1c40f;
+    pointer-events: none;
+    z-index: 100;
+    animation: sparkleAnimation 1s ease-in-out forwards;
+}
+
+@keyframes sparkleAnimation {
+    0% {
+        opacity: 0;
+        transform: scale(0);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.5);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(0);
+        transform: translateY(-20px);
+    }
+}
+
+/* ============================
+  Title Sparkle Animation
+  ============================ */
+.title-sparkle {
+    position: absolute;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background-color: #f1c40f;
+    pointer-events: none;
+    z-index: 10000;
+    animation: titleSparkleAnimation 1s ease-in-out forwards;
+}
+
+@keyframes titleSparkleAnimation {
+    0% {
+        opacity: 0;
+        transform: scale(0);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.5);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(0);
+        transform: translateY(-20px);
+    }
 }

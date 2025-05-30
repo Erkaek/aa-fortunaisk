@@ -1,6 +1,5 @@
 # fortunaisk/models/general.py
 
-# Django
 from django.db import models
 
 

@@ -9,13 +9,13 @@
 {% block details %}
   <link rel="stylesheet" href="{% static 'css/clover.css' %}">
 
-  {# ② Conteneur plein écran pour les trèfles #}
+  {# Full screen container for clovers #}
   <div id="clover-explosion-container"></div>
 
   <div class="container my-5">
     <!-- Hero Section -->
     <div class="text-center mb-5">
-      <h1 class="fw-bold" style="font-size:2.5rem; color:#2ecc71;">
+      <h1 class="fw-bold lottery-title" style="font-size:2.5rem; color:#2ecc71;">
         <i class="fas fa-clover me-2" style="font-size:2rem; color:#f1c40f;"></i>
         {% trans "Fortune Lotteries" %}
       </h1>
@@ -156,7 +156,7 @@
     </div>
   </div>
 
-  {# ③ Scripts pour copie et total #}
+  {# Scripts for copying and total calculation #}
   <script>
   document.addEventListener('DOMContentLoaded', function () {
     const copyToastEl = document.getElementById('copyToast');
@@ -191,14 +191,14 @@
       card.querySelector('.copy-amount-btn').dataset.copy = total.toFixed(2);
     }
 
-    // ─── On initialise et bind uniquement les cartes avec input ───
+    // Initialize and bind only cards with input
     document.querySelectorAll('.ticket-qty-input').forEach(input => {
       const card = input.closest('.lottery-card');
       updateTotal(card);
       input.addEventListener('input', () => updateTotal(card));
     });
 
-    // ─── Puis on bind les boutons Copy pour tous ───
+    // Then bind Copy buttons for all
     document.querySelectorAll('.copy-id-btn').forEach(btn =>
       btn.addEventListener('click', () =>
         handleCopy(btn, btn.dataset.copy, '{% trans "Lottery ID copied!" %}')
@@ -212,6 +212,8 @@
   });
   </script>
 
-  {# ④ Charge le JS de l’explosion & chute #}
+  {# Load JS for explosion & falling animation #}
   <script src="{% static 'js/clover.js' %}"></script>
+  <script src="{% static 'js/sparkle.js' %}"></script>
+  
 {% endblock details %}

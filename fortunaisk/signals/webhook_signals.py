@@ -1,13 +1,11 @@
 # fortunaisk/signals/webhook_signals.py
-# Standard Library
+
 import logging
 
-# Django
 from django.core.cache import cache
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
-# fortunaisk
 from fortunaisk.models import WebhookConfiguration
 
 logger = logging.getLogger(__name__)

@@ -21,7 +21,7 @@
 
     <!-- Action Buttons -->
     <div class="mb-4 d-flex justify-content-end">
-        {% if perms.fortunaisk.admin and lottery.status == 'active' %}
+        {% if perms.fortunaisk.can_admin_app and lottery.status == 'active' %}
         <form action="{% url 'fortunaisk:terminate_lottery' lottery.id %}" method="post" class="me-2">
             {% csrf_token %}
             <button type="submit" class="btn btn-outline-danger btn-sm"
@@ -33,7 +33,6 @@
         <a href="{% url 'fortunaisk:lottery_participants' lottery.id %}" class="btn btn-outline-primary btn-sm">
             <i class="fas fa-users"></i> {% trans "View Participants" %}
         </a>
-        {# Export CSV button removed because it's not needed #}
     </div>
 
     <!-- Lottery Information Section -->
@@ -51,10 +50,10 @@
                             <span class="badge bg-success">{% trans "Active" %}</span>
                         {% elif lottery.status == "completed" %}
                             <span class="badge bg-secondary">{% trans "Completed" %}</span>
+                        {% elif lottery.status == "pending" %}
+                            <span class="badge bg-info"><i class="fas fa-spinner fa-spin me-1"></i>{% trans "Pending" %}</span>
                         {% elif lottery.status == "cancelled" %}
                             <span class="badge bg-danger">{% trans "Cancelled" %}</span>
-                        {% else %}
-                            <span class="badge bg-dark">{{ lottery.status }}</span>
                         {% endif %}
                     </li>
                     <li class="list-group-item d-flex justify-content-between align-items-center">
@@ -62,8 +61,16 @@
                         <span>{{ lottery.ticket_price|intcomma }}</span>
                     </li>
                     <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <strong>{% trans "Tax (%)" %}</strong>
+                        <span>{{ lottery.tax|floatformat:2 }} %</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
                         <strong>{% trans "Total Pot (ISK)" %}</strong>
                         <span>{{ lottery.total_pot|intcomma }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <strong>{% trans "Tax Collected (ISK)" %}</strong>
+                        <span>{{ tax_collected|intcomma }}</span>
                     </li>
                     <li class="list-group-item d-flex justify-content-between align-items-center">
                         <strong>{% trans "Winner Count" %}</strong>
@@ -90,6 +97,7 @@
                 </ul>
             </div>
         </div>
+
         <!-- Additional Information Card -->
         <div class="col-lg-6 mb-4">
             <div class="card shadow-sm border-0">
@@ -109,28 +117,36 @@
                     </li>
                     <li class="list-group-item d-flex justify-content-between align-items-center">
                         <strong>{% trans "Duration" %}</strong>
-                        <span>{{ lottery.duration_value }} {{ lottery.get_duration_unit_display }}</span>
+                        <span>
+                            {{ lottery.duration_value }} {{ lottery.get_duration_unit_display }}
+                        </span>
                     </li>
                     <li class="list-group-item">
                         <strong>{% trans "Winners Distribution" %}:</strong>
                         <div class="mt-2">
                             <ul class="list-unstyled">
-                                {% for percentage in lottery.winners_distribution %}
+                                {% for dist in distributions %}
                                 <li class="d-flex align-items-center mb-2">
                                     <i class="fas fa-award me-2 text-warning"></i>
-                                    <span class="fw-bold">{% trans "Winner" %} {{ forloop.counter }}:</span>
-                                    <span class="ms-2 badge bg-info text-light">{{ percentage }}%</span>
+                                    <span class="fw-bold">
+                                        {% trans "Winner" %} {{ dist.winner_rank }}:
+                                    </span>
+                                    <span class="ms-2 badge bg-info text-light">
+                                        {{ dist.winner_prize_distribution }}%
+                                    </span>
                                 </li>
+                                {% empty %}
+                                <li class="text-muted">{% trans "No distribution defined." %}</li>
                                 {% endfor %}
                             </ul>
                         </div>
                     </li>
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <strong>{% trans "Number of Participants" %}</strong>
+                        <strong>{% trans "Participants" %}</strong>
                         <span>{{ participant_count }}</span>
                     </li>
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <strong>{% trans "Number of Tickets Sold" %}</strong>
+                        <strong>{% trans "Tickets Sold" %}</strong>
                         <span>{{ tickets_sold }}</span>
                     </li>
                 </ul>
@@ -143,8 +159,9 @@
         <div class="col-12">
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-warning text-white d-flex justify-content-between align-items-center">
-                    <h4 class="mb-0"><i class="fas fa-award"></i> {% trans "Winners" %}</h4>
-                    {# Export CSV button removed #}
+                    <h4 class="mb-0">
+                        <i class="fas fa-award"></i> {% trans "Winners" %}
+                    </h4>
                 </div>
                 <div class="card-body">
                     {% if winners %}
@@ -152,13 +169,13 @@
                             <table class="table table-striped table-hover align-middle">
                                 <thead class="table-dark">
                                     <tr>
-                                        <th scope="col">{% trans "Lottery Reference" %}</th>
-                                        <th scope="col">{% trans "User" %}</th>
-                                        <th scope="col">{% trans "Character" %}</th>
-                                        <th scope="col">{% trans "Prize Amount (ISK)" %}</th>
-                                        <th scope="col">{% trans "Won At" %}</th>
-                                        <th scope="col">{% trans "Distributed" %}</th>
-                                        <th scope="col">{% trans "Actions" %}</th>
+                                        <th>{% trans "Reference" %}</th>
+                                        <th>{% trans "User" %}</th>
+                                        <th>{% trans "Character" %}</th>
+                                        <th>{% trans "Prize (ISK)" %}</th>
+                                        <th>{% trans "Won At" %}</th>
+                                        <th>{% trans "Distributed" %}</th>
+                                        <th>{% trans "Actions" %}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -187,20 +204,15 @@
                                             {% endif %}
                                         </td>
                                         <td>
-                                            {% if perms.fortunaisk.admin %}
-                                                {% if not winner.distributed %}
-                                                    <form action="{% url 'fortunaisk:distribute_prize' winner.id %}" method="post" class="d-inline">
-                                                        {% csrf_token %}
-                                                        <button type="submit" class="btn btn-sm btn-primary"
-                                                                onclick="return confirm('{% trans "Have you distributed the prize to this winner?" %}');">
-                                                            <i class="fas fa-hand-holding-usd"></i> {% trans "Distribute Prize" %}
-                                                        </button>
-                                                    </form>
-                                                {% else %}
-                                                    <span class="badge bg-success">
-                                                        <i class="fas fa-check"></i> {% trans "Distributed" %}
-                                                    </span>
-                                                {% endif %}
+                                            {% if perms.fortunaisk.can_admin_app and not winner.distributed %}
+                                            <form action="{% url 'fortunaisk:distribute_prize' winner.id %}"
+                                                  method="post" class="d-inline">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-primary"
+                                                        onclick="return confirm('{% trans "Confirm distribution?" %}');">
+                                                    <i class="fas fa-hand-holding-usd"></i>
+                                                </button>
+                                            </form>
                                             {% endif %}
                                         </td>
                                     </tr>

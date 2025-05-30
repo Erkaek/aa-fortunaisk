@@ -2,6 +2,9 @@
 
 # Django
 from django.db import models
+from decimal import Decimal
+from django.contrib.auth import get_user_model
+from allianceauth.eveonline.models import EveCharacter
 
 
 class ProcessedPayment(models.Model):
@@ -10,6 +13,35 @@ class ProcessedPayment(models.Model):
         unique=True,
         verbose_name="Payment ID",
         help_text="Unique identifier for processed payments.",
+    )
+    character = models.ForeignKey(
+        EveCharacter,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        verbose_name="Eve Character",
+        help_text="EVE character (if identified).",
+    )
+    user = models.ForeignKey(
+        get_user_model(),
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        verbose_name="Django User",
+        help_text="Django user (if identified).",
+    )
+    amount = models.DecimalField(
+        max_digits=25,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        verbose_name="Total Paid Amount",
+        help_text="Total amount paid in ISK.",
+    )
+    payed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Paid At",
+        help_text="Payment date & time.",
     )
     processed_at = models.DateTimeField(
         auto_now_add=True,

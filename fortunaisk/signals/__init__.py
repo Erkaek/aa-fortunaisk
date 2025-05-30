@@ -6,4 +6,5 @@ __all__ = [
     "notifications_signals",
     "webhook_signals",
     "autolottery_signals",
+    "lottery_signals",
 ]
