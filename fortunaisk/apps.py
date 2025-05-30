@@ -36,7 +36,7 @@ class FortunaIskConfig(AppConfig):
             Logs exceptions if signal loading fails but doesn't halt startup
         """
         super().ready()
-        
+
         # Load signals
         try:
             # fortunaisk
@@ -46,25 +46,30 @@ class FortunaIskConfig(AppConfig):
             logger.exception(f"Error loading signals: {e}")
 
         # Do not configure tasks during tests or migrations
-        if 'test' in sys.argv or 'runtests.py' in sys.argv[0]:
+        if "test" in sys.argv or "runtests.py" in sys.argv[0]:
             logger.info("Skipping periodic tasks setup during tests.")
             return
-            
-        if 'migrate' in sys.argv or 'makemigrations' in sys.argv:
+
+        if "migrate" in sys.argv or "makemigrations" in sys.argv:
             logger.info("Skipping periodic tasks setup during migrations.")
             return
 
         # Check that Celery Beat tables exist
         try:
             with connection.cursor() as cursor:
-                cursor.execute("SELECT 1 FROM django_celery_beat_crontabschedule LIMIT 1")
+                cursor.execute(
+                    "SELECT 1 FROM django_celery_beat_crontabschedule LIMIT 1"
+                )
         except Exception as e:
-            logger.warning(f"Celery Beat tables not available, skipping periodic tasks setup: {e}")
+            logger.warning(
+                f"Celery Beat tables not available, skipping periodic tasks setup: {e}"
+            )
             return
 
         # Configure periodic tasks
         try:
             from .tasks import setup_periodic_tasks
+
             setup_periodic_tasks()
             logger.info("FortunaIsk periodic tasks configured.")
         except Exception as e:
