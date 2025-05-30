@@ -61,7 +61,7 @@ ______________________________________________________________________
 ### Step 1 - Install the Package
 
 ```bash
-pip install aa-fortunaisk
+pip install fortunaisk
 ```
 
 ### Step 2 - Configure Settings
@@ -179,7 +179,7 @@ ______________________________________________________________________
 ### Step 1 - Update Package
 
 ```bash
-pip install -U aa-fortunaisk
+pip install -U fortunaisk
 ```
 
 ### Step 2 - Apply Changes
