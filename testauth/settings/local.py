@@ -45,7 +45,7 @@ NOTIFICATIONS_MAX_PER_USER = 50
 
 # Ajouter corptools et fortunaisk pour les tests
 INSTALLED_APPS += [
-    "corptools",  # ← AJOUTER CETTE LIGNE
+    "corptools",
     PACKAGE,
 ]
 
@@ -101,6 +101,7 @@ LOGGING = {
 ESI_SSO_CLIENT_ID = "dummy"
 ESI_SSO_CLIENT_SECRET = "dummy"
 ESI_SSO_CALLBACK_URL = "http://localhost:8000"
+ESI_USER_CONTACT_EMAIL = "test@example.com"  # ← LIGNE AJOUTÉE
 
 # Email settings (désactivé pour les tests)
 REGISTRATION_VERIFY_EMAIL = False
