@@ -45,13 +45,11 @@ dependencies = [
     "allianceauth>=4,<5",
     "allianceauth-corptools>=2.5.5",
 ]
-
-optional-dependencies.test = [
-    "coverage",
-    "fakeredis",
-]
 urls.Home = "https://github.com/Erkaek/aa-fortunaisk"
 urls.Source = "https://github.com/Erkaek/aa-fortunaisk"
+# Déplacer les dépendances test dans tox.ini au lieu de pyproject.toml
+# pour éviter les conflits avec pyproject-fmt
+
 urls.Tracker = "https://github.com/Erkaek/aa-fortunaisk/issues"
 
 [tool.flit.module]
