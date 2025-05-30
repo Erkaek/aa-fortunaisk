@@ -126,10 +126,10 @@ ______________________________________________________________________
 
 ### 🎲 User Experience
 
-| **FortunaISK in Action** | **Personal Dashboard** |
-|---|---|
+| **FortunaISK in Action**                                          | **Personal Dashboard**                                                 |
+| ----------------------------------------------------------------- | ---------------------------------------------------------------------- |
 | ![FortunaISK Overview](docs/screenshots/fortunaisk_home_page.gif) | ![User Dashboard](docs/screenshots/fortunaisk_user_dashboard_page.png) |
-| *Complete lottery system overview* | *Track tickets, winnings, and payments* |
+| *Complete lottery system overview*                                | *Track tickets, winnings, and payments*                                |
 
 **Lottery History**
 ![Lottery History](docs/screenshots/fortunaisk_lottery_history_page.png)
@@ -137,21 +137,22 @@ ______________________________________________________________________
 
 ### 🛠️ Admin Interface
 
-| **Admin Dashboard** | **Lottery Details** |
-|---|---|
+| **Admin Dashboard**                                                      | **Lottery Details**                                                      |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
 | ![Admin Dashboard](docs/screenshots/fortunaisk_admin_dashboard_page.png) | ![Lottery Details](docs/screenshots/fortunaisk_lottery_details_page.png) |
-| *Real-time statistics and monitoring* | *Participant tracking and anomaly resolution* |
+| *Real-time statistics and monitoring*                                    | *Participant tracking and anomaly resolution*                            |
 
 ### 🏆 Results & 🔔 Discord Integration
 
-| **Winner Announcements** | **Discord Notifications** |
-|---|---|
+| **Winner Announcements**                                       | **Discord Notifications**                                                         |
+| -------------------------------------------------------------- | --------------------------------------------------------------------------------- |
 | ![Winner Results](docs/screenshots/fortunaisk_winner_page.png) | ![New Lottery Discord](docs/screenshots/fortunaisk_new_lottery_discord_embed.png) |
-| *Transparent prize distribution* | *Rich embeds for community engagement* |
+| *Transparent prize distribution*                               | *Rich embeds for community engagement*                                            |
 
-**24-Hour Closure Reminders**
-![24h Reminder Discord](docs/screenshots/fortunaisk_24h_remind_closure_discord.png)
-*Automated reminders to boost participation before lottery closure*
+| **24-Hour Closure Reminders**
+|\---|---|
+| ![24h Reminder Discord](docs/screenshots/fortunaisk_24h_remind_closure_discord.png) |
+| *Automated reminders to boost participation before lottery closure* |
 
 ______________________________________________________________________
 
