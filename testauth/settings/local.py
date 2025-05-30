@@ -37,16 +37,15 @@ WSGI_APPLICATION = "testauth.wsgi.application"
 SECRET_KEY = "t$@h+j#yqhmuy$x7$fkhytd&drajgfsb-6+j9pqn*vj0)gq&-2"
 STATIC_ROOT = "/var/www/testauth/static/"
 SITE_NAME = "testauth"
-DEBUG = True  # Activé pour les tests pour voir les erreurs
+DEBUG = True
 
 # Notifications
 NOTIFICATIONS_REFRESH_TIME = 30
 NOTIFICATIONS_MAX_PER_USER = 50
 
-# S'assurer que django-celery-beat est installé pour les tests
+# Ajouter SEULEMENT le package fortunaisk (django_celery_beat est déjà dans base.py)
 INSTALLED_APPS += [
-    "django_celery_beat",  # IMPORTANT: Ajouté pour les tests
-    PACKAGE,
+    PACKAGE,  # Seulement fortunaisk, pas django_celery_beat
 ]
 
 # Celery settings pour les tests
