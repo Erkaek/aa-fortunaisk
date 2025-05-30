@@ -79,7 +79,7 @@ def on_lottery_created(sender, instance, **kwargs):
         {
             "name": "📊 Prize Distribution",
             "value": "\n".join(
-                f"• Winner {i+1}: {p}" for i, p in enumerate(distributions)
+                f"• Winner {i + 1}: {p}" for i, p in enumerate(distributions)
             ),
             "inline": False,
         },
