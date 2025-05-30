@@ -52,12 +52,27 @@ INSTALLED_APPS += [
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
 
-# Cache simple pour les tests
-CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+# Cache avec fake Redis pour les tests
+try:
+    # Third Party
+    import fakeredis
+
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": "redis://127.0.0.1:6379/1",
+            "OPTIONS": {
+                "CONNECTION_CLASS": "fakeredis.FakeConnection",
+            },
+        }
     }
-}
+except ImportError:
+    # Fallback si fakeredis n'est pas disponible
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.dummy.DummyCache",
+        }
+    }
 
 # Logging pour les tests - plus verbeux pour débugger
 LOGGING = {
