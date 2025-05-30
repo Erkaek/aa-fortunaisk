@@ -11,6 +11,9 @@ from django.utils.translation import gettext as _
 # Alliance Auth
 from allianceauth.eveonline.models import EveCorporationInfo
 
+# Corp Tools
+from corptools.models import CorporationWalletJournalEntry
+
 # fortunaisk
 from fortunaisk.models import Lottery
 
@@ -34,11 +37,33 @@ class LotteryCreateForm(forms.ModelForm):
         ),
     )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Récupérer les corporations avec accès wallet
+        available_corps = EveCorporationInfo.objects.filter(
+            corporation_id__in=CorporationWalletJournalEntry.objects.filter(
+                second_party_name_id__isnull=False
+            ).values_list('second_party_name_id', flat=True).distinct()
+        )
+        
+        if available_corps.exists():
+            self.fields['payment_receiver'].queryset = available_corps
+            self.fields['payment_receiver'].help_text = _(
+                "Choose the corporation that will receive payments (only corporations with wallet access)."
+            )
+        else:
+            # Aucune corporation disponible
+            self.fields['payment_receiver'].queryset = EveCorporationInfo.objects.none()
+            self.fields['payment_receiver'].help_text = _(
+                "No corporations available. Please add your corporation token on CorpTools first."
+            )
+            self.fields['payment_receiver'].widget.attrs['disabled'] = True
+
     payment_receiver = forms.ModelChoiceField(
-        queryset=EveCorporationInfo.objects.all(),
+        queryset=EveCorporationInfo.objects.none(),  # Sera redéfini dans __init__
         required=False,
         label=_("Payment Receiver (Corporation)"),
-        help_text=_("Choose the corporation that will receive payments."),
         widget=forms.Select(attrs={"class": "form-select"}),
     )
 
@@ -80,6 +105,26 @@ class LotteryCreateForm(forms.ModelForm):
     def clean_max_tickets_per_user(self):
         max_tix = self.cleaned_data.get("max_tickets_per_user")
         return None if max_tix in (0, None) else max_tix
+
+    def clean_payment_receiver(self):
+        payment_receiver = self.cleaned_data.get('payment_receiver')
+        
+        # Vérifier qu'une corporation est sélectionnée
+        if not payment_receiver:
+            available_corps = EveCorporationInfo.objects.filter(
+                corporation_id__in=CorporationWalletJournalEntry.objects.filter(
+                    second_party_name_id__isnull=False
+                ).values_list('second_party_name_id', flat=True).distinct()
+            )
+            
+            if not available_corps.exists():
+                raise forms.ValidationError(
+                    _("No corporations available. Please add your corporation token on CorpTools first.")
+                )
+            else:
+                raise forms.ValidationError(_("Please select a corporation to receive payments."))
+        
+        return payment_receiver
 
     def clean(self):
         cd = super().clean()

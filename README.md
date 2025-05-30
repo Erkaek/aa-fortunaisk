@@ -149,10 +149,10 @@ ______________________________________________________________________
 | ![Winner Results](docs/screenshots/fortunaisk_winner_page.png) | ![New Lottery Discord](docs/screenshots/fortunaisk_new_lottery_discord_embed.png) |
 | *Transparent prize distribution*                               | *Rich embeds for community engagement*                                            |
 
-| **24-Hour Closure Reminders**
-| -------------------------------------------------------------- |
+| **24-Hour Closure Reminders**                                                       |
+| ----------------------------------------------------------------------------------- |
 | ![24h Reminder Discord](docs/screenshots/fortunaisk_24h_remind_closure_discord.png) |
-| *Automated reminders to boost participation before lottery closure* |
+| *Automated reminders to boost participation before lottery closure*                 |
 
 ______________________________________________________________________
 
