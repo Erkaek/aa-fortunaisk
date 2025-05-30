@@ -43,9 +43,10 @@ DEBUG = True
 NOTIFICATIONS_REFRESH_TIME = 30
 NOTIFICATIONS_MAX_PER_USER = 50
 
-# Ajouter SEULEMENT le package fortunaisk (django_celery_beat est déjà dans base.py)
+# Ajouter corptools et fortunaisk pour les tests
 INSTALLED_APPS += [
-    PACKAGE,  # Seulement fortunaisk, pas django_celery_beat
+    "corptools",  # ← AJOUTER CETTE LIGNE
+    PACKAGE,
 ]
 
 # Celery settings pour les tests
