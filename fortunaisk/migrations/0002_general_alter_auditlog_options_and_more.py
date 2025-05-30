@@ -4,11 +4,12 @@ Migration to configure application-wide permissions and model defaults.
 
 This migration:
 1. Creates a General model with app-level permissions:
-   - can_access_app: Basic access to the application 
-   - can_admin_app: Administrative privileges
+- can_access_app: Basic access to the application
+- can_admin_app: Administrative privileges
 2. Disables default Django permissions for all models to simplify access control
 """
 
+# Django
 from django.db import migrations, models
 
 

@@ -3,142 +3,142 @@
 {% load i18n humanize static %}
 
 {% block page_title %}
-    {% trans "All Anomalies" %}
+  {% trans "All Anomalies" %}
 {% endblock page_title %}
 
 {% block details %}
 <div class="container my-5">
-    <!-- Header Section -->
-    <div class="text-center mb-5">
-        <h2 class="fw-bold" style="color: #e67e22;">
-            <i class="fas fa-exclamation-triangle me-2" style="color: #f1c40f;"></i>
-            {% trans "All Anomalies" %}
-        </h2>
-        <p class="text-muted fs-5">
-            {% trans "Review and resolve any issues in lottery transactions to keep the system running smoothly." %}
-        </p>
-    </div>
+  <!-- Header Section -->
+  <div class="text-center mb-5">
+    <h2 class="fw-bold" style="color: #e67e22;">
+      <i class="fas fa-exclamation-triangle me-2" style="color: #f1c40f;"></i>
+      {% trans "All Anomalies" %}
+    </h2>
+    <p class="text-muted fs-5">
+      {% trans "Review and resolve any issues in lottery transactions to keep the system running smoothly." %}
+    </p>
+  </div>
 
-    {% if page_obj.object_list %}
-    <div class="card shadow-sm border-0">
-        <div class="card-header bg-warning text-white">
-            <h5 class="mb-0">
-                <i class="fas fa-info-circle me-2"></i>
-                {% trans "Anomaly List" %}
-            </h5>
-        </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-bordered table-hover align-middle mb-0">
-                    <thead class="table-dark">
-                        <tr>
-                            <th scope="col">{% trans "Lottery Reference" %}</th>
-                            <th scope="col">{% trans "User" %}</th>
-                            <th scope="col">{% trans "Character" %}</th>
-                            <th scope="col">{% trans "Reason" %}</th>
-                            <th scope="col">{% trans "Payment Date" %}</th>
-                            <th scope="col">{% trans "Amount (ISK)" %}</th>
-                            <th scope="col">{% trans "Payment ID" %}</th>
-                            <th scope="col">{% trans "Recorded At" %}</th>
-                            <th scope="col">{% trans "Actions" %}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for anomaly in page_obj.object_list %}
-                        <tr>
-                            <td>
-                                {% if anomaly.lottery %}
-                                    {{ anomaly.lottery.lottery_reference }}
-                                {% else %}
-                                    <span class="text-muted">N/A</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if anomaly.user %}
-                                    {{ anomaly.user.username }}
-                                {% else %}
-                                    <span class="text-muted">N/A</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if anomaly.character %}
-                                    {{ anomaly.character.character_name }}
-                                {% else %}
-                                    <span class="text-muted">N/A</span>
-                                {% endif %}
-                            </td>
-                            <td>{{ anomaly.reason }}</td>
-                            <td>{{ anomaly.payment_date|date:"Y-m-d H:i" }}</td>
-                            <td>{{ anomaly.amount|floatformat:2|intcomma }}</td>
-                            <td>{{ anomaly.payment_id }}</td>
-                            <td>{{ anomaly.recorded_at|date:"Y-m-d H:i" }}</td>
-                            <td>
-                                <a href="{% url 'fortunaisk:resolve_anomaly' anomaly.id %}"
-                                   class="btn btn-sm btn-success">
-                                    <i class="fas fa-check-circle"></i>
-                                    {% trans "Resolve" %}
-                                </a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        <div class="card-footer bg-light">
-            <nav aria-label="Page navigation" class="my-3">
-                <ul class="pagination justify-content-center mb-0">
-                    {% if page_obj.has_previous %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
-                                <span aria-hidden="true">&laquo;</span>
-                            </a>
-                        </li>
-                    {% else %}
-                        <li class="page-item disabled">
-                            <span class="page-link" aria-hidden="true">&laquo;</span>
-                        </li>
-                    {% endif %}
-
-                    {% for num in page_obj.paginator.page_range %}
-                        {% if page_obj.number == num %}
-                            <li class="page-item active">
-                                <span class="page-link">{{ num }}</span>
-                            </li>
-                        {% else %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
-                            </li>
-                        {% endif %}
-                    {% endfor %}
-
-                    {% if page_obj.has_next %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
-                                <span aria-hidden="true">&raquo;</span>
-                            </a>
-                        </li>
-                    {% else %}
-                        <li class="page-item disabled">
-                            <span class="page-link" aria-hidden="true">&raquo;</span>
-                        </li>
-                    {% endif %}
-                </ul>
-            </nav>
-        </div>
+  {% if page_obj.object_list %}
+  <div class="card shadow-sm border-0">
+    <div class="card-header bg-warning text-white">
+      <h5 class="mb-0">
+        <i class="fas fa-info-circle me-2"></i>
+        {% trans "Anomaly List" %}
+      </h5>
     </div>
-    {% else %}
-    <div class="alert alert-success text-center">
-        <i class="fas fa-check-circle me-2"></i>
-        {% trans "No anomalies detected." %}
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-bordered table-hover align-middle mb-0">
+          <thead class="table-dark">
+            <tr>
+              <th scope="col">{% trans "Lottery Reference" %}</th>
+              <th scope="col">{% trans "User" %}</th>
+              <th scope="col">{% trans "Character" %}</th>
+              <th scope="col">{% trans "Reason" %}</th>
+              <th scope="col">{% trans "Payment Date" %}</th>
+              <th scope="col">{% trans "Amount (ISK)" %}</th>
+              <th scope="col">{% trans "Payment ID" %}</th>
+              <th scope="col">{% trans "Recorded At" %}</th>
+              <th scope="col">{% trans "Actions" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for anomaly in page_obj.object_list %}
+            <tr>
+              <td>
+                {% if anomaly.lottery %}
+                  {{ anomaly.lottery.lottery_reference }}
+                {% else %}
+                  <span class="text-muted">N/A</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if anomaly.user %}
+                  {{ anomaly.user.username }}
+                {% else %}
+                  <span class="text-muted">N/A</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if anomaly.character %}
+                  {{ anomaly.character.character_name }}
+                {% else %}
+                  <span class="text-muted">N/A</span>
+                {% endif %}
+              </td>
+              <td>{{ anomaly.reason }}</td>
+              <td>{{ anomaly.payment_date|date:"Y-m-d H:i" }}</td>
+              <td>{{ anomaly.amount|floatformat:2|intcomma }}</td>
+              <td>{{ anomaly.payment_id }}</td>
+              <td>{{ anomaly.recorded_at|date:"Y-m-d H:i" }}</td>
+              <td>
+                <a href="{% url 'fortunaisk:resolve_anomaly' anomaly.id %}"
+                    class="btn btn-sm btn-success">
+                  <i class="fas fa-check-circle"></i>
+                  {% trans "Resolve" %}
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
-    {% endif %}
+    <div class="card-footer bg-light">
+      <nav aria-label="Page navigation" class="my-3">
+        <ul class="pagination justify-content-center mb-0">
+          {% if page_obj.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
+                <span aria-hidden="true">&laquo;</span>
+              </a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link" aria-hidden="true">&laquo;</span>
+            </li>
+          {% endif %}
 
-    <div class="text-center mt-4">
-        <a href="{% url 'fortunaisk:admin_dashboard' %}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left me-1"></i>
-            {% trans "Back to Dashboard" %}
-        </a>
+          {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+              <li class="page-item active">
+                <span class="page-link">{{ num }}</span>
+              </li>
+            {% else %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+              </li>
+            {% endif %}
+          {% endfor %}
+
+          {% if page_obj.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
+                <span aria-hidden="true">&raquo;</span>
+              </a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link" aria-hidden="true">&raquo;</span>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
     </div>
+  </div>
+  {% else %}
+  <div class="alert alert-success text-center">
+    <i class="fas fa-check-circle me-2"></i>
+    {% trans "No anomalies detected." %}
+  </div>
+  {% endif %}
+
+  <div class="text-center mt-4">
+    <a href="{% url 'fortunaisk:admin_dashboard' %}" class="btn btn-secondary">
+      <i class="fas fa-arrow-left me-1"></i>
+      {% trans "Back to Dashboard" %}
+    </a>
+  </div>
 </div>
 {% endblock details %}

@@ -22,9 +22,9 @@
   <!-- Statistics Cards -->
   <div class="row mb-5 g-4">
     {# Financial Summary #}
-   <div class="col-6 col-md-4 d-flex flex-column h-100">
-     <div class="card text-white flex-fill"
-          style="background: linear-gradient(135deg, #f1c40f, #27ae60);">
+    <div class="col-6 col-md-4 d-flex flex-column h-100">
+      <div class="card text-white flex-fill"
+            style="background: linear-gradient(135deg, #f1c40f, #27ae60);">
         <div class="card-header">
           <i class="fas fa-wallet me-1"></i> {% trans "Financial Summary" %}
         </div>
@@ -49,10 +49,10 @@
       </div>
     </div>
 
-    {# Total Lotteries & Average Participation empilés #}
+    {# Total Lotteries & Average Participation stacked #}
     <div class="col-6 col-md-4 d-flex flex-column h-100">
       <div class="card text-white mb-2 flex-fill"
-           style="background: linear-gradient(135deg, #27ae60, #1abc9c);">
+            style="background: linear-gradient(135deg, #27ae60, #1abc9c);">
         <div class="card-header">
           <i class="fas fa-ticket-alt me-1"></i> {% trans "Total Lotteries" %}
         </div>
@@ -61,7 +61,7 @@
         </div>
       </div>
       <div class="card text-white flex-fill"
-           style="background: linear-gradient(135deg, #3498db, #2980b9);">
+            style="background: linear-gradient(135deg, #3498db, #2980b9);">
         <div class="card-header">
           <i class="fas fa-users me-1"></i> {% trans "Average Participation" %}
         </div>
@@ -71,12 +71,12 @@
       </div>
     </div>
 
-    {# Active Anomalies & History empilés #}
+    {# Active Anomalies & History stacked #}
     <div class="col-6 col-md-4 d-flex flex-column" style="height: 100%;">
       <a href="{% url 'fortunaisk:anomalies_list' %}"
-         class="text-decoration-none mb-2 flex-fill">
+          class="text-decoration-none mb-2 flex-fill">
         <div class="card text-white h-100"
-             style="background: {% if stats.total_unsolved_anomalies > 0 %}
+              style="background: {% if stats.total_unsolved_anomalies > 0 %}
                       linear-gradient(135deg, #e74c3c, #c0392b)
                     {% else %}
                       linear-gradient(135deg, #27ae60, #1abc9c)
@@ -107,9 +107,9 @@
       </a>
 
       <a href="{% url 'fortunaisk:resolved_anomalies_list' %}"
-         class="text-decoration-none flex-fill">
+          class="text-decoration-none flex-fill">
         <div class="card text-white h-100"
-             style="background: linear-gradient(135deg, #95a5a6, #7f8c8d);">
+              style="background: linear-gradient(135deg, #95a5a6, #7f8c8d);">
           <div class="card-header d-flex justify-content-between align-items-center">
             <span>
               <i class="fas fa-history me-1"></i>
@@ -126,7 +126,7 @@
       </a>
     </div>
   </div>
-  
+
   <!-- Automatic Lotteries -->
   <div class="mb-5">
     <h4 class="text-success mb-3">
@@ -257,7 +257,7 @@
               <td>{{ lottery.tickets_sold|intcomma }}</td>
               <td>
                 <a href="{% url 'fortunaisk:lottery_detail' lottery.id %}"
-                   class="btn btn-sm btn-info">
+                    class="btn btn-sm btn-info">
                   <i class="fas fa-chart-pie me-1"></i>
                   {% trans "Dashboard" %}
                 </a>
@@ -296,36 +296,36 @@
           </thead>
           <tbody>
             {% for winner in winners %}
-              {% if not winner.distributed %}
-              <tr>
-                <td>{{ winner.ticket.lottery.lottery_reference }}</td>
-                <td>{{ winner.ticket.user.username }}</td>
-                <td>
-                  {% if winner.character %}
-                    {{ winner.character }}
-                  {% else %}
-                    {% trans "N/A" %}
-                  {% endif %}
-                </td>
-                <td>{{ winner.prize_amount|floatformat:2|intcomma }}</td>
-                <td>{{ winner.won_at|date:"Y-m-d H:i" }}</td>
-                <td>
-                  <span class="badge bg-warning">{% trans "No" %}</span>
-                </td>
-                <td>
-                  <form action="{% url 'fortunaisk:distribute_prize' winner.id %}"
-                        method="post" class="d-inline">
-                    {% csrf_token %}
-                    <button type="submit"
-                            class="btn btn-sm btn-primary"
-                            onclick="return confirm('{% trans "Have you distributed the prize to this winner?" %}');">
-                      <i class="fas fa-hand-holding-usd me-1"></i>
-                      {% trans "Distribute Prize" %}
-                    </button>
-                  </form>
-                </td>
-              </tr>
-              {% endif %}
+            {% if not winner.distributed %}
+            <tr>
+              <td>{{ winner.ticket.lottery.lottery_reference }}</td>
+              <td>{{ winner.ticket.user.username }}</td>
+              <td>
+                {% if winner.character %}
+                  {{ winner.character }}
+                {% else %}
+                  {% trans "N/A" %}
+                {% endif %}
+              </td>
+              <td>{{ winner.prize_amount|floatformat:2|intcomma }}</td>
+              <td>{{ winner.won_at|date:"Y-m-d H:i" }}</td>
+              <td>
+                <span class="badge bg-warning">{% trans "No" %}</span>
+              </td>
+              <td>
+                <form action="{% url 'fortunaisk:distribute_prize' winner.id %}"
+                      method="post" class="d-inline">
+                  {% csrf_token %}
+                  <button type="submit"
+                          class="btn btn-sm btn-primary"
+                          onclick="return confirm('{% trans "Have you distributed the prize to this winner?" %}');">
+                    <i class="fas fa-hand-holding-usd me-1"></i>
+                    {% trans "Distribute Prize" %}
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% endif %}
             {% endfor %}
           </tbody>
         </table>

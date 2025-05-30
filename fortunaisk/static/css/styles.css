@@ -156,22 +156,23 @@ nav.navbar .navbar-nav .nav-item.active > .nav-link {
     background-color: #f1c40f;
     pointer-events: none;
     z-index: 100;
-    animation: sparkleAnimation 1s ease-in-out forwards;
+    animation: sparkle-animation 1s ease-in-out forwards;
 }
 
-@keyframes sparkleAnimation {
+@keyframes sparkle-animation {
     0% {
         opacity: 0;
         transform: scale(0);
     }
+
     50% {
         opacity: 1;
         transform: scale(1.5);
     }
+
     100% {
         opacity: 0;
-        transform: scale(0);
-        transform: translateY(-20px);
+        transform: scale(0) translateY(-20px);
     }
 }
 
@@ -186,21 +187,22 @@ nav.navbar .navbar-nav .nav-item.active > .nav-link {
     background-color: #f1c40f;
     pointer-events: none;
     z-index: 10000;
-    animation: titleSparkleAnimation 1s ease-in-out forwards;
+    animation: title-sparkle-animation 1s ease-in-out forwards;
 }
 
-@keyframes titleSparkleAnimation {
+@keyframes title-sparkle-animation {
     0% {
         opacity: 0;
         transform: scale(0);
     }
+
     50% {
         opacity: 1;
         transform: scale(1.5);
     }
+
     100% {
         opacity: 0;
-        transform: scale(0);
-        transform: translateY(-20px);
+        transform: scale(0) translateY(-20px);
     }
 }

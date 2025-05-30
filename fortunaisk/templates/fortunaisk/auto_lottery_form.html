@@ -117,7 +117,7 @@
                 <label class="form-label">{% trans "Prize Distribution (%)" %}</label>
                 <div id="prize-distribution-container"></div>
                 <small class="form-text text-muted">
-                  {% trans "Adjust each winner’s share; total must equal 100%." %}
+                  {% trans "Adjust each winner's share; total must equal 100%." %}
                 </small>
               </div>
             </div>
@@ -185,8 +185,8 @@
 <script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  const form      = document.getElementById('autoLotteryForm');
-  const countEl   = document.getElementById('id_winner_count');
+  const form = document.getElementById('autoLotteryForm');
+  const countEl = document.getElementById('id_winner_count');
   const container = document.getElementById('prize-distribution-container');
   // on récupère aussi le champ JSON caché
   const hiddenInput = document.getElementById('id_winners_distribution');
@@ -197,8 +197,8 @@ document.addEventListener('DOMContentLoaded', () => {
     div.innerHTML = `
       <span class="input-group-text">Winner ${i+1}</span>
       <input type="number" name="winners_distribution_entry"
-             class="form-control prize-distribution"
-             value="${val}" min="0" max="100" required>
+              class="form-control prize-distribution"
+              value="${val}" min="0" max="100" required>
       <span class="input-group-text">%</span>
     `;
     // à chaque changement on remplit le hidden

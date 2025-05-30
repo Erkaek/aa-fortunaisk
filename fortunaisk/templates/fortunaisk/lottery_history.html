@@ -3,204 +3,204 @@
 {% load i18n humanize fortunaisk_tags my_filters static %}
 
 {% block page_title %}
-    {% trans "Lottery History" %}
+  {% trans "Lottery History" %}
 {% endblock page_title %}
 
 {% block details %}
 <div class="container my-5">
-    <!-- Header -->
-    <div class="text-center mb-5">
-        <h2 class="fw-bold" style="color: #f1c40f;">
-            <i class="fas fa-history me-2" style="color: #27ae60;"></i>
-            {% trans "Lottery History" %}
-        </h2>
-        <p class="text-muted fs-5">
-            {% trans "Explore past lotteries, see their winners, and review total payouts." %}
-        </p>
-    </div>
+  <!-- Header -->
+  <div class="text-center mb-5">
+    <h2 class="fw-bold" style="color: #f1c40f;">
+      <i class="fas fa-history me-2" style="color: #27ae60;"></i>
+      {% trans "Lottery History" %}
+    </h2>
+    <p class="text-muted fs-5">
+      {% trans "Explore past lotteries, see their winners, and review total payouts." %}
+    </p>
+  </div>
 
-    <!-- Filters & Per-page control -->
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <form method="get" class="d-flex align-items-center flex-wrap">
-                {# Keep per_page when filtering #}
-                <input type="hidden" name="per_page" value="{{ per_page }}">
-                <label class="me-2 mb-2 fw-bold">{% trans "Filter by status" %}:</label>
-                {% for status in allowed_statuses %}
-                <div class="form-check form-check-inline mb-2">
-                    <input class="form-check-input"
-                           type="checkbox"
-                           name="status"
-                           id="status_{{ status }}"
-                           value="{{ status }}"
-                           {% if status in selected_statuses %}checked{% endif %}>
-                    <label class="form-check-label" for="status_{{ status }}">
-                        {{ status|capfirst }}
-                    </label>
-                </div>
-                {% endfor %}
-                <button type="submit" class="btn btn-sm btn-primary ms-3 mb-2">{% trans "Apply" %}</button>
-            </form>
-        </div>
-        <div class="col-md-4 text-end">
-            <form method="get" class="d-inline-flex align-items-center">
-                {# Keep current statuses when changing per_page #}
-                {% for s in selected_statuses %}
-                    <input type="hidden" name="status" value="{{ s }}">
-                {% endfor %}
-                <label for="perPageSelect" class="me-2 fw-bold mb-0">{% trans "Results per page" %}:</label>
-                <select id="perPageSelect" name="per_page" class="form-select w-auto" onchange="this.form.submit()">
-                    {% for choice in per_page_choices %}
-                        <option value="{{ choice }}" {% if per_page == choice %}selected{% endif %}>{{ choice }}</option>
-                    {% endfor %}
-                </select>
-            </form>
-        </div>
-    </div>
-
-    {% if page_obj %}
-    <div class="row g-4">
-        {% for lottery in page_obj %}
-        <div class="col-md-6 col-lg-4">
-            <div class="card shadow-sm border-0" style="width: 22rem;">
-                <div class="card-header text-white" style="background: linear-gradient(135deg, #27ae60, #1abc9c);">
-                    <h5 class="mb-0">
-                        <i class="fas fa-ticket-alt me-2"></i>
-                        {{ lottery.lottery_reference }}
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <p class="mb-2">
-                        <strong>{% trans "Ticket Price" %}:</strong>
-                        <span class="text-primary fw-bold">{{ lottery.ticket_price|floatformat:2|intcomma }} ISK</span>
-                    </p>
-                    <p class="mb-2">
-                        <strong>{% trans "Start Date" %}:</strong>
-                        <i class="far fa-clock me-1"></i>
-                        {{ lottery.start_date|date:"Y-m-d H:i" }}
-                    </p>
-                    <p class="mb-2">
-                        <strong>{% trans "End Date" %}:</strong>
-                        <i class="far fa-clock me-1"></i>
-                        {{ lottery.end_date|date:"Y-m-d H:i" }}
-                    </p>
-                    <p class="mb-2">
-                        <strong>{% trans "Status" %}:</strong>
-                        {% if lottery.status == "completed" %}
-                            <span class="badge bg-success text-light">
-                                <i class="fas fa-check-circle me-1"></i>
-                                {{ lottery.get_status_display }}
-                            </span>
-                        {% elif lottery.status == "cancelled" %}
-                            <span class="badge bg-danger">
-                                <i class="fas fa-ban me-1"></i>
-                                {{ lottery.get_status_display }}
-                            </span>
-                        {% elif lottery.status == "pending" %}
-                            <span class="badge bg-info">
-                                <i class="fas fa-spinner fa-spin me-1"></i>
-                                {{ lottery.get_status_display }}
-                            </span>
-                        {% else %}
-                            <span class="badge bg-dark">{{ lottery.get_status_display }}</span>
-                        {% endif %}
-                    </p>
-                    <p class="mb-2">
-                        <strong>{% trans "Participants" %}:</strong>
-                        {{ lottery.ticket_purchases.count }}
-                    </p>
-                    <p class="mb-2">
-                        <strong>{% trans "Total Pot" %}:</strong>
-                        <span class="text-warning fw-bold">{{ lottery.total_pot|floatformat:2|intcomma }} ISK</span>
-                    </p>
-                    <div>
-                        <strong>{% trans "Winners" %}:</strong>
-                        {% with winners_list=lottery.winners %}
-                            {% if winners_list %}
-                                <ul class="list-unstyled mt-2">
-                                    {% for winner in winners_list %}
-                                    <li class="d-flex align-items-center mb-1">
-                                        <i class="fas fa-crown me-2 text-warning"></i>
-                                        <span class="fw-semibold">
-                                            {{ winner.character.character_name|default:winner.ticket.user.username }}
-                                        </span>
-                                        <small class="text-muted ms-2">
-                                            ({{ winner.prize_amount|floatformat:2|intcomma }} ISK)
-                                        </small>
-                                    </li>
-                                    {% endfor %}
-                                </ul>
-                            {% else %}
-                                <span class="text-muted">{% trans "No winner" %}</span>
-                            {% endif %}
-                        {% endwith %}
-                    </div>
-                </div>
-                {% if perms.fortunaisk.admin %}
-                <div class="card-footer bg-light text-end">
-                    <a href="{% url 'fortunaisk:lottery_detail' lottery.id %}" class="btn btn-sm btn-info">
-                        <i class="fas fa-eye"></i> {% trans "Details" %}
-                    </a>
-                </div>
-                {% endif %}
-            </div>
+  <!-- Filters & Per-page control -->
+  <div class="row mb-4">
+    <div class="col-md-8">
+      <form method="get" class="d-flex align-items-center flex-wrap">
+        {# Keep per_page when filtering #}
+        <input type="hidden" name="per_page" value="{{ per_page }}">
+        <label class="me-2 mb-2 fw-bold">{% trans "Filter by status" %}:</label>
+        {% for status in allowed_statuses %}
+        <div class="form-check form-check-inline mb-2">
+          <input class="form-check-input"
+                  type="checkbox"
+                  name="status"
+                  id="status_{{ status }}"
+                  value="{{ status }}"
+                  {% if status in selected_statuses %}checked{% endif %}>
+          <label class="form-check-label" for="status_{{ status }}">
+            {{ status|capfirst }}
+          </label>
         </div>
         {% endfor %}
+        <button type="submit" class="btn btn-sm btn-primary ms-3 mb-2">{% trans "Apply" %}</button>
+      </form>
     </div>
-
-    <!-- Pagination -->
-    <nav aria-label="Page navigation" class="mt-4">
-      <ul class="pagination justify-content-center">
-        {# Previous #}
-        {% if page_obj.has_previous %}
-        <li class="page-item">
-          <a class="page-link"
-             href="?page={{ page_obj.previous_page_number }}&per_page={{ per_page }}
-                   {% for s in selected_statuses %}&status={{ s }}{% endfor %}"
-             aria-label="Previous">
-            <span aria-hidden="true">&laquo;</span>
-          </a>
-        </li>
-        {% else %}
-        <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
-        {% endif %}
-
-        {# Page numbers #}
-        {% for num in page_obj.paginator.page_range %}
-          {% if page_obj.number == num %}
-            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
-          {% else %}
-            <li class="page-item">
-              <a class="page-link"
-                 href="?page={{ num }}&per_page={{ per_page }}
-                       {% for s in selected_statuses %}&status={{ s }}{% endfor %}">
-                {{ num }}
-              </a>
-            </li>
-          {% endif %}
+    <div class="col-md-4 text-end">
+      <form method="get" class="d-inline-flex align-items-center">
+        {# Keep current statuses when changing per_page #}
+        {% for s in selected_statuses %}
+          <input type="hidden" name="status" value="{{ s }}">
         {% endfor %}
-
-        {# Next #}
-        {% if page_obj.has_next %}
-        <li class="page-item">
-          <a class="page-link"
-             href="?page={{ page_obj.next_page_number }}&per_page={{ per_page }}
-                   {% for s in selected_statuses %}&status={{ s }}{% endfor %}"
-             aria-label="Next">
-            <span aria-hidden="true">&raquo;</span>
-          </a>
-        </li>
-        {% else %}
-        <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
-        {% endif %}
-      </ul>
-    </nav>
-
-    {% else %}
-    <div class="alert alert-warning text-center">
-        <i class="fas fa-exclamation-circle me-2"></i>
-        {% trans "No past lotteries found." %}
+        <label for="perPageSelect" class="me-2 fw-bold mb-0">{% trans "Results per page" %}:</label>
+        <select id="perPageSelect" name="per_page" class="form-select w-auto" onchange="this.form.submit()">
+          {% for choice in per_page_choices %}
+            <option value="{{ choice }}" {% if per_page == choice %}selected{% endif %}>{{ choice }}</option>
+          {% endfor %}
+        </select>
+      </form>
     </div>
-    {% endif %}
+  </div>
+
+  {% if page_obj %}
+  <div class="row g-4">
+    {% for lottery in page_obj %}
+    <div class="col-md-6 col-lg-4">
+      <div class="card shadow-sm border-0" style="width: 22rem;">
+        <div class="card-header text-white" style="background: linear-gradient(135deg, #27ae60, #1abc9c);">
+          <h5 class="mb-0">
+            <i class="fas fa-ticket-alt me-2"></i>
+            {{ lottery.lottery_reference }}
+          </h5>
+        </div>
+        <div class="card-body">
+          <p class="mb-2">
+            <strong>{% trans "Ticket Price" %}:</strong>
+            <span class="text-primary fw-bold">{{ lottery.ticket_price|floatformat:2|intcomma }} ISK</span>
+          </p>
+          <p class="mb-2">
+            <strong>{% trans "Start Date" %}:</strong>
+            <i class="far fa-clock me-1"></i>
+            {{ lottery.start_date|date:"Y-m-d H:i" }}
+          </p>
+          <p class="mb-2">
+            <strong>{% trans "End Date" %}:</strong>
+            <i class="far fa-clock me-1"></i>
+            {{ lottery.end_date|date:"Y-m-d H:i" }}
+          </p>
+          <p class="mb-2">
+            <strong>{% trans "Status" %}:</strong>
+            {% if lottery.status == "completed" %}
+              <span class="badge bg-success text-light">
+                <i class="fas fa-check-circle me-1"></i>
+                {{ lottery.get_status_display }}
+              </span>
+            {% elif lottery.status == "cancelled" %}
+              <span class="badge bg-danger">
+                <i class="fas fa-ban me-1"></i>
+                {{ lottery.get_status_display }}
+              </span>
+            {% elif lottery.status == "pending" %}
+              <span class="badge bg-info">
+                <i class="fas fa-spinner fa-spin me-1"></i>
+                {{ lottery.get_status_display }}
+              </span>
+            {% else %}
+              <span class="badge bg-dark">{{ lottery.get_status_display }}</span>
+            {% endif %}
+          </p>
+          <p class="mb-2">
+            <strong>{% trans "Participants" %}:</strong>
+            {{ lottery.ticket_purchases.count }}
+          </p>
+          <p class="mb-2">
+            <strong>{% trans "Total Pot" %}:</strong>
+            <span class="text-warning fw-bold">{{ lottery.total_pot|floatformat:2|intcomma }} ISK</span>
+          </p>
+          <div>
+            <strong>{% trans "Winners" %}:</strong>
+            {% with winners_list=lottery.winners %}
+              {% if winners_list %}
+                <ul class="list-unstyled mt-2">
+                  {% for winner in winners_list %}
+                  <li class="d-flex align-items-center mb-1">
+                    <i class="fas fa-crown me-2 text-warning"></i>
+                    <span class="fw-semibold">
+                      {{ winner.character.character_name|default:winner.ticket.user.username }}
+                    </span>
+                    <small class="text-muted ms-2">
+                      ({{ winner.prize_amount|floatformat:2|intcomma }} ISK)
+                    </small>
+                  </li>
+                  {% endfor %}
+                </ul>
+              {% else %}
+                <span class="text-muted">{% trans "No winner" %}</span>
+              {% endif %}
+            {% endwith %}
+          </div>
+        </div>
+        {% if perms.fortunaisk.admin %}
+        <div class="card-footer bg-light text-end">
+          <a href="{% url 'fortunaisk:lottery_detail' lottery.id %}" class="btn btn-sm btn-info">
+            <i class="fas fa-eye"></i> {% trans "Details" %}
+          </a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Pagination -->
+  <nav aria-label="Page navigation" class="mt-4">
+    <ul class="pagination justify-content-center">
+      {# Previous #}
+      {% if page_obj.has_previous %}
+      <li class="page-item">
+        <a class="page-link"
+            href="?page={{ page_obj.previous_page_number }}&per_page={{ per_page }}
+                  {% for s in selected_statuses %}&status={{ s }}{% endfor %}"
+            aria-label="Previous">
+          <span aria-hidden="true">&laquo;</span>
+        </a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+      {% endif %}
+
+      {# Page numbers #}
+      {% for num in page_obj.paginator.page_range %}
+        {% if page_obj.number == num %}
+          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+        {% else %}
+          <li class="page-item">
+            <a class="page-link"
+                href="?page={{ num }}&per_page={{ per_page }}
+                      {% for s in selected_statuses %}&status={{ s }}{% endfor %}">
+              {{ num }}
+            </a>
+          </li>
+        {% endif %}
+      {% endfor %}
+
+      {# Next #}
+      {% if page_obj.has_next %}
+      <li class="page-item">
+        <a class="page-link"
+            href="?page={{ page_obj.next_page_number }}&per_page={{ per_page }}
+                  {% for s in selected_statuses %}&status={{ s }}{% endfor %}"
+            aria-label="Next">
+          <span aria-hidden="true">&raquo;</span>
+        </a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+      {% endif %}
+    </ul>
+  </nav>
+
+  {% else %}
+  <div class="alert alert-warning text-center">
+    <i class="fas fa-exclamation-circle me-2"></i>
+    {% trans "No past lotteries found." %}
+  </div>
+  {% endif %}
 </div>
 {% endblock details %}

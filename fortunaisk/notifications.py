@@ -1,39 +1,44 @@
 # fortunaisk/notifications.py
 
+# Standard Library
 import logging
-import requests
 from datetime import datetime
-from typing import Optional, List
 
+# Third Party
+import requests
+
+# Django
 from django.db.models import QuerySet
 
+# Alliance Auth
 from allianceauth.notifications import notify as alliance_notify
+
 from .models.webhook import WebhookConfiguration
 
 logger = logging.getLogger(__name__)
 
 # Embed colors by level
 LEVEL_COLORS = {
-    "info":    0x3498DB,
+    "info": 0x3498DB,
     "success": 0x2ECC71,
     "warning": 0xF1C40F,
-    "error":   0xE74C3C,
+    "error": 0xE74C3C,
 }
 
 
 def build_embed(
     title: str,
-    description: Optional[str] = None,
-    fields: Optional[List[dict]] = None,
+    description: str | None = None,
+    fields: list[dict] | None = None,
     level: str = "info",
-    footer: Optional[dict] = None
+    footer: dict | None = None,
 ) -> dict:
     """
     Build a standard Discord embed payload.
-    
+
     Creates a properly formatted Discord embed object with consistent styling
     based on the notification level. The embed includes a timestamp and footer.
-    
+
     Args:
         title (str): The title of the embed
         description (Optional[str]): The main text content of the embed
@@ -41,7 +46,7 @@ def build_embed(
         level (str): The notification level ('info', 'success', 'warning', 'error')
             which determines the color of the embed
         footer (Optional[dict]): Custom footer for the embed, overrides the default
-            
+
     Returns:
         dict: A dictionary containing the Discord embed object
     """
@@ -59,19 +64,21 @@ def build_embed(
     return embed
 
 
-def _send_to_webhook(cfg: WebhookConfiguration, embed: dict, content: Optional[str]) -> bool:
+def _send_to_webhook(
+    cfg: WebhookConfiguration, embed: dict, content: str | None
+) -> bool:
     """
     Send a single embed + content (with any role pings) to one webhook config.
-    
+
     Attempts to post the provided embed and content to the Discord webhook URL
     specified in the configuration. If ping roles are configured, they will be
     mentioned in the message content.
-    
+
     Args:
         cfg (WebhookConfiguration): The webhook configuration to use
         embed (dict): The Discord embed object to send
         content (Optional[str]): Additional text content to include with the embed
-            
+
     Returns:
         bool: True if the webhook POST was successful, False otherwise
     """
@@ -89,7 +96,9 @@ def _send_to_webhook(cfg: WebhookConfiguration, embed: dict, content: Optional[s
     try:
         resp = requests.post(url, json=payload, timeout=5)
         resp.raise_for_status()
-        logger.info("Webhook POST succeeded (cfg=%s, status=%s)", cfg.name, resp.status_code)
+        logger.info(
+            "Webhook POST succeeded (cfg=%s, status=%s)", cfg.name, resp.status_code
+        )
         return True
     except Exception as exc:
         logger.error("Webhook POST failed (cfg=%s): %s", cfg.name, exc, exc_info=True)
@@ -99,24 +108,24 @@ def _send_to_webhook(cfg: WebhookConfiguration, embed: dict, content: Optional[s
 def notify_discord_or_fallback(
     users,
     *,
-    title: Optional[str] = None,
-    message: Optional[str] = None,
-    embed: Optional[dict] = None,
+    title: str | None = None,
+    message: str | None = None,
+    embed: dict | None = None,
     level: str = "info",
     private: bool = False,
-    event: Optional[str] = None,
+    event: str | None = None,
 ):
     """
     Send notifications via Discord webhooks or Alliance Auth notifications.
-    
+
     This function implements a multi-tiered notification strategy:
-    
+
     1. If `private=True`: Send direct messages to each user via Alliance Auth.
-    2. If `event` is provided: Send to all webhook configurations that have 
-       subscribed to that event type, including any configured role pings.
-    3. If no webhooks succeeded or weren't attempted: Fall back to sending 
-       individual Alliance Auth notifications to each specified user.
-    
+    2. If `event` is provided: Send to all webhook configurations that have
+    subscribed to that event type, including any configured role pings.
+    3. If no webhooks succeeded or weren't attempted: Fall back to sending
+    individual Alliance Auth notifications to each specified user.
+
     Args:
         users: A user, list of users, or QuerySet of users to notify
         title: The title of the notification (used for both Discord and AA)
@@ -143,7 +152,9 @@ def notify_discord_or_fallback(
     if private:
         text = message or (embed.get("description") if embed else "")
         for u in recipient_list:
-            alliance_notify(user=u, title=title or embed.get("title", ""), message=text, level=level)
+            alliance_notify(
+                user=u, title=title or embed.get("title", ""), message=text, level=level
+            )
             logger.info("Queued private DM for %s: %s", u, title or text)
         return
 
@@ -164,7 +175,12 @@ def notify_discord_or_fallback(
     fallback_text = message or (embed.get("description") if embed else "")
     for u in recipient_list:
         try:
-            alliance_notify(user=u, title=title or embed.get("title", ""), message=fallback_text, level=level)
+            alliance_notify(
+                user=u,
+                title=title or embed.get("title", ""),
+                message=fallback_text,
+                level=level,
+            )
             logger.info("Fallback DM sent to %s: %s", u, fallback_text)
         except Exception as exc:
             logger.error("Fallback notify failed for %s: %s", u, exc, exc_info=True)
@@ -173,11 +189,11 @@ def notify_discord_or_fallback(
 def notify_alliance(user, title: str, message: str, level: str = "info"):
     """
     Send a notification via Alliance Auth's internal notification system.
-    
+
     This function directly uses Alliance Auth's notification system without
     any Discord webhook integration. It's useful for admin-specific notifications
     or when Discord integration is not needed.
-    
+
     Args:
         user: The user to notify
         title (str): The notification title

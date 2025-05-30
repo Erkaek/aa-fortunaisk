@@ -1,7 +1,8 @@
 # fortunaisk/models/winner_distribution.py
 
+# Django
 from django.db import models
-from django.utils import timezone
+
 
 class WinnerDistribution(models.Model):
     lottery_reference = models.CharField(
@@ -11,9 +12,7 @@ class WinnerDistribution(models.Model):
     )
     winner_rank = models.PositiveIntegerField(verbose_name="Winner Rank")
     winner_prize_distribution = models.DecimalField(
-        max_digits=5,
-        decimal_places=2,
-        verbose_name="Prize Distribution (%)"
+        max_digits=5, decimal_places=2, verbose_name="Prize Distribution (%)"
     )
     created_at = models.DateTimeField(
         auto_now_add=True,

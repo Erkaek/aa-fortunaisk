@@ -13,8 +13,10 @@ This migration creates the following models:
 - AuditLog: For tracking system changes
 """
 
+# Standard Library
 from decimal import Decimal
 
+# Django
 import django.db.models.deletion
 import django.utils.timezone
 from django.conf import settings
@@ -661,4 +663,3 @@ class Migration(migrations.Migration):
             },
         ),
     ]
-    

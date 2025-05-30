@@ -1,11 +1,15 @@
 # fortunaisk/signals/notifications_signals.py
 
+# Standard Library
 import logging
+
+# Django
 from django.contrib.auth import get_user_model
-from django.db.models.signals import pre_save, post_save
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 
-from fortunaisk.models import TicketPurchase, TicketAnomaly, Winner
+# fortunaisk
+from fortunaisk.models import TicketAnomaly, TicketPurchase, Winner
 from fortunaisk.notifications import build_embed, notify_discord_or_fallback
 
 logger = logging.getLogger(__name__)
@@ -13,12 +17,11 @@ logger = logging.getLogger(__name__)
 
 def get_admin_users_queryset():
     User = get_user_model()
-    return User.objects.filter(
-        groups__permissions__codename="can_admin_app"
-    ).distinct()
+    return User.objects.filter(groups__permissions__codename="can_admin_app").distinct()
 
 
 # ─── TicketPurchase: track diffs & DM purchaser only ─────────────────────────
+
 
 @receiver(pre_save, sender=TicketPurchase)
 def track_ticketpurchase_old_values(sender, instance, **kwargs):
@@ -73,6 +76,7 @@ def notify_ticketpurchase_change(sender, instance, created, **kwargs):
 
 # ─── TicketAnomaly: DM user + public alert ───────────────────────────────────
 
+
 @receiver(post_save, sender=TicketAnomaly)
 def on_anomaly_created(sender, instance, created, **kwargs):
     """When an anomaly is created, DM to the user + public alert to admins."""
@@ -121,11 +125,11 @@ def on_anomaly_resolved(sender, instance, created, **kwargs):
     if created or not instance.solved or not instance.user:
         return
 
-    user     = instance.user
-    reason   = instance.reason
-    amount   = f"{instance.amount:,} ISK"
+    user = instance.user
+    reason = instance.reason
+    amount = f"{instance.amount:,} ISK"
     resolver = instance.solved_by.username if instance.solved_by else "Unknown"
-    details  = instance.detail or None
+    details = instance.detail or None
 
     # Build message for AllianceAuth DM
     dm_lines = [
@@ -158,10 +162,10 @@ def on_anomaly_resolved(sender, instance, created, **kwargs):
         level="info",
     )
     public_embed["fields"] = [
-        {"name": "User",        "value": user.username, "inline": True},
-        {"name": "Reason",      "value": reason,        "inline": False},
-        {"name": "Amount",      "value": amount,        "inline": True},
-        {"name": "Resolved by", "value": resolver,      "inline": True},
+        {"name": "User", "value": user.username, "inline": True},
+        {"name": "Reason", "value": reason, "inline": False},
+        {"name": "Amount", "value": amount, "inline": True},
+        {"name": "Resolved by", "value": resolver, "inline": True},
     ]
     if details:
         public_embed["fields"].append(
@@ -177,6 +181,7 @@ def on_anomaly_resolved(sender, instance, created, **kwargs):
 
 
 # ─── Winner: DM winner on creation, alert admin when prize distributed ──────
+
 
 @receiver(post_save, sender=Winner)
 def on_winner_created(sender, instance, created, **kwargs):
@@ -228,10 +233,10 @@ def on_prize_distributed(sender, instance, **kwargs):
             embed=winner_embed,
             private=True,
         )
-        
+
         # 2. Public notification to Discord webhook
         admin_users = get_admin_users_queryset()
-        
+
         # More detailed embed for public announcement
         public_embed = build_embed(
             title="💰 Lottery Prize Distributed",
@@ -239,13 +244,29 @@ def on_prize_distributed(sender, instance, **kwargs):
                 f"A prize has been distributed for lottery **{instance.ticket.lottery.lottery_reference}**"
             ),
             fields=[
-                {"name": "Winner", "value": instance.ticket.user.username, "inline": True},
-                {"name": "Amount", "value": f"{instance.prize_amount:,} ISK", "inline": True},
-                {"name": "Distributed by", "value": instance.distributed_by.username if instance.distributed_by else "System", "inline": True},
+                {
+                    "name": "Winner",
+                    "value": instance.ticket.user.username,
+                    "inline": True,
+                },
+                {
+                    "name": "Amount",
+                    "value": f"{instance.prize_amount:,} ISK",
+                    "inline": True,
+                },
+                {
+                    "name": "Distributed by",
+                    "value": (
+                        instance.distributed_by.username
+                        if instance.distributed_by
+                        else "System"
+                    ),
+                    "inline": True,
+                },
             ],
             level="success",
         )
-        
+
         notify_discord_or_fallback(
             users=admin_users,
             event="prize_distributed",

@@ -1,10 +1,13 @@
 # fortunaisk/models/ticket.py
 
+# Standard Library
 from decimal import Decimal
 
+# Django
 from django.contrib.auth import get_user_model
 from django.db import models
 
+# Alliance Auth
 from allianceauth.eveonline.models import EveCharacter
 
 User = get_user_model()

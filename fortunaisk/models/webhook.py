@@ -1,8 +1,11 @@
 # fortunaisk/models/webhook.py
 
+# Standard Library
 import logging
-from django.db import models
+
+# Django
 from django.contrib.auth import get_user_model
+from django.db import models
 
 logger = logging.getLogger(__name__)
 

@@ -1,12 +1,17 @@
 # fortunaisk/forms/lottery_forms.py
 
+# Standard Library
 import logging
 from decimal import Decimal
+
+# Django
 from django import forms
-from django.core.exceptions import ValidationError
 from django.utils.translation import gettext as _
+
+# Alliance Auth
 from allianceauth.eveonline.models import EveCorporationInfo
 
+# fortunaisk
 from fortunaisk.models import Lottery
 
 logger = logging.getLogger(__name__)
@@ -24,7 +29,9 @@ class LotteryCreateForm(forms.ModelForm):
         initial=Decimal("0.00"),
         label=_("Tax (%)"),
         help_text=_("Tax percentage applied to each ticket sold."),
-        widget=forms.NumberInput(attrs={"class": "form-control", "placeholder": "E.g. 10"}),
+        widget=forms.NumberInput(
+            attrs={"class": "form-control", "placeholder": "E.g. 10"}
+        ),
     )
 
     payment_receiver = forms.ModelChoiceField(
@@ -48,7 +55,11 @@ class LotteryCreateForm(forms.ModelForm):
         ]
         widgets = {
             "ticket_price": forms.NumberInput(
-                attrs={"step": "1", "class": "form-control", "placeholder": _("E.g. 100")}
+                attrs={
+                    "step": "1",
+                    "class": "form-control",
+                    "placeholder": _("E.g. 100"),
+                }
             ),
             "duration_value": forms.NumberInput(
                 attrs={"min": "1", "class": "form-control", "placeholder": _("E.g. 7")}
@@ -58,7 +69,11 @@ class LotteryCreateForm(forms.ModelForm):
                 attrs={"min": "1", "class": "form-control", "placeholder": _("E.g. 3")}
             ),
             "max_tickets_per_user": forms.NumberInput(
-                attrs={"min": "1", "class": "form-control", "placeholder": _("Leave empty for unlimited")}
+                attrs={
+                    "min": "1",
+                    "class": "form-control",
+                    "placeholder": _("Leave empty for unlimited"),
+                }
             ),
         }
 
@@ -71,5 +86,7 @@ class LotteryCreateForm(forms.ModelForm):
         dv = cd.get("duration_value")
         du = cd.get("duration_unit")
         if not (dv and du in ["hours", "days", "months"]):
-            self.add_error("duration_value", _("Duration and unit are required and must be valid."))
+            self.add_error(
+                "duration_value", _("Duration and unit are required and must be valid.")
+            )
         return cd

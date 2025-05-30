@@ -1,42 +1,36 @@
-import csv
+# Standard Library
 import ast
+import csv
 
+# Django
 from django import forms
 from django.contrib import admin
 from django.db import models
 from django.http import HttpResponse
-from django_celery_beat.models import IntervalSchedule, PeriodicTask
 
+# Alliance Auth
 from allianceauth.services.hooks import get_extension_logger
 
-from .models import (
-    AutoLottery,
-    Lottery,
-    TicketAnomaly,
-    Winner,
-    WinnerDistribution,
-)
+from .models import AutoLottery, Lottery, TicketAnomaly, Winner, WinnerDistribution
 from .models.webhook import WebhookConfiguration
-from .notifications import (
-    notify_discord_or_fallback,
-    notify_alliance as send_alliance_auth_notification,
-)
+from .notifications import notify_alliance as send_alliance_auth_notification
+from .notifications import notify_discord_or_fallback
 
 logger = get_extension_logger(__name__)
 
 
 EVENT_CHOICES = [
-    ("lottery_created",             "Lottery Created"),
-    ("lottery_sales_closed",        "Lottery Sales Closed"),
-    ("lottery_completed",           "Lottery Completed"),
-    ("lottery_cancelled",           "Lottery Cancelled"),
-    ("autolottery_activated",       "AutoLottery Activated"),
-    ("autolottery_paused",          "AutoLottery Paused"),
-    ("autolottery_suppressed",      "AutoLottery Suppressed"),
-    ("anomaly_detected",            "Anomaly Detected"),
-    ("anomaly_resolved",            "Anomaly Resolved"),
-    ("prize_distributed",           "Prize Distributed"),
-    ("reminder_24h_before_closure",  "24h Before Closure Reminder"),
+    ("lottery_created", "Lottery Created"),
+    ("lottery_sales_closed", "Lottery Sales Closed"),
+    ("lottery_completed", "Lottery Completed"),
+    ("lottery_cancelled", "Lottery Cancelled"),
+    ("autolottery_activated", "AutoLottery Activated"),
+    ("autolottery_paused", "AutoLottery Paused"),
+    ("autolottery_suppressed", "AutoLottery Suppressed"),
+    ("anomaly_detected", "Anomaly Detected"),
+    ("anomaly_resolved", "Anomaly Resolved"),
+    ("prize_distributed", "Prize Distributed"),
+    ("reminder_24h_before_closure", "24h Before Closure Reminder"),
 ]
 
 
@@ -45,24 +39,27 @@ class ExportCSVMixin:
     Mixin that adds CSV export capability to an admin class.
     Provides a customizable action for exporting selected objects to CSV format.
     """
+
     export_fields = []
 
     @admin.action(description="Export selected as CSV")
     def export_as_csv(self, request, queryset):
         """
         Action to export selected objects as CSV file.
-        
+
         Args:
             request: The current HTTP request
             queryset: The queryset of selected objects
-            
+
         Returns:
             HttpResponse containing CSV data
         """
         meta = self.model._meta
         fields = self.export_fields or [f.name for f in meta.fields]
         resp = HttpResponse(content_type="text/csv")
-        resp["Content-Disposition"] = f'attachment; filename="{meta.verbose_name_plural}.csv"'
+        resp["Content-Disposition"] = (
+            f'attachment; filename="{meta.verbose_name_plural}.csv"'
+        )
         writer = csv.writer(resp)
         writer.writerow(fields)
         for obj in queryset:
@@ -77,30 +74,34 @@ class ExportCSVMixin:
 class FortunaiskModelAdmin(admin.ModelAdmin):
     """
     Base ModelAdmin class for FortunaISK models.
-    
+
     Enforces permission rules based on the can_admin_app permission.
     All admin views inherit from this class to ensure consistent permission handling.
     """
+
     def has_module_permission(self, request):
         """
         Check if user has permission to access this module.
-        
+
         Args:
             request: The current HTTP request
-            
+
         Returns:
             Boolean indicating permission access
         """
-        return request.user.has_perm("fortunaisk.can_admin_app") or request.user.is_superuser
+        return (
+            request.user.has_perm("fortunaisk.can_admin_app")
+            or request.user.is_superuser
+        )
 
     def has_view_permission(self, request, obj=None):
         """
         Check if user has permission to view objects.
-        
+
         Args:
             request: The current HTTP request
             obj: The object being viewed (optional)
-            
+
         Returns:
             Boolean indicating permission access
         """
@@ -109,10 +110,10 @@ class FortunaiskModelAdmin(admin.ModelAdmin):
     def has_add_permission(self, request):
         """
         Check if user has permission to add objects.
-        
+
         Args:
             request: The current HTTP request
-            
+
         Returns:
             Boolean indicating permission access
         """
@@ -121,11 +122,11 @@ class FortunaiskModelAdmin(admin.ModelAdmin):
     def has_change_permission(self, request, obj=None):
         """
         Check if user has permission to change objects.
-        
+
         Args:
             request: The current HTTP request
             obj: The object being changed (optional)
-            
+
         Returns:
             Boolean indicating permission access
         """
@@ -134,11 +135,11 @@ class FortunaiskModelAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         """
         Check if user has permission to delete objects.
-        
+
         Args:
             request: The current HTTP request
             obj: The object being deleted (optional)
-            
+
         Returns:
             Boolean indicating permission access
         """
@@ -148,10 +149,11 @@ class FortunaiskModelAdmin(admin.ModelAdmin):
 class WebhookConfigurationForm(forms.ModelForm):
     """
     Form for the WebhookConfiguration model.
-    
+
     Handles special fields like notification_config (MultipleChoiceField)
     and ping_roles (CSV string of role IDs).
     """
+
     notification_config = forms.MultipleChoiceField(
         choices=EVENT_CHOICES,
         widget=forms.CheckboxSelectMultiple,
@@ -174,7 +176,9 @@ class WebhookConfigurationForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         # Initialize the display values
         if self.instance and self.instance.notification_config:
-            self.fields["notification_config"].initial = self.instance.notification_config
+            self.fields["notification_config"].initial = (
+                self.instance.notification_config
+            )
         if self.instance and self.instance.ping_roles:
             # Simple join for display purposes
             self.fields["ping_roles"].initial = ",".join(self.instance.ping_roles)
@@ -182,7 +186,7 @@ class WebhookConfigurationForm(forms.ModelForm):
     def clean_notification_config(self):
         """
         Clean and validate notification_config field.
-        
+
         Returns:
             List of selected notification events
         """
@@ -191,12 +195,12 @@ class WebhookConfigurationForm(forms.ModelForm):
     def clean_ping_roles(self):
         """
         Clean and validate ping_roles field.
-        
+
         Handles multiple input formats:
         1. List/tuple (flattens nested lists)
         2. String in Python list format (uses ast.literal_eval)
         3. Comma-separated values
-        
+
         Returns:
             List of role IDs as strings
         """
@@ -233,10 +237,11 @@ class WebhookConfigurationForm(forms.ModelForm):
 class WebhookConfigurationAdmin(ExportCSVMixin, FortunaiskModelAdmin):
     """
     Admin interface for WebhookConfiguration model.
-    
+
     Handles display and validation of webhook configuration,
     including notification events and role pings.
     """
+
     form = WebhookConfigurationForm
     list_display = (
         "name",
@@ -260,7 +265,7 @@ class WebhookConfigurationAdmin(ExportCSVMixin, FortunaiskModelAdmin):
     def save_model(self, request, obj, form, change):
         """
         Custom save method to capture user who created the webhook.
-        
+
         Args:
             request: The current HTTP request
             obj: The object being saved
@@ -276,10 +281,10 @@ class WebhookConfigurationAdmin(ExportCSVMixin, FortunaiskModelAdmin):
     def notification_config_display(self, obj):
         """
         Format notification_config for display in list view.
-        
+
         Args:
             obj: WebhookConfiguration instance
-            
+
         Returns:
             String representation of notification events
         """
@@ -289,10 +294,10 @@ class WebhookConfigurationAdmin(ExportCSVMixin, FortunaiskModelAdmin):
     def ping_roles_display(self, obj):
         """
         Format ping_roles for display in list view.
-        
+
         Args:
             obj: WebhookConfiguration instance
-            
+
         Returns:
             String representation of role IDs
         """
@@ -302,7 +307,9 @@ class WebhookConfigurationAdmin(ExportCSVMixin, FortunaiskModelAdmin):
         if not isinstance(roles, (list, tuple)):
             # If it's a string, try literal_eval to get a list
             if isinstance(roles, str):
+                # Standard Library
                 import ast
+
                 try:
                     parsed = ast.literal_eval(roles)
                     if isinstance(parsed, (list, tuple)):
@@ -324,10 +331,17 @@ class WebhookConfigurationAdmin(ExportCSVMixin, FortunaiskModelAdmin):
 class LotteryAdmin(ExportCSVMixin, FortunaiskModelAdmin):
     """
     Admin interface for Lottery model.
-    
+
     Provides actions for managing lotteries, including completing and canceling.
     """
-    list_display = ("id", "lottery_reference", "status", "participant_count", "total_pot")
+
+    list_display = (
+        "id",
+        "lottery_reference",
+        "status",
+        "participant_count",
+        "total_pot",
+    )
     search_fields = ("lottery_reference",)
     readonly_fields = (
         "id",
@@ -372,10 +386,10 @@ class LotteryAdmin(ExportCSVMixin, FortunaiskModelAdmin):
     def has_add_permission(self, request):
         """
         Override to disable direct creation through admin interface.
-        
+
         Args:
             request: The current HTTP request
-            
+
         Returns:
             False to disable creation
         """
@@ -385,10 +399,10 @@ class LotteryAdmin(ExportCSVMixin, FortunaiskModelAdmin):
     def participant_count(self, obj):
         """
         Calculate the number of participants for display.
-        
+
         Args:
             obj: Lottery instance
-            
+
         Returns:
             Count of ticket purchases
         """
@@ -398,7 +412,7 @@ class LotteryAdmin(ExportCSVMixin, FortunaiskModelAdmin):
     def mark_completed(self, request, queryset):
         """
         Action to mark selected lotteries as completed.
-        
+
         Args:
             request: The current HTTP request
             queryset: Selected lotteries
@@ -414,13 +428,15 @@ class LotteryAdmin(ExportCSVMixin, FortunaiskModelAdmin):
             message=f"{count} lotteries completed by {request.user.username}.",
             private=False,
         )
-        send_alliance_auth_notification(request.user, "Lotteries Completed", f"{count} lotteries completed.")
+        send_alliance_auth_notification(
+            request.user, "Lotteries Completed", f"{count} lotteries completed."
+        )
 
     @admin.action(description="Mark selected as cancelled")
     def mark_cancelled(self, request, queryset):
         """
         Action to mark selected lotteries as cancelled.
-        
+
         Args:
             request: The current HTTP request
             queryset: Selected lotteries
@@ -433,13 +449,15 @@ class LotteryAdmin(ExportCSVMixin, FortunaiskModelAdmin):
             message=f"{count} lotteries cancelled by {request.user.username}.",
             private=False,
         )
-        send_alliance_auth_notification(request.user, "Lotteries Cancelled", f"{count} lotteries cancelled.")
+        send_alliance_auth_notification(
+            request.user, "Lotteries Cancelled", f"{count} lotteries cancelled."
+        )
 
     @admin.action(description="Terminate selected prematurely")
     def terminate_lottery(self, request, queryset):
         """
         Action to terminate selected lotteries prematurely.
-        
+
         Args:
             request: The current HTTP request
             queryset: Selected lotteries
@@ -456,16 +474,19 @@ class LotteryAdmin(ExportCSVMixin, FortunaiskModelAdmin):
             message=f"{count} lotteries terminated by {request.user.username}.",
             private=False,
         )
-        send_alliance_auth_notification(request.user, "Lotteries Terminated", f"{count} lotteries terminated.")
+        send_alliance_auth_notification(
+            request.user, "Lotteries Terminated", f"{count} lotteries terminated."
+        )
 
 
 @admin.register(TicketAnomaly)
 class TicketAnomalyAdmin(ExportCSVMixin, FortunaiskModelAdmin):
     """
     Admin interface for TicketAnomaly model.
-    
+
     Provides read-only access to anomalies for auditing purposes.
     """
+
     list_display = (
         "lottery",
         "user",
@@ -515,9 +536,10 @@ class TicketAnomalyAdmin(ExportCSVMixin, FortunaiskModelAdmin):
 class AutoLotteryAdmin(ExportCSVMixin, FortunaiskModelAdmin):
     """
     Admin interface for AutoLottery model.
-    
+
     Manages automatic lottery configurations.
     """
+
     list_display = (
         "id",
         "name",
@@ -554,9 +576,10 @@ class AutoLotteryAdmin(ExportCSVMixin, FortunaiskModelAdmin):
 class WinnerAdmin(FortunaiskModelAdmin):
     """
     Admin interface for Winner model.
-    
+
     Manages lottery winners and prize distribution status.
     """
+
     list_display = (
         "id",
         "ticket",
@@ -595,7 +618,7 @@ class WinnerAdmin(FortunaiskModelAdmin):
     def mark_as_distributed(self, request, queryset):
         """
         Action to mark selected prizes as distributed.
-        
+
         Args:
             request: The current HTTP request
             queryset: Selected winners
@@ -608,17 +631,26 @@ class WinnerAdmin(FortunaiskModelAdmin):
             message=f"{count} prizes distributed by {request.user.username}.",
             private=False,
         )
-        send_alliance_auth_notification(request.user, "Prizes Distributed", f"{count} prizes distributed.")
+        send_alliance_auth_notification(
+            request.user, "Prizes Distributed", f"{count} prizes distributed."
+        )
 
 
 @admin.register(WinnerDistribution)
 class WinnerDistributionAdmin(FortunaiskModelAdmin):
     """
     Admin interface for WinnerDistribution model.
-    
+
     Manages lottery prize distribution configurations.
     """
-    list_display = ("lottery_reference", "winner_rank", "winner_prize_distribution", "created_at", "updated_at")
+
+    list_display = (
+        "lottery_reference",
+        "winner_rank",
+        "winner_prize_distribution",
+        "created_at",
+        "updated_at",
+    )
     list_filter = ("lottery_reference",)
     search_fields = ("lottery_reference",)
     readonly_fields = ("created_at", "updated_at")

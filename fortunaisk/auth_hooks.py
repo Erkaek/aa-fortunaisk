@@ -16,7 +16,7 @@ from . import urls
 class FortunaIskMenu(MenuItemHook):
     """
     Adds a menu item for FortunaIsk in the Alliance Auth navigation.
-    
+
     This menu item is dynamically shown or hidden based on user permissions,
     providing access to the lottery system for authorized users.
     """
@@ -24,7 +24,7 @@ class FortunaIskMenu(MenuItemHook):
     def __init__(self):
         """
         Initialize the FortunaIsk menu entry.
-        
+
         Sets up the menu with the proper name, icon, URL, and active navigation patterns.
         """
         super().__init__(
@@ -37,13 +37,13 @@ class FortunaIskMenu(MenuItemHook):
     def render(self, request):
         """
         Conditionally render the menu item based on user permissions.
-        
+
         Args:
             request: The HTTP request object containing the current user
-            
+
         Returns:
-            str: The rendered HTML for the menu item, or an empty string if 
-                 the user lacks necessary permissions
+            str: The rendered HTML for the menu item, or an empty string if
+                the user lacks necessary permissions
         """
         if request.user.has_perm("fortunaisk.can_access_app") or request.user.has_perm(
             "fortunaisk.can_admin_app"
@@ -56,10 +56,10 @@ class FortunaIskMenu(MenuItemHook):
 def register_menu():
     """
     Register the FortunaIsk menu item with Alliance Auth.
-    
+
     This hook is automatically discovered and called by Alliance Auth
     during application initialization.
-    
+
     Returns:
         FortunaIskMenu: An instance of the menu item
     """
@@ -70,11 +70,11 @@ def register_menu():
 def register_urls():
     """
     Register FortunaIsk URL patterns with Alliance Auth.
-    
+
     This hook is automatically discovered and called by Alliance Auth
     during application initialization, making FortunaIsk's views accessible
     under the /fortunaisk/ URL path.
-    
+
     Returns:
         UrlHook: A URL hook configured with FortunaIsk's URL patterns
     """

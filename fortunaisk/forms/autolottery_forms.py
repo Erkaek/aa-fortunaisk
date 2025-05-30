@@ -1,11 +1,15 @@
-import json
+# Standard Library
 from decimal import Decimal
 
+# Django
 from django import forms
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext as _
 
+# Alliance Auth
 from allianceauth.eveonline.models import EveCorporationInfo
+
+# fortunaisk
 from fortunaisk.models import AutoLottery
 
 
@@ -14,9 +18,7 @@ class AutoLotteryForm(forms.ModelForm):
     winners_distribution = forms.JSONField(
         widget=forms.HiddenInput(),
         required=True,
-        help_text=_(
-            "JSON list of percentages for each winner (must total 100)."
-        ),
+        help_text=_("JSON list of percentages for each winner (must total 100)."),
     )
 
     payment_receiver = forms.ModelChoiceField(

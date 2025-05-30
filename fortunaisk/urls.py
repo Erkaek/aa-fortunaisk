@@ -6,6 +6,7 @@ from django.urls import path
 from .views import (
     admin_dashboard,
     anomalies_list,
+    auto_lottery_toggle,
     create_auto_lottery,
     create_lottery,
     delete_auto_lottery,
@@ -21,7 +22,6 @@ from .views import (
     terminate_lottery,
     user_dashboard,
     winner_list,
-    auto_lottery_toggle,
 )
 
 app_name = "fortunaisk"
@@ -76,7 +76,9 @@ urlpatterns = [
         name="distribute_prize",
     ),
     path("anomalies/", anomalies_list, name="anomalies_list"),
-    path("anomalies/resolved/", resolved_anomalies_list, name="resolved_anomalies_list"),
+    path(
+        "anomalies/resolved/", resolved_anomalies_list, name="resolved_anomalies_list"
+    ),
     path(
         "lottery/<int:lottery_id>/export_csv/",
         export_winners_csv,
@@ -85,6 +87,6 @@ urlpatterns = [
     path(
         "auto_lotteries/<int:autolottery_id>/toggle/",
         auto_lottery_toggle,
-        name="auto_lottery_toggle"
+        name="auto_lottery_toggle",
     ),
 ]

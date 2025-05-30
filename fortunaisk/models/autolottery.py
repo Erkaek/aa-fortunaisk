@@ -1,17 +1,19 @@
 # fortunaisk/models/autolottery.py
 
+# Standard Library
 import logging
 from datetime import timedelta
 from decimal import Decimal
 
+# Django
 from django.apps import apps
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext as _
 
+# Alliance Auth
 from allianceauth.eveonline.models import EveCorporationInfo
-
 
 logger = logging.getLogger(__name__)
 
@@ -29,15 +31,11 @@ class AutoLottery(models.Model):
         ("months", "Months"),
     ]
 
-    is_active = models.BooleanField(
-        default=True, verbose_name="Is Active"
-    )
+    is_active = models.BooleanField(default=True, verbose_name="Is Active")
     name = models.CharField(
         max_length=100, unique=True, verbose_name="AutoLottery Name"
     )
-    frequency = models.PositiveIntegerField(
-        verbose_name="Frequency Value"
-    )
+    frequency = models.PositiveIntegerField(verbose_name="Frequency Value")
     frequency_unit = models.CharField(
         max_length=10,
         choices=FREQUENCY_UNITS,
@@ -109,18 +107,23 @@ class AutoLottery(models.Model):
         """
         if self.winners_distribution:
             if len(self.winners_distribution) != self.winner_count:
-                raise ValidationError({
-                    "winners_distribution": _(
-                        "Distribution must match the number of winners."
-                    )
-                })
+                raise ValidationError(
+                    {
+                        "winners_distribution": _(
+                            "Distribution must match the number of winners."
+                        )
+                    }
+                )
             total = sum(self.winners_distribution or [])
             if abs(Decimal(total) - Decimal("100")) > Decimal("0.001"):
-                raise ValidationError({
-                    "winners_distribution": _(
-                        "The sum of percentages must be exactly 100% (current: %(total)s%)."
-                    ) % {"total": total}
-                })
+                raise ValidationError(
+                    {
+                        "winners_distribution": _(
+                            "The sum of percentages must be exactly 100% (current: %(total)s%)."
+                        )
+                        % {"total": total}
+                    }
+                )
 
     def save(self, *args, **kwargs):
         self.clean()
@@ -139,7 +142,9 @@ class AutoLottery(models.Model):
         return timedelta(hours=self.duration_value)
 
     def create_lottery(self):
+        # fortunaisk
         from fortunaisk.signals.lottery_signals import lottery_created
+
         """
         Creates a new Lottery from this AutoLottery and
         populates WinnerDistribution for that lottery.
@@ -178,5 +183,5 @@ class AutoLottery(models.Model):
             f"for lottery {new_lottery.lottery_reference}"
         )
         lottery_created.send(sender=self.__class__, instance=new_lottery)
-        
+
         return new_lottery

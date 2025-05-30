@@ -1,12 +1,17 @@
 # fortunaisk/signals/autolottery_signals.py
 
+# Standard Library
 import json
 import logging
 
+# Third Party
 from django_celery_beat.models import IntervalSchedule, PeriodicTask
+
+# Django
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
+# fortunaisk
 from fortunaisk.models import AutoLottery
 from fortunaisk.notifications import build_embed, notify_discord_or_fallback
 
@@ -43,10 +48,10 @@ def create_or_update_auto_lottery_cron(sender, instance, created, **kwargs):
     task, created_task = PeriodicTask.objects.update_or_create(
         name=name,
         defaults={
-            "task":     "fortunaisk.tasks.create_lottery_from_auto_lottery",
+            "task": "fortunaisk.tasks.create_lottery_from_auto_lottery",
             "interval": schedule,
-            "args":     json.dumps([instance.id]),
-            "enabled":  instance.is_active,
+            "args": json.dumps([instance.id]),
+            "enabled": instance.is_active,
         },
     )
     logger.info(
@@ -58,7 +63,7 @@ def create_or_update_auto_lottery_cron(sender, instance, created, **kwargs):
     # immediately create the first Lottery and notify Discord
     if created and instance.is_active:
         try:
-            lot = instance.create_lottery()
+            instance.create_lottery()
             embed = build_embed(
                 title="🎲 AutoLottery Activated",
                 description=f"AutoLottery **{instance.name}** is now active.",

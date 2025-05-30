@@ -9,13 +9,21 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db.models import Count, F, IntegerField, Q, Sum, ExpressionWrapper, DecimalField
+from django.db.models import (
+    Count,
+    DecimalField,
+    ExpressionWrapper,
+    F,
+    IntegerField,
+    Q,
+    Sum,
+)
 from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.utils.html import format_html
 from django.utils.translation import gettext as _
-from django.utils import timezone
 
 # fortunaisk
 from fortunaisk.decorators import can_access_app, can_admin_app
@@ -29,7 +37,6 @@ from fortunaisk.models import (
     Winner,
     WinnerDistribution,
 )
-from fortunaisk.signals.lottery_signals import lottery_created
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -46,6 +53,7 @@ def get_distribution_range(winner_count):
 ##################################
 #           ADMIN VIEWS
 ##################################
+
 
 @login_required
 @can_admin_app
@@ -64,8 +72,7 @@ def admin_dashboard(request):
 
     # Active & pending, with tickets_sold & participant_count
     active_lotteries = (
-        all_lotteries
-        .filter(status__in=["active", "pending"])
+        all_lotteries.filter(status__in=["active", "pending"])
         .annotate(
             tickets_sold=Coalesce(
                 Sum(
@@ -123,7 +130,9 @@ def admin_dashboard(request):
     total_anomalies = TicketAnomaly.objects.count()
     unsolved_qs = TicketAnomaly.objects.filter(solved=False)
     resolved_qs = TicketAnomaly.objects.filter(solved=True)
-    anomalies = unsolved_qs.select_related("lottery", "user", "character").order_by("-recorded_at")
+    anomalies = unsolved_qs.select_related("lottery", "user", "character").order_by(
+        "-recorded_at"
+    )
     total_unsolved = unsolved_qs.count()
     total_resolved = resolved_qs.count()
 
@@ -154,7 +163,9 @@ def admin_dashboard(request):
         .annotate(count=Count("id"))
         .order_by("-count")[:10]
     )
-    anomaly_lottery_names = [item["lottery__lottery_reference"] for item in anomaly_data]
+    anomaly_lottery_names = [
+        item["lottery__lottery_reference"] for item in anomaly_data
+    ]
     anomalies_per_lottery = [item["count"] for item in anomaly_data]
 
     # Top users by anomalies
@@ -172,11 +183,9 @@ def admin_dashboard(request):
     # Automatic lotteries, recent anomalies & winners
     autolotteries = AutoLottery.objects.all()
     latest_anomalies = anomalies[:5]
-    recent_winners = (
-        Winner.objects
-        .select_related("ticket__user", "ticket__lottery", "character")
-        .order_by("-won_at")[:10]
-    )
+    recent_winners = Winner.objects.select_related(
+        "ticket__user", "ticket__lottery", "character"
+    ).order_by("-won_at")[:10]
 
     context = {
         "active_lotteries": active_lotteries,
@@ -204,7 +213,9 @@ def resolve_anomaly(request, anomaly_id):
         anomaly.save(update_fields=["solved", "solved_at", "solved_by", "detail"])
         messages.success(request, _("Anomaly marked as solved."))
         return redirect("fortunaisk:anomalies_list")
-    return render(request, "fortunaisk/resolve_anomaly_confirm.html", {"anomaly": anomaly})
+    return render(
+        request, "fortunaisk/resolve_anomaly_confirm.html", {"anomaly": anomaly}
+    )
 
 
 @login_required
@@ -216,7 +227,9 @@ def resolved_anomalies_list(request):
         .order_by("-solved_at")
     )
     page = Paginator(qs, 25).get_page(request.GET.get("page"))
-    return render(request, "fortunaisk/resolved_anomalies_list.html", {"page_obj": page})
+    return render(
+        request, "fortunaisk/resolved_anomalies_list.html", {"page_obj": page}
+    )
 
 
 @login_required
@@ -228,7 +241,9 @@ def distribute_prize(request, winner_id):
             winner.distributed = True
             winner.distributed_at = timezone.now()
             winner.distributed_by = request.user
-            winner.save(update_fields=["distributed", "distributed_at", "distributed_by"])
+            winner.save(
+                update_fields=["distributed", "distributed_at", "distributed_by"]
+            )
             messages.success(
                 request,
                 _("Marked prize as distributed for {username}.").format(
@@ -238,12 +253,15 @@ def distribute_prize(request, winner_id):
         else:
             messages.info(request, _("Prize was already distributed."))
         return redirect("fortunaisk:admin_dashboard")
-    return render(request, "fortunaisk/distribute_prize_confirm.html", {"winner": winner})
+    return render(
+        request, "fortunaisk/distribute_prize_confirm.html", {"winner": winner}
+    )
 
 
 ##################################
 #       AUTOLOTTERY VIEWS
 ##################################
+
 
 @login_required
 @can_admin_app
@@ -256,8 +274,7 @@ def create_auto_lottery(request):
         if form.is_valid():
             auto = form.save()
             messages.success(
-                request,
-                _('Auto-lottery "%(name)s" created.') % {"name": auto.name}
+                request, _('Auto-lottery "%(name)s" created.') % {"name": auto.name}
             )
             return redirect("fortunaisk:admin_dashboard")
         else:
@@ -269,16 +286,22 @@ def create_auto_lottery(request):
                         label = form.fields[field].label or field
                         messages.error(request, f"{label} : {e}")
     else:
-        form = AutoLotteryForm(initial={
-            "winner_count": 1,
-            "winners_distribution": [100],
-        })
+        form = AutoLotteryForm(
+            initial={
+                "winner_count": 1,
+                "winners_distribution": [100],
+            }
+        )
 
     cnt = form.initial.get("winner_count", 1) or 1
-    return render(request, "fortunaisk/auto_lottery_form.html", {
-        "form": form,
-        "distribution_range": range(max(int(cnt), 1)),
-    })
+    return render(
+        request,
+        "fortunaisk/auto_lottery_form.html",
+        {
+            "form": form,
+            "distribution_range": range(max(int(cnt), 1)),
+        },
+    )
 
 
 @login_required
@@ -294,10 +317,14 @@ def edit_auto_lottery(request, autolottery_id):
         messages.error(request, _("Please correct the errors below."))
     else:
         form = AutoLotteryForm(instance=auto)
-    return render(request, "fortunaisk/auto_lottery_form.html", {
-        "form": form,
-        "distribution_range": range(max(auto.winner_count, 1)),
-    })
+    return render(
+        request,
+        "fortunaisk/auto_lottery_form.html",
+        {
+            "form": form,
+            "distribution_range": range(max(auto.winner_count, 1)),
+        },
+    )
 
 
 @login_required
@@ -317,10 +344,13 @@ def delete_auto_lottery(request, autolottery_id):
 #         USER VIEWS
 ##################################
 
+
 @login_required
 @can_access_app
 def lottery(request):
-    active_qs = Lottery.objects.filter(status="active").prefetch_related("ticket_purchases")
+    active_qs = Lottery.objects.filter(status="active").prefetch_related(
+        "ticket_purchases"
+    )
     counts = (
         TicketPurchase.objects.filter(user=request.user, lottery__in=active_qs)
         .values("lottery")
@@ -334,21 +364,27 @@ def lottery(request):
         pct = (cnt / lot.max_tickets_per_user * 100) if lot.max_tickets_per_user else 0
         remaining = lot.max_tickets_per_user - cnt if lot.max_tickets_per_user else "∞"
         instructions = format_html(
-            _("Send <strong>{amount}</strong> ISK to <strong>{receiver}</strong> with ref <strong>{ref}</strong>"),
+            _(
+                "Send <strong>{amount}</strong> ISK to <strong>{receiver}</strong> with ref <strong>{ref}</strong>"
+            ),
             amount=lot.ticket_price,
             receiver=getattr(lot.payment_receiver, "corporation_name", "Unknown"),
             ref=lot.lottery_reference,
         )
-        info.append({
-            "lottery": lot,
-            "has_ticket": cnt > 0,
-            "user_ticket_count": cnt,
-            "max_tickets_per_user": lot.max_tickets_per_user,
-            "remaining_tickets": remaining,
-            "tickets_percentage": min(pct, 100),
-            "instructions": instructions,
-            "corporation_name": getattr(lot.payment_receiver, "corporation_name", "Unknown"),
-        })
+        info.append(
+            {
+                "lottery": lot,
+                "has_ticket": cnt > 0,
+                "user_ticket_count": cnt,
+                "max_tickets_per_user": lot.max_tickets_per_user,
+                "remaining_tickets": remaining,
+                "tickets_percentage": min(pct, 100),
+                "instructions": instructions,
+                "corporation_name": getattr(
+                    lot.payment_receiver, "corporation_name", "Unknown"
+                ),
+            }
+        )
 
     return render(request, "fortunaisk/lottery.html", {"active_lotteries": info})
 
@@ -371,7 +407,9 @@ def winner_list(request):
         .filter(total_prize__gt=0)
         .order_by("-total_prize")[:3]
     )
-    return render(request, "fortunaisk/winner_list.html", {"page_obj": page, "top_3": top3})
+    return render(
+        request, "fortunaisk/winner_list.html", {"page_obj": page, "top_3": top3}
+    )
 
 
 @login_required
@@ -391,21 +429,21 @@ def lottery_history(request):
     selected = [s for s in selected if s in allowed]
 
     # filter & order
-    qs = (
-        Lottery.objects
-        .filter(status__in=selected)
-        .order_by("-end_date")
-    )
+    qs = Lottery.objects.filter(status__in=selected).order_by("-end_date")
 
     page = Paginator(qs, per_page).get_page(request.GET.get("page"))
 
-    return render(request, "fortunaisk/lottery_history.html", {
-        "page_obj":         page,
-        "per_page":         per_page,
-        "per_page_choices": [6, 12, 24, 48],
-        "allowed_statuses": allowed,
-        "selected_statuses": selected,
-    })
+    return render(
+        request,
+        "fortunaisk/lottery_history.html",
+        {
+            "page_obj": page,
+            "per_page": per_page,
+            "per_page_choices": [6, 12, 24, 48],
+            "allowed_statuses": allowed,
+            "selected_statuses": selected,
+        },
+    )
 
 
 @login_required
@@ -413,10 +451,10 @@ def lottery_history(request):
 def create_lottery(request):
     """
     Create a standard lottery:
-     1) create the Lottery,
-     2) read the winners_distribution_entry inputs,
-     3) create the WinnerDistribution,
-     4) emit the signal.
+      1) create the Lottery,
+      2) read the winners_distribution_entry inputs,
+      3) create the WinnerDistribution,
+      4) emit the signal.
     """
     if request.method == "POST":
         form = LotteryCreateForm(request.POST)
@@ -434,10 +472,14 @@ def create_lottery(request):
                 return redirect("fortunaisk:lottery_create")
 
             # 3) Validations
-            if len(dist_list) != lottery.winner_count or sum(dist_list) != Decimal("100"):
+            if len(dist_list) != lottery.winner_count or sum(dist_list) != Decimal(
+                "100"
+            ):
                 messages.error(
                     request,
-                    _("The distribution must total 100% and match the number of winners."),
+                    _(
+                        "The distribution must total 100% and match the number of winners."
+                    ),
                 )
                 lottery.delete()
                 return redirect("fortunaisk:lottery_create")
@@ -451,7 +493,9 @@ def create_lottery(request):
                 )
 
             # 5) Emit signal for Discord notifications
+            # fortunaisk
             from fortunaisk.signals.lottery_signals import lottery_created
+
             lottery_created.send(sender=Lottery, instance=lottery)
 
             messages.success(request, _("Lottery successfully created."))
@@ -461,10 +505,14 @@ def create_lottery(request):
         form = LotteryCreateForm()
 
     dist_range = range(form.initial.get("winner_count", 1))
-    return render(request, "fortunaisk/standard_lottery_form.html", {
-        "form": form,
-        "distribution_range": dist_range,
-    })
+    return render(
+        request,
+        "fortunaisk/standard_lottery_form.html",
+        {
+            "form": form,
+            "distribution_range": dist_range,
+        },
+    )
 
 
 @login_required
@@ -472,12 +520,13 @@ def create_lottery(request):
 def lottery_participants(request, lottery_id):
     lot = get_object_or_404(Lottery, id=lottery_id)
     page = Paginator(
-        lot.ticket_purchases.select_related("user", "character"),
-        25
+        lot.ticket_purchases.select_related("user", "character"), 25
     ).get_page(request.GET.get("page"))
-    return render(request, "fortunaisk/lottery_participants.html", {
-        "lottery": lot, "participants": page
-    })
+    return render(
+        request,
+        "fortunaisk/lottery_participants.html",
+        {"lottery": lot, "participants": page},
+    )
 
 
 @login_required
@@ -491,7 +540,9 @@ def terminate_lottery(request, lottery_id):
             request, _("Lottery {ref} cancelled.").format(ref=lot.lottery_reference)
         )
         return redirect("fortunaisk:admin_dashboard")
-    return render(request, "fortunaisk/terminate_lottery_confirm.html", {"lottery": lot})
+    return render(
+        request, "fortunaisk/terminate_lottery_confirm.html", {"lottery": lot}
+    )
 
 
 @login_required
@@ -514,36 +565,42 @@ def lottery_detail(request, lottery_id):
         lot.ticket_purchases.select_related("user", "character"), 25
     ).get_page(request.GET.get("participants_page"))
     anomalies = Paginator(
-        TicketAnomaly.objects.filter(lottery=lot)
-        .select_related("user", "character"), 25
+        TicketAnomaly.objects.filter(lottery=lot).select_related("user", "character"),
+        25,
     ).get_page(request.GET.get("anomalies_page"))
     winners = Paginator(
-        Winner.objects.filter(ticket__lottery=lot)
-        .select_related("ticket__user", "character"), 25
+        Winner.objects.filter(ticket__lottery=lot).select_related(
+            "ticket__user", "character"
+        ),
+        25,
     ).get_page(request.GET.get("winners_page"))
 
     participant_count = lot.ticket_purchases.values("user").distinct().count()
     tickets_sold = TicketPurchase.objects.filter(
         lottery=lot, status="processed"
-    ).aggregate(
-        total=Coalesce(Sum("quantity"), 0, output_field=IntegerField())
-    )["total"]
+    ).aggregate(total=Coalesce(Sum("quantity"), 0, output_field=IntegerField()))[
+        "total"
+    ]
     distributions = WinnerDistribution.objects.filter(
         lottery_reference=lot.lottery_reference
     ).order_by("winner_rank")
     raw_amount = lot.ticket_price * tickets_sold
     tax_collected = (raw_amount - lot.total_pot).quantize(Decimal("0.01"))
 
-    return render(request, "fortunaisk/lottery_detail.html", {
-        "lottery": lot,
-        "participants": participants,
-        "anomalies": anomalies,
-        "winners": winners,
-        "participant_count": participant_count,
-        "tickets_sold": tickets_sold,
-        "distributions": distributions,
-        "tax_collected": tax_collected,
-    })
+    return render(
+        request,
+        "fortunaisk/lottery_detail.html",
+        {
+            "lottery": lot,
+            "participants": participants,
+            "anomalies": anomalies,
+            "winners": winners,
+            "participant_count": participant_count,
+            "tickets_sold": tickets_sold,
+            "distributions": distributions,
+            "tax_collected": tax_collected,
+        },
+    )
 
 
 @login_required
@@ -553,29 +610,35 @@ def user_dashboard(request):
         TicketPurchase.objects.filter(user=request.user)
         .select_related("lottery", "character")
         .order_by("-purchase_date"),
-        9
+        9,
     ).get_page(request.GET.get("tickets_page"))
 
     winnings_page = Paginator(
         Winner.objects.filter(ticket__user=request.user)
         .select_related("ticket__lottery", "character")
         .order_by("-won_at"),
-        9
+        9,
     ).get_page(request.GET.get("winnings_page"))
 
+    # fortunaisk
     from fortunaisk.models.payment import ProcessedPayment
+
     payments_page = Paginator(
         ProcessedPayment.objects.filter(user=request.user)
         .select_related("character")
         .order_by("-payed_at"),
-        10
+        10,
     ).get_page(request.GET.get("payments_page"))
 
-    return render(request, "fortunaisk/user_dashboard.html", {
-        "ticket_purchases": tickets_page,
-        "winnings": winnings_page,
-        "payments_page": payments_page,
-    })
+    return render(
+        request,
+        "fortunaisk/user_dashboard.html",
+        {
+            "ticket_purchases": tickets_page,
+            "winnings": winnings_page,
+            "payments_page": payments_page,
+        },
+    )
 
 
 @login_required
@@ -583,7 +646,9 @@ def export_winners_csv(request, lottery_id):
     lot = get_object_or_404(Lottery, id=lottery_id)
     winners = Winner.objects.filter(ticket__lottery=lot)
     resp = HttpResponse(content_type="text/csv")
-    resp["Content-Disposition"] = f'attachment; filename="winners_{lot.lottery_reference}.csv"'
+    resp["Content-Disposition"] = (
+        f'attachment; filename="winners_{lot.lottery_reference}.csv"'
+    )
     resp.write(
         "Lottery Reference,User,Character,Prize Amount,Won At,Distributed,Distributed At,Distributed By\n"
     )
@@ -600,6 +665,7 @@ def export_winners_csv(request, lottery_id):
         )
     return resp
 
+
 @login_required
 @can_admin_app
 def auto_lottery_toggle(request, autolottery_id):
@@ -611,7 +677,9 @@ def auto_lottery_toggle(request, autolottery_id):
         auto.is_active = not auto.is_active
         auto.save(update_fields=["is_active"])
         action = _("activated") if auto.is_active else _("paused")
-        messages.success(request, _('Auto-lottery "%(name)s" %(action)s.') % {
-            "name": auto.name, "action": action
-        })
+        messages.success(
+            request,
+            _('Auto-lottery "%(name)s" %(action)s.')
+            % {"name": auto.name, "action": action},
+        )
     return redirect("fortunaisk:admin_dashboard")

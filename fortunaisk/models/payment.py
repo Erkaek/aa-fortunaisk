@@ -1,9 +1,13 @@
 # fortunaisk/models/payment.py
 
-# Django
-from django.db import models
+# Standard Library
 from decimal import Decimal
+
+# Django
 from django.contrib.auth import get_user_model
+from django.db import models
+
+# Alliance Auth
 from allianceauth.eveonline.models import EveCharacter
 
 

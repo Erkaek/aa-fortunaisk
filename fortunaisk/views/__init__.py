@@ -2,7 +2,7 @@
 from .views import (
     admin_dashboard,
     anomalies_list,
-    resolved_anomalies_list,
+    auto_lottery_toggle,
     create_auto_lottery,
     create_lottery,
     delete_auto_lottery,
@@ -14,10 +14,10 @@ from .views import (
     lottery_history,
     lottery_participants,
     resolve_anomaly,
+    resolved_anomalies_list,
     terminate_lottery,
     user_dashboard,
     winner_list,
-    auto_lottery_toggle,
 )
 
 __all__ = [
