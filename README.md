@@ -126,13 +126,10 @@ ______________________________________________________________________
 
 ### 🎲 User Experience
 
-**FortunaISK in Action**
-![FortunaISK Overview](docs/screenshots/fortunaisk_home_page.gif)
-*Complete lottery system overview - from participation to winner announcement*
-
-**Personal Dashboard**
-![User Dashboard](docs/screenshots/fortunaisk_user_dashboard_page.png)
-*Track your ticket purchases, winnings, and payment history*
+| **FortunaISK in Action** | **Personal Dashboard** |
+|---|---|
+| ![FortunaISK Overview](docs/screenshots/fortunaisk_home_page.gif) | ![User Dashboard](docs/screenshots/fortunaisk_user_dashboard_page.png) |
+| *Complete lottery system overview* | *Track tickets, winnings, and payments* |
 
 **Lottery History**
 ![Lottery History](docs/screenshots/fortunaisk_lottery_history_page.png)
@@ -140,29 +137,21 @@ ______________________________________________________________________
 
 ### 🛠️ Admin Interface
 
-**Admin Dashboard**
-![Admin Dashboard](docs/screenshots/fortunaisk_admin_dashboard_page.png)
-*Comprehensive admin control center with real-time statistics and monitoring*
+| **Admin Dashboard** | **Lottery Details** |
+|---|---|
+| ![Admin Dashboard](docs/screenshots/fortunaisk_admin_dashboard_page.png) | ![Lottery Details](docs/screenshots/fortunaisk_lottery_details_page.png) |
+| *Real-time statistics and monitoring* | *Participant tracking and anomaly resolution* |
 
-**Lottery Details**
-![Lottery Details](docs/screenshots/fortunaisk_lottery_details_page.png)
-*Detailed lottery management with participant tracking and anomaly resolution*
+### 🏆 Results & 🔔 Discord Integration
 
-### 🏆 Results & Winners
+| **Winner Announcements** | **Discord Notifications** |
+|---|---|
+| ![Winner Results](docs/screenshots/fortunaisk_winner_page.png) | ![New Lottery Discord](docs/screenshots/fortunaisk_new_lottery_discord_embed.png) |
+| *Transparent prize distribution* | *Rich embeds for community engagement* |
 
-**Winner Announcements**
-![Winner Results](docs/screenshots/fortunaisk_winner_page.png)
-*Transparent winner displays with complete prize distribution details*
-
-### 🔔 Discord Integration
-
-**New Lottery Notifications**
-![New Lottery Discord](docs/screenshots/fortunaisk_new_lottery_discord_embed.png)
-*Rich Discord embeds announcing new lotteries to your community*
-
-**Closure Reminders**
+**24-Hour Closure Reminders**
 ![24h Reminder Discord](docs/screenshots/fortunaisk_24h_remind_closure_discord.png)
-*Automated 24-hour closure reminders to boost participation*
+*Automated reminders to boost participation before lottery closure*
 
 ______________________________________________________________________
 
